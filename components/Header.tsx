@@ -16,18 +16,18 @@ export default function Header() {
         padding: "22px 28px",
       }}
     >
-      {/* top-left: brand mark */}
       <a
-        href="#home"
+        href="/"
         aria-label="pokyh.studio home"
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-          textDecoration: "none",
-        }}
+        style={{ display: "flex", alignItems: "center", gap: 12, textDecoration: "none" }}
       >
-        <Image src="/assets/logo.png" alt="" width={42} height={42} style={{ display: "block", objectFit: "contain" }} />
+        <Image
+          src="/assets/logo.png"
+          alt="pokyh.studio logo"
+          width={42}
+          height={42}
+          style={{ display: "block", objectFit: "contain" }}
+        />
         <span
           style={{
             fontWeight: 800,
@@ -57,22 +57,15 @@ export default function Header() {
         </span>
       </a>
 
-      {/* center: empty spacer */}
       <div />
 
-      {/* top-right: nav */}
       <nav
         aria-label="Primary"
-        style={{
-          justifySelf: "end",
-          display: "flex",
-          alignItems: "center",
-          gap: 22,
-        }}
+        style={{ justifySelf: "end", display: "flex", alignItems: "center", gap: 22 }}
       >
         <NavLinks />
         <a
-          href="#contact"
+          href="/contact"
           style={{
             background: "#0c0c0c",
             color: "#fff",
@@ -103,9 +96,10 @@ export default function Header() {
 
 function NavLinks() {
   const links = [
-    { href: "#home", label: "Home" },
-    { href: "#about", label: "About" },
-    { href: "#works", label: "Works" },
+    { href: "/", label: "Home" },
+    { href: "/about", label: "About" },
+    { href: "/works", label: "Works" },
+    { href: "/contact", label: "Contact" },
   ];
   return (
     <div
@@ -130,12 +124,7 @@ function NavLink({ href, label }: { href: string; label: string }) {
   return (
     <a
       href={href}
-      style={{
-        color: "#0c0c0c",
-        textDecoration: "none",
-        padding: "6px 2px",
-        position: "relative",
-      }}
+      style={{ color: "#0c0c0c", textDecoration: "none", padding: "6px 2px", position: "relative" }}
       onMouseEnter={(e) => {
         const el = e.currentTarget.querySelector<HTMLSpanElement>(".underline");
         if (el) el.style.transform = "scaleX(1)";
@@ -167,7 +156,7 @@ function NavLink({ href, label }: { href: string; label: string }) {
 function CircleButton() {
   return (
     <a
-      href="#contact"
+      href="/contact"
       aria-label="Go to contact"
       style={{
         width: 38,

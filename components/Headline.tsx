@@ -58,11 +58,14 @@ export default function Headline() {
               key={text}
               className="line"
               data-text={text}
+              suppressHydrationWarning
               style={{
                 display: "block",
                 fontWeight: bold ? 600 : undefined,
               }}
-            />
+            >
+              {text}
+            </span>
           ))}
         </h1>
         <p
