@@ -1,0 +1,856 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>pokyh.studio</title>
+<style>
+  :root{
+    --bg:#e4e2dc;
+    --ink:#593DF8;
+    --black:#0c0c0c;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"Helvetica Neue", Helvetica, Arial, sans-serif;
+    overflow:hidden;
+    cursor:default;
+  }
+
+  #stage{
+    position:fixed; inset:0;
+    width:100%; height:100%;
+    display:block;
+    z-index:1;
+  }
+
+  .ui{
+    position:fixed; inset:0;
+    z-index:2;
+    pointer-events:none;
+  }
+  .ui > *{ pointer-events:auto; }
+
+  /* top */
+  .top{
+    position:absolute; top:0; left:0; right:0;
+    display:grid;
+    grid-template-columns:1fr auto 1fr;
+    align-items:start;
+    padding:22px 28px;
+  }
+  /* top-left logo + wordmark */
+  .brand-mark{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    text-decoration:none;
+  }
+  .brand-mark img{
+    width:42px; height:42px;
+    display:block;
+    object-fit:contain;
+  }
+  .brand-mark .wordmark{
+    font-weight:800;
+    font-style:italic;
+    font-size:22px;
+    letter-spacing:-.02em;
+    color:var(--ink);
+    line-height:1;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    display:flex; align-items:baseline;
+  }
+  .brand-mark .wordmark .dotsep{
+    display:inline-block;
+    width:.28em; height:.28em;
+    background:#0c0c0c;
+    border-radius:50%;
+    margin:0 .12em .08em;
+    transform:translateY(-.05em);
+  }
+
+  /* wordmark */
+  .logo{
+    justify-self:center;
+    font-weight:800;
+    font-style:italic;
+    font-size:24px;
+    letter-spacing:-.02em;
+    color:var(--ink);
+    line-height:1;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    display:flex; align-items:baseline;
+  }
+  .logo .name{ color:var(--ink); }
+  .logo .dotsep{
+    display:inline-block;
+    width:.28em; height:.28em;
+    background:var(--ink);
+    border-radius:50%;
+    margin:0 .12em .08em;
+    transform:translateY(-.05em);
+  }
+  .logo .ext{ color:var(--ink); opacity:.95; }
+
+  /* top-right nav */
+  .nav{
+    justify-self:end;
+    display:flex;
+    align-items:center;
+    gap:22px;
+  }
+  .nav .links{
+    display:flex;
+    gap:22px;
+    align-items:center;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size:15px;
+    font-weight:500;
+    color:#0c0c0c;
+  }
+  .nav .links a{
+    color:#0c0c0c;
+    text-decoration:none;
+    padding:6px 2px;
+    position:relative;
+  }
+  .nav .links a::after{
+    content:"";
+    position:absolute;
+    left:2px; right:2px; bottom:4px;
+    height:1px; background:currentColor;
+    transform:scaleX(0);
+    transform-origin:left center;
+    transition:transform .35s cubic-bezier(.2,.7,.2,1);
+  }
+  .nav .links a:hover::after{ transform:scaleX(1); }
+  .nav .btn-pill{
+    background:#0c0c0c;
+    color:#fff;
+    border-radius:999px;
+    padding:9px 18px 10px;
+    font-size:14px;
+    font-weight:500;
+    text-decoration:none;
+    line-height:1;
+    transition: background .25s ease, transform .25s ease;
+  }
+  .nav .btn-pill:hover{ background:var(--ink); transform:translateY(-1px); }
+  .nav .btn-circle{
+    width:38px; height:38px;
+    border-radius:50%;
+    background:#0c0c0c;
+    color:#fff;
+    display:grid; place-items:center;
+    text-decoration:none;
+    transition: background .25s ease, transform .25s ease;
+  }
+  .nav .btn-circle:hover{ background:var(--ink); transform:translateY(-1px) rotate(45deg); }
+  .nav .btn-circle svg{
+    width:16px; height:16px;
+    stroke:currentColor; fill:none; stroke-width:1.8;
+  }
+
+  /* headline */
+  .headline-wrap{
+    position:absolute;
+    inset:0;
+    display:grid;
+    place-items:center;
+    pointer-events:none;
+    padding:0 6vw;
+  }
+  .headline{
+    width:min(86vw, 1280px);
+    text-align:center;
+    color:#0c0c0c;
+    font-weight:500;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    line-height:1.05;
+    letter-spacing:-.02em;
+    font-size: clamp(28px, 5.6vw, 96px);
+    user-select:none;
+  }
+  .headline .line{ display:block; }
+  .headline .light{ font-weight:300; opacity:.92; }
+
+  /* side award tag */
+  .side-tag{
+    position:absolute;
+    right:0; top:50%;
+    transform:translateY(-50%);
+    background:var(--black);
+    color:#fff;
+    padding:16px 12px 20px;
+    width:48px;
+    text-align:center;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    letter-spacing:.06em;
+  }
+  .side-tag .big{
+    font-size:24px;
+    font-weight:700;
+    font-family:"Helvetica Neue", Helvetica, Arial, sans-serif;
+    letter-spacing:-.02em;
+    line-height:1;
+    margin-bottom:16px;
+  }
+  .side-tag .vert{
+    writing-mode:vertical-rl;
+    transform:rotate(180deg);
+    font-size:11px;
+    margin:0 auto;
+    color:#cfcfcf;
+  }
+
+  /* left-side decorative line, vertically centered */
+  .rail-line{ display:none; }
+
+  /* bottom-center scroll indicator */
+  .scroll-indicator{
+    position:absolute;
+    left:50%;
+    bottom:24px;
+    transform:translateX(-50%);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:10px;
+    color:#0c0c0c;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size:11px;
+    letter-spacing:.32em;
+    text-transform:uppercase;
+    pointer-events:none;
+  }
+  .scroll-indicator .word{
+    display:inline-block;
+    font-weight:700;
+    font-size:12px;
+  }
+  .scroll-indicator .arrow{
+    width:14px;
+    height:28px;
+    color:#0c0c0c;
+    display:block;
+  }
+  .scroll-indicator .arrow .track{
+    stroke:rgba(12,12,12,.18);
+    stroke-width:1.5;
+    fill:none;
+    stroke-linecap:square;
+    stroke-linejoin:miter;
+  }
+  .scroll-indicator .arrow .runner{
+    stroke:#0c0c0c;
+    stroke-width:1.5;
+    fill:none;
+    stroke-linecap:butt;
+    stroke-linejoin:miter;
+    /* total path length ≈ 30 (20 line + 2*~7 chevron). */
+    stroke-dasharray: 9 33;
+    animation: scrollRun 2.4s cubic-bezier(.55,0,.45,1) infinite;
+  }
+  @keyframes scrollRun{
+    0%   { stroke-dashoffset: 9;  opacity: 0; }
+    15%  { opacity: 1; }
+    85%  { opacity: 1; }
+    100% { stroke-dashoffset: -33; opacity: 0; }
+  }
+
+  /* socials — bottom-left */
+  .socials{
+    position:absolute;
+    left:42px;
+    bottom:32px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:22px;
+  }
+  .socials a{
+    width:34px; height:34px;
+    display:grid; place-items:center;
+    color:#0c0c0c;
+    text-decoration:none;
+    transition: transform .2s ease, opacity .2s ease;
+  }
+  .socials a:hover{ transform:translateY(-2px); opacity:.65; }
+  .socials a svg{
+    width:32px; height:32px;
+    fill:currentColor;
+  }
+  .socials a svg.stroke{
+    fill:none;
+    stroke:currentColor;
+    stroke-width:1.7;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+  }
+
+  /* letter fly-in */
+  .headline .ch{
+    display:inline-block;
+    opacity:0;
+    transform: translateY(.6em);
+    filter: blur(6px);
+    animation: chIn .7s cubic-bezier(.22,.61,.36,1) both;
+    animation-delay: var(--d, 0ms);
+  }
+  .headline .sp{
+    display:inline-block;
+    width:.28em;
+  }
+  @keyframes chIn{
+    0%   { opacity:0; transform: translateY(.6em); filter: blur(6px); }
+    60%  { opacity:1; filter: blur(0); }
+    100% { opacity:1; transform: translateY(0); filter: blur(0); }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="stage"></canvas>
+
+<div class="ui">
+  <header class="top">
+    <a class="brand-mark" href="#home" aria-label="pokyh.studio home">
+      <img src="assets/logo.png" alt="" />
+      <span class="wordmark">
+        <span class="name">pokyh</span><span class="dotsep"></span><span class="ext">studio</span>
+      </span>
+    </a>
+
+    <div></div>
+
+    <nav class="nav" aria-label="Primary">
+      <div class="links">
+        <a href="#home">Home</a>
+        <a href="#about">About</a>
+        <a href="#works">Works</a>
+      </div>
+      <a class="btn-pill" href="#contact">Contact</a>
+      <a class="btn-circle" href="#contact" aria-label="Go to contact">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M7 17 L17 7 M9 7 H17 V15"/>
+        </svg>
+      </a>
+    </nav>
+  </header>
+
+  <div class="headline-wrap">
+    <h1 class="headline" id="headline">
+      <span class="line light" data-text="Your Partner in"></span>
+      <span class="line" data-text="Digital Growth."></span>
+    </h1>
+  </div>
+
+  <div class="rail-line" aria-hidden="true">
+    <span class="endpoint"></span>
+    <span class="stem"></span>
+    <span class="endpoint"></span>
+  </div>
+
+  <aside class="socials" aria-label="Socials">
+    <a href="https://github.com/" target="_blank" rel="noopener" aria-label="GitHub">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.04 1.53 1.04.9 1.53 2.36 1.09 2.94.83.09-.65.35-1.09.63-1.34-2.22-.25-4.56-1.11-4.56-4.94 0-1.09.39-1.99 1.03-2.69-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02a9.5 9.5 0 0 1 5 0c1.91-1.29 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.6 1.03 2.69 0 3.84-2.34 4.69-4.57 4.94.36.31.68.91.68 1.85v2.74c0 .27.18.58.69.48A10 10 0 0 0 12 2z"/>
+      </svg>
+    </a>
+    <a href="mailto:hello@pokyh.studio" aria-label="Email">
+      <svg class="stroke" viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="3" y="5" width="18" height="14" rx="1.5"/>
+        <path d="M3.5 6.5l8.5 6 8.5-6"/>
+      </svg>
+    </a>
+    <a href="https://discord.com/" target="_blank" rel="noopener" aria-label="Discord">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M19.27 5.33A17.4 17.4 0 0 0 15.05 4l-.21.43a16.1 16.1 0 0 0-5.68 0L8.95 4a17.4 17.4 0 0 0-4.22 1.33C2 9.46 1.26 13.5 1.63 17.47a17.6 17.6 0 0 0 5.37 2.7l1.08-1.5a11.3 11.3 0 0 1-1.72-.83l.42-.33a12.5 12.5 0 0 0 10.44 0l.42.33a11.3 11.3 0 0 1-1.72.83l1.08 1.5a17.6 17.6 0 0 0 5.37-2.7c.43-4.6-.7-8.6-3.1-12.14zM8.52 14.9c-1.06 0-1.93-.99-1.93-2.2 0-1.22.85-2.2 1.93-2.2 1.08 0 1.95.99 1.93 2.2 0 1.21-.85 2.2-1.93 2.2zm6.96 0c-1.06 0-1.93-.99-1.93-2.2 0-1.22.85-2.2 1.93-2.2s1.95.99 1.93 2.2c0 1.21-.85 2.2-1.93 2.2z"/>
+      </svg>
+    </a>
+  </aside>
+
+  <div class="scroll-indicator" aria-hidden="true">
+    <span class="word">Scroll</span>
+    <svg class="arrow" viewBox="0 0 14 28" aria-hidden="true">
+      <path class="track"  d="M7 2 V19 L2 14 M7 19 L12 14" />
+      <path class="runner" d="M7 2 V19 L2 14 M7 19 L12 14" />
+    </svg>
+  </div>
+</div>
+
+<script>
+/* Split headline lines into per-letter spans with staggered delays */
+(() => {
+  const lines = document.querySelectorAll('.headline .line');
+  let idx = 0;
+  const stagger = 35;     // ms per char
+  const lineGap = 120;    // ms between lines
+  lines.forEach((line, li) => {
+    const text = (line.getAttribute('data-text') ?? line.textContent ?? '').trim();
+    line.textContent = '';
+    for (const ch of text) {
+      if (ch === ' ') {
+        const sp = document.createElement('span');
+        sp.className = 'sp';
+        line.appendChild(sp);
+        continue;
+      }
+      const s = document.createElement('span');
+      s.className = 'ch';
+      s.textContent = ch;
+      s.style.setProperty('--d', (li * lineGap + idx * stagger) + 'ms');
+      line.appendChild(s);
+      idx++;
+    }
+    // reset character index between lines so they don't pile up
+    idx = 0;
+  });
+})();
+</script>
+
+<script>
+/* ----------------------------------------------------------
+   3D particle field that morphs between shapes:
+     torus → sphere → cube → cylinder → torus ...
+   - Rotation is bounded (yaw oscillates ±40°)
+   - Idle: subtle breathing
+   - Cursor: pushes particles away; they spring back slowly.
+---------------------------------------------------------- */
+(() => {
+  const canvas = document.getElementById('stage');
+  const ctx = canvas.getContext('2d');
+  let DPR = Math.min(window.devicePixelRatio || 1, 2);
+  let W = 0, H = 0;
+
+  const mouse = { x:-9999, y:-9999, active:false };
+  window.addEventListener('mousemove', e => {
+    mouse.x = e.clientX; mouse.y = e.clientY; mouse.active = true;
+  }, { passive:true });
+  window.addEventListener('mouseleave', () => { mouse.active=false; mouse.x=-9999; mouse.y=-9999; });
+  window.addEventListener('touchmove', e => {
+    const t = e.touches[0]; if(!t) return;
+    mouse.x = t.clientX; mouse.y = t.clientY; mouse.active = true;
+  }, { passive:true });
+  window.addEventListener('touchend', () => { mouse.active=false; mouse.x=-9999; mouse.y=-9999; });
+
+  let particles = [];
+  let N = 0;
+  let shapes = [];      // array of Float32Array of length N*3
+  let cx = 0, cy = 0;
+  let introStart = 0;   // ms timestamp of when the fly-in began
+  const INTRO_MS = 1400; // duration of fly-in animation
+  const PERSP = 1100;
+
+  // -------- shape generators --------
+  function buildTorus(N){
+    const arr = new Float32Array(N*3);
+    const base = Math.min(W, H);
+    const R = base * 0.30;
+    const r = base * 0.10;
+    const ratio = R / r;
+    const vSteps = Math.max(20, Math.round(Math.sqrt(N / ratio)));
+    const uSteps = Math.ceil(N / vSteps);
+    let i = 0;
+    outer:
+    for(let ui=0; ui<uSteps; ui++){
+      const u = (ui / uSteps) * Math.PI * 2;
+      for(let vi=0; vi<vSteps; vi++){
+        if(i >= N) break outer;
+        const v = ((vi + (ui % 2) * 0.5) / vSteps) * Math.PI * 2;
+        const cu = Math.cos(u), su = Math.sin(u);
+        const cv = Math.cos(v), sv = Math.sin(v);
+        arr[i*3+0] = (R + r * cv) * cu;
+        arr[i*3+1] = (R + r * cv) * su;
+        arr[i*3+2] = r * sv;
+        i++;
+      }
+    }
+    return arr;
+  }
+
+  function buildSphere(N){
+    const arr = new Float32Array(N*3);
+    const base = Math.min(W, H);
+    const R = base * 0.32;
+    const golden = Math.PI * (3 - Math.sqrt(5)); // ≈ golden angle
+    for(let i=0; i<N; i++){
+      const y = 1 - (i / Math.max(1, N - 1)) * 2;
+      const r = Math.sqrt(Math.max(0, 1 - y*y));
+      const theta = i * golden;
+      arr[i*3+0] = R * r * Math.cos(theta);
+      arr[i*3+1] = R * y;
+      arr[i*3+2] = R * r * Math.sin(theta);
+    }
+    return arr;
+  }
+
+  function buildCube(N){
+    const arr = new Float32Array(N*3);
+    const base = Math.min(W, H);
+    const S = base * 0.22;             // half-side
+    const perFace = Math.ceil(N / 6);
+    const grid = Math.max(2, Math.ceil(Math.sqrt(perFace)));
+    let i = 0;
+    for(let f=0; f<6; f++){
+      for(let a=0; a<grid; a++){
+        for(let b=0; b<grid; b++){
+          if(i >= N) break;
+          const u = (a / (grid - 1)) * 2 - 1;
+          const v = (b / (grid - 1)) * 2 - 1;
+          let x=0, y=0, z=0;
+          if(f===0){ x= S; y=u*S; z=v*S; }
+          else if(f===1){ x=-S; y=u*S; z=v*S; }
+          else if(f===2){ x=u*S; y= S; z=v*S; }
+          else if(f===3){ x=u*S; y=-S; z=v*S; }
+          else if(f===4){ x=u*S; y=v*S; z= S; }
+          else { x=u*S; y=v*S; z=-S; }
+          arr[i*3+0]=x; arr[i*3+1]=y; arr[i*3+2]=z;
+          i++;
+        }
+      }
+    }
+    // fill any leftover indices
+    while(i < N){
+      const j = i - 1;
+      arr[i*3+0] = arr[j*3+0];
+      arr[i*3+1] = arr[j*3+1];
+      arr[i*3+2] = arr[j*3+2];
+      i++;
+    }
+    return arr;
+  }
+
+  function buildCylinder(N){
+    const arr = new Float32Array(N*3);
+    const base = Math.min(W, H);
+    const R = base * 0.20;
+    const HH = base * 0.55;
+    // distribute on the side surface
+    const circ = 2 * Math.PI * R;
+    const ratio = circ / HH;
+    const hSteps = Math.max(8, Math.round(Math.sqrt(N / ratio)));
+    const aSteps = Math.ceil(N / hSteps);
+    let i = 0;
+    for(let ai=0; ai<aSteps; ai++){
+      const theta = (ai / aSteps) * Math.PI * 2;
+      const ct = Math.cos(theta), st = Math.sin(theta);
+      for(let hi=0; hi<hSteps; hi++){
+        if(i >= N) break;
+        const t = (hi / Math.max(1, hSteps - 1));
+        const y = t * HH - HH / 2;
+        arr[i*3+0] = R * ct;
+        arr[i*3+1] = y;
+        arr[i*3+2] = R * st;
+        i++;
+      }
+    }
+    while(i < N){
+      const j = i - 1;
+      arr[i*3+0] = arr[j*3+0];
+      arr[i*3+1] = arr[j*3+1];
+      arr[i*3+2] = arr[j*3+2];
+      i++;
+    }
+    return arr;
+  }
+
+  function buildStar(N){
+    const arr = new Float32Array(N*3);
+    const base = Math.min(W, H);
+    const R = base * 0.34;
+    const r = R * 0.42;
+    const points = 5;
+    for(let i=0; i<N; i++){
+      const theta = Math.random() * Math.PI * 2;
+      // star radius at this theta — segments alternate outer/inner
+      const seg = (theta / (Math.PI * 2)) * (points * 2);
+      const segF = seg - Math.floor(seg);
+      const isOuter = (Math.floor(seg) % 2) === 0;
+      const starR = isOuter ? (R - (R - r) * segF) : (r + (R - r) * segF);
+      const rNorm = Math.sqrt(Math.random());
+      const rad = rNorm * starR;
+      arr[i*3+0] = Math.cos(theta - Math.PI/2) * rad;     // point up
+      arr[i*3+1] = Math.sin(theta - Math.PI/2) * rad;
+      arr[i*3+2] = (Math.random() - 0.5) * base * 0.05;
+    }
+    return arr;
+  }
+
+  function buildFlower(N){
+    const arr = new Float32Array(N*3);
+    const base = Math.min(W, H);
+    const A = base * 0.34;   // max petal radius
+    const petals = 6;
+    const innerR = A * 0.16; // small disc in the middle
+    for(let i=0; i<N; i++){
+      const theta = Math.random() * Math.PI * 2;
+      // rose curve: r = A * |sin(k * theta)|, lifted by innerR so center is filled
+      const petalR = Math.abs(Math.sin(petals * 0.5 * theta));
+      const edge = innerR + (A - innerR) * petalR;
+      const rNorm = Math.sqrt(Math.random());
+      const rad = rNorm * edge;
+      arr[i*3+0] = Math.cos(theta) * rad;
+      arr[i*3+1] = Math.sin(theta) * rad;
+      arr[i*3+2] = (Math.random() - 0.5) * base * 0.05;
+    }
+    return arr;
+  }
+
+  function buildHeart(N){
+    const arr = new Float32Array(N*3);
+    const base = Math.min(W, H);
+    const SCALE = base * 0.20;
+    // Iconic heart = two circles on top + downward triangle.
+    // Lobe centers at (±0.5, 0.45), radius 0.55. Triangle apex at (0, -1.2).
+    const LX = 0.5, LY = 0.45, LR = 0.55;
+    const TY_TOP = 0.45, TY_BOT = -1.2, TY_RANGE = TY_TOP - TY_BOT;
+    const inHeart = (x, y) => {
+      // left lobe
+      const dxl = x + LX, dyl = y - LY;
+      if(dxl*dxl + dyl*dyl <= LR*LR) return true;
+      // right lobe
+      const dxr = x - LX, dyr = y - LY;
+      if(dxr*dxr + dyr*dyr <= LR*LR) return true;
+      // triangle pointing down
+      if(y >= TY_BOT && y <= TY_TOP){
+        const halfW = (y - TY_BOT) / TY_RANGE;   // 1 at top, 0 at bottom
+        if(Math.abs(x) <= halfW) return true;
+      }
+      return false;
+    };
+    let i = 0;
+    let guard = 0;
+    while(i < N && guard < N * 80){
+      guard++;
+      const x = (Math.random() * 2 - 1) * 1.15;
+      const y = Math.random() * 2.30 - 1.30;
+      if(inHeart(x, y)){
+        arr[i*3+0] =  x * SCALE;
+        arr[i*3+1] = -(y - 0.15) * SCALE;       // flip y for canvas + center
+        arr[i*3+2] = (Math.random() - 0.5) * base * 0.04;
+        i++;
+      }
+    }
+    while(i < N){
+      arr[i*3+0] = arr[(i-1)*3+0];
+      arr[i*3+1] = arr[(i-1)*3+1];
+      arr[i*3+2] = arr[(i-1)*3+2];
+      i++;
+    }
+    return arr;
+  }
+
+  function buildAll(){
+    N = Math.min(9000, Math.max(4500, Math.floor(W * H / 340)));
+    shapes = [
+      buildTorus(N),    // donut
+      buildStar(N),
+      buildSphere(N),   // circle
+      buildHeart(N),
+      buildFlower(N),
+    ];
+    // (re)init particles
+    if(particles.length !== N){
+      particles = new Array(N);
+      const initial = shapes[0];
+      for(let i=0; i<N; i++){
+        const ix = i*3;
+        const hx0 = cx + initial[ix];
+        const hy0 = cy + initial[ix+1];
+        // start positions: scattered outward from center so they FLY IN
+        const ang = Math.random() * Math.PI * 2;
+        const dist = Math.min(W, H) * (0.55 + Math.random() * 0.45);
+        particles[i] = {
+          // scattered start (used for the intro lerp)
+          sx: cx + Math.cos(ang) * dist,
+          sy: cy + Math.sin(ang) * dist,
+          x: cx + Math.cos(ang) * dist,
+          y: cy + Math.sin(ang) * dist,
+          vx: 0, vy: 0,
+          hx: hx0,
+          hy: hy0,
+          persp: 1,
+          depth: initial[ix+2],
+        };
+      }
+      introStart = performance.now();
+    }
+  }
+
+  function resize(){
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth;
+    H = window.innerHeight;
+    canvas.width  = Math.floor(W * DPR);
+    canvas.height = Math.floor(H * DPR);
+    canvas.style.width = W+'px';
+    canvas.style.height = H+'px';
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    cx = W/2;
+    cy = H/2;
+    buildAll();
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  const REPEL_RADIUS = 240;
+  const REPEL_RADIUS_SQ = REPEL_RADIUS*REPEL_RADIUS;
+  const REPEL_FORCE = 4200;
+  const SPRING   = 0.014;
+  const FRICTION = 0.92;
+
+  const baseR = 0x59, baseG = 0x3D, baseB = 0xF8;
+  function shadeRGBA(t, alpha){
+    const r = Math.round(baseR * t + 228 * (1-t) * 0.4);
+    const g = Math.round(baseG * t + 226 * (1-t) * 0.4);
+    const b = Math.round(baseB * t + 220 * (1-t) * 0.4);
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
+
+  function smoothstep(t){ return t*t*(3 - 2*t); }
+
+  // shape cycle timing
+  const HOLD = 3.0;     // seconds holding a shape
+  const TRANS = 2.0;    // seconds transitioning
+  const CYCLE = HOLD + TRANS;
+
+  let t0 = performance.now();
+  function tick(now){
+    const time = (now - t0) / 1000;
+    ctx.clearRect(0,0,W,H);
+
+    // bounded rotation (±~40° yaw)
+    const tiltX = -0.55 + Math.sin(time * 0.20) * 0.06;
+    const tiltY = Math.sin(time * 0.18) * 0.70;   // ±40°
+    const tiltZ = Math.sin(time * 0.15) * 0.05;
+    const cosX = Math.cos(tiltX), sinX = Math.sin(tiltX);
+    const cosY = Math.cos(tiltY), sinY = Math.sin(tiltY);
+    const cosZ = Math.cos(tiltZ), sinZ = Math.sin(tiltZ);
+
+    const breathe = 1 + Math.sin(time * 0.6) * 0.015;
+
+    // pick current shape pair + blend
+    const totalCycles = time / CYCLE;
+    const idx = Math.floor(totalCycles) % shapes.length;
+    const within = (totalCycles - Math.floor(totalCycles)) * CYCLE;
+    let blend = 0;
+    if(within > HOLD) blend = (within - HOLD) / TRANS;
+    blend = smoothstep(Math.min(1, Math.max(0, blend)));
+    const A = shapes[idx];
+    const B = shapes[(idx + 1) % shapes.length];
+    if(!A || !B){
+      // shapes not ready yet (or buildAll failed) — try again next frame
+      requestAnimationFrame(tick);
+      return;
+    }
+
+    const mx = mouse.x, my = mouse.y, active = mouse.active;
+
+    const BIN_COUNT = 24;
+    const bins = new Array(BIN_COUNT);
+    for(let i=0; i<BIN_COUNT; i++) bins[i] = [];
+
+    // approx z-range for binning
+    const ZR = Math.min(W, H) * 0.45;
+
+    for(let i=0; i<N; i++){
+      const p = particles[i];
+
+      // blended target in object space
+      const ix = i*3;
+      const ax = A[ix],   ay = A[ix+1],   az = A[ix+2];
+      const bx = B[ix],   by = B[ix+1],   bz = B[ix+2];
+      let x = (ax + (bx - ax) * blend) * breathe;
+      let y = (ay + (by - ay) * blend) * breathe;
+      let z = (az + (bz - az) * blend) * breathe;
+
+      // rotate Z
+      let xz = x * cosZ - y * sinZ;
+      let yz = x * sinZ + y * cosZ;
+      x = xz; y = yz;
+      // rotate X
+      let y1 = y * cosX - z * sinX;
+      let z1 = y * sinX + z * cosX;
+      // rotate Y
+      let x2 = x * cosY + z1 * sinY;
+      let z2 = -x * sinY + z1 * cosY;
+
+      const persp = PERSP / (PERSP + z2);
+      const hx = cx + x2 * persp;
+      const hy = cy + y1 * persp;
+
+      p.hx = hx; p.hy = hy; p.depth = z2; p.persp = persp;
+
+      // ---- INTRO fly-in ----
+      const introT = Math.min(1, (now - introStart) / INTRO_MS);
+      if(introT < 1){
+        // ease out cubic
+        const e = 1 - Math.pow(1 - introT, 3);
+        p.x = p.sx + (hx - p.sx) * e;
+        p.y = p.sy + (hy - p.sy) * e;
+        // tiny velocity to feed into spring on handoff
+        p.vx = (hx - p.sx) * 0.005;
+        p.vy = (hy - p.sy) * 0.005;
+      } else {
+        // physics (spring + cursor repel)
+        let ax2 = (hx - p.x) * SPRING;
+        let ay2 = (hy - p.y) * SPRING;
+
+        if(active){
+          const dx = p.x - mx, dy = p.y - my;
+          const d2 = dx*dx + dy*dy;
+          if(d2 < REPEL_RADIUS_SQ && d2 > 0.01){
+            const d = Math.sqrt(d2);
+            const falloff = 1 - d / REPEL_RADIUS;
+            const f = (REPEL_FORCE * falloff * falloff) / d;
+            ax2 += dx * f / 60;
+            ay2 += dy * f / 60;
+          }
+        }
+
+        p.vx = (p.vx + ax2) * FRICTION;
+        p.vy = (p.vy + ay2) * FRICTION;
+        p.x += p.vx;
+        p.y += p.vy;
+      }
+
+      // bin
+      const t = (z2 + ZR) / (2 * ZR);
+      let bi = Math.floor(t * BIN_COUNT);
+      if(bi < 0) bi = 0; else if(bi >= BIN_COUNT) bi = BIN_COUNT-1;
+      bins[bi].push(p);
+    }
+
+    // render back-to-front
+    for(let bi = BIN_COUNT-1; bi >= 0; bi--){
+      const bucket = bins[bi];
+      for(let k=0; k<bucket.length; k++){
+        const p = bucket[k];
+        const tBright = Math.min(1, Math.max(0.15, p.persp * 0.95));
+        const alpha = 0.18 + 0.78 * tBright;
+        const size = 0.6 + 2.2 * tBright;
+
+        ctx.fillStyle = shadeRGBA(tBright, alpha);
+        if(size > 1.6){
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, size*0.55, 0, Math.PI*2);
+          ctx.fill();
+        }else{
+          ctx.fillRect(p.x - size/2, p.y - size/2, size, size);
+        }
+      }
+    }
+
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+})();
+</script>
+
+</body>
+</html>

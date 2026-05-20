@@ -1,0 +1,115 @@
+:root {
+  --bg: #e4e2dc;
+  --ink: #593df8;
+  --black: #0c0c0c;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  overflow: hidden;
+  cursor: default;
+}
+
+.ui > * {
+  pointer-events: auto;
+}
+
+.headline-wrapper {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4vw;
+  pointer-events: none;
+}
+
+.headline-content {
+  text-align: center;
+  max-width: min(80vw, 800px);
+}
+
+@media (max-width: 768px) {
+  .headline-wrapper {
+    align-items: center;
+    justify-content: center;
+    padding: 0 7vw;
+  }
+
+  .headline-content {
+    text-align: center;
+    max-width: 100%;
+  }
+}
+
+/* letter fly-in */
+.ch {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(0.6em);
+  filter: blur(6px);
+  animation: chIn 0.7s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+  animation-delay: var(--d, 0ms);
+}
+
+.sp {
+  display: inline-block;
+  width: 0.28em;
+}
+
+@keyframes chIn {
+  0%   { opacity: 0; transform: translateY(0.6em); filter: blur(6px); }
+  60%  { opacity: 1; filter: blur(0); }
+  100% { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+
+/* scroll arrow: runner goes down stem, splits into branches, crossfades back into stem */
+@keyframes scrollStem {
+  0%    { stroke-dashoffset: -3.2; opacity: 1; }
+  46%   { opacity: 1; }
+  52%   { stroke-dashoffset: -17;  opacity: 0; }
+  53%   { stroke-dashoffset: 0;    opacity: 0; }
+  88%   { stroke-dashoffset: 0;    opacity: 0; }
+  98%   { opacity: 1; }
+  100%  { stroke-dashoffset: -3.2; opacity: 1; }
+}
+
+@keyframes scrollBranch {
+  0%    { stroke-dashoffset: 0;  opacity: 0; }
+  46%   { stroke-dashoffset: 0;  opacity: 0; }
+  52%   { opacity: 1; }
+  88%   { opacity: 1; }
+  98%   { stroke-dashoffset: -7; opacity: 0; }
+  99%   { stroke-dashoffset: 0;  opacity: 0; }
+  100%  { stroke-dashoffset: 0;  opacity: 0; }
+}
+
+.scroll-stem {
+  stroke: #0c0c0c;
+  stroke-width: 1.5;
+  fill: none;
+  stroke-linecap: butt;
+  stroke-dasharray: 8 100;
+  animation: scrollStem 2.4s linear infinite;
+}
+
+.scroll-branch {
+  stroke: #0c0c0c;
+  stroke-width: 1.5;
+  fill: none;
+  stroke-linecap: butt;
+  stroke-dasharray: 5 100;
+  animation: scrollBranch 2.4s linear infinite;
+}
