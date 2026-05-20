@@ -12,13 +12,13 @@
 
 html, body {
   height: 100%;
+  overflow-x: hidden;
 }
 
 body {
   background: var(--bg);
   color: var(--ink);
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-  overflow: hidden;
   cursor: default;
 }
 

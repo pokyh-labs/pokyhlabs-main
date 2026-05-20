@@ -4,18 +4,19 @@ import Headline from "@/components/Headline";
 import RailLine from "@/components/RailLine";
 import Socials from "@/components/Socials";
 import ScrollIndicator from "@/components/ScrollIndicator";
+import HomeClientWrapper from "@/components/HomeClientWrapper";
 
 export default function Home() {
   return (
-    <>
+    <HomeClientWrapper>
       <ParticleCanvas />
-      <div className="ui" style={{ position: "fixed", inset: 0, zIndex: 2, pointerEvents: "none" }}>
+      <div className="ui" style={{ position: "absolute", inset: 0, zIndex: 2, pointerEvents: "none" }}>
         <Header />
         <Headline />
         <RailLine />
         <Socials />
         <ScrollIndicator />
       </div>
-    </>
+    </HomeClientWrapper>
   );
 }
