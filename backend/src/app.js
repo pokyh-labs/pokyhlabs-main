@@ -144,7 +144,11 @@ async function start() {
       logger.info(`Server running on http://localhost:${PORT} (${process.env.NODE_ENV || 'development'})`);
     });
   } catch (err) {
-    logger.error('Failed to start', { err: err.message });
+    logger.error('Failed to start', {
+      name: err.name,
+      message: err.message || '(no message)',
+      code: err.original?.code || err.code,
+    });
     process.exit(1);
   }
 }

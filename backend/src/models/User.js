@@ -13,7 +13,7 @@ module.exports = (sequelize) => {
       validate: { isEmail: true },
     },
     password_hash: { type: DataTypes.STRING(255), allowNull: false },
-    role: { type: DataTypes.ENUM('admin', 'editor'), defaultValue: 'editor', allowNull: false },
+    role: { type: DataTypes.STRING(10), defaultValue: 'editor', allowNull: false, validate: { isIn: [['admin', 'editor']] } },
     failed_login_attempts: { type: DataTypes.INTEGER, defaultValue: 0 },
     locked_until: { type: DataTypes.DATE, allowNull: true },
     last_login: { type: DataTypes.DATE, allowNull: true },

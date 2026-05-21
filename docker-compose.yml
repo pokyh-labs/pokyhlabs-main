@@ -1,22 +1,5 @@
 services:
 
-  # ── MySQL Datenbank ────────────────────────────────────────────────
-  mysql:
-    image: mysql:8.0
-    restart: unless-stopped
-    environment:
-      MYSQL_DATABASE: ${DB_NAME:-pokyhlabs}
-      MYSQL_USER: ${DB_USER:-pokyhlabs_user}
-      MYSQL_PASSWORD: ${DB_PASSWORD}
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-changeme_root_CHANGE_ME}
-    volumes:
-      - mysql_data:/var/lib/mysql
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${DB_ROOT_PASSWORD:-changeme_root_CHANGE_ME}"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-
   # ── Express Backend API ────────────────────────────────────────────
   backend:
     build:
@@ -25,16 +8,14 @@ services:
     restart: unless-stopped
     env_file: .env
     environment:
-      DB_HOST: mysql
       NODE_ENV: production
+      SQLITE_PATH: /app/data/database.sqlite
     ports:
       - "${PORT:-3001}:${PORT:-3001}"
-    depends_on:
-      mysql:
-        condition: service_healthy
     volumes:
       - ./backend/uploads:/app/uploads
       - ./backend/logs:/app/logs
+      - sqlite_data:/app/data
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:${PORT:-3001}/api/blogs"]
       interval: 15s
@@ -69,4 +50,4 @@ services:
       - tunnel
 
 volumes:
-  mysql_data:
+  sqlite_data:

@@ -12,8 +12,9 @@ module.exports = (sequelize) => {
     hostname: { type: DataTypes.STRING(255), allowNull: true },
     local_service: { type: DataTypes.STRING(255), allowNull: true },
     status: {
-      type: DataTypes.ENUM('stopped', 'running', 'error'),
+      type: DataTypes.STRING(10),
       defaultValue: 'stopped',
+      validate: { isIn: [['stopped', 'running', 'error']] },
     },
     service_installed: { type: DataTypes.BOOLEAN, defaultValue: false },
   }, {
