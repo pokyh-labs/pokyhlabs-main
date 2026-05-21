@@ -32,35 +32,63 @@ export default function Login({ onLogin }) {
 
   return (
     <div style={{
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      minHeight: '100vh', padding: '1rem',
-      background: 'radial-gradient(ellipse 80% 60% at 50% -10%, rgba(108,71,255,0.12) 0%, transparent 70%)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: '100vh',
+      padding: '1rem',
+      background: 'var(--bg)',
     }}>
-      <div style={{ width: '100%', maxWidth: 380 }}>
-        {/* Logo mark */}
+      {/* Subtle accent glow */}
+      <div style={{
+        position: 'fixed',
+        top: 0, left: '50%',
+        transform: 'translateX(-50%)',
+        width: 600, height: 300,
+        background: 'radial-gradient(ellipse at 50% 0%, rgba(89,61,248,0.07) 0%, transparent 70%)',
+        pointerEvents: 'none',
+      }} />
+
+      <div style={{ width: '100%', maxWidth: 360, position: 'relative' }}>
+        {/* Brand mark */}
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <div style={{
-            width: 52, height: 52, background: 'var(--accent-dim)',
-            border: '1px solid rgba(108,71,255,0.3)',
-            borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: 48, height: 48,
+            background: 'var(--accent)',
+            borderRadius: 13,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
             margin: '0 auto 1rem',
+            boxShadow: '0 4px 16px rgba(89,61,248,0.25)',
           }}>
-            <i className="bi bi-shield-lock" style={{ fontSize: '1.4rem', color: 'var(--accent)' }} />
+            <i className="bi bi-shield-lock-fill" style={{ fontSize: '1.3rem', color: '#fff' }} />
           </div>
-          <h1 style={{ color: 'var(--text)', fontSize: '1.35rem', fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 4 }}>
+          <h1 style={{
+            color: 'var(--text)',
+            fontSize: '1.25rem',
+            fontWeight: 600,
+            letterSpacing: '-0.03em',
+            marginBottom: 4,
+          }}>
             pokyh.studio
           </h1>
-          <p style={{ color: 'var(--text3)', fontSize: '0.85rem' }}>Admin Dashboard</p>
+          <p style={{ color: 'var(--text3)', fontSize: '0.8125rem' }}>Admin Dashboard</p>
         </div>
 
-        <div className="card" style={{ padding: '1.75rem' }}>
-          <form onSubmit={handleSubmit}>
-            <div className="form-group">
-              <label className="form-label">Username</label>
+        {/* Card */}
+        <div className="card" style={{
+          padding: '1.75rem',
+          background: 'var(--bg2)',
+        }}>
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+            {/* Username */}
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">Benutzername</label>
               <div style={{ position: 'relative' }}>
                 <i className="bi bi-person" style={{
-                  position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)',
-                  color: 'var(--text3)', fontSize: '1rem', pointerEvents: 'none',
+                  position: 'absolute', left: '0.75rem', top: '50%',
+                  transform: 'translateY(-50%)',
+                  color: 'var(--text3)', fontSize: '0.875rem',
+                  pointerEvents: 'none',
                 }} />
                 <input
                   type="text"
@@ -74,12 +102,15 @@ export default function Login({ onLogin }) {
               </div>
             </div>
 
-            <div className="form-group" style={{ marginBottom: error ? '1rem' : '1.5rem' }}>
+            {/* Password */}
+            <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label">Passwort</label>
               <div style={{ position: 'relative' }}>
                 <i className="bi bi-lock" style={{
-                  position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)',
-                  color: 'var(--text3)', fontSize: '1rem', pointerEvents: 'none',
+                  position: 'absolute', left: '0.75rem', top: '50%',
+                  transform: 'translateY(-50%)',
+                  color: 'var(--text3)', fontSize: '0.875rem',
+                  pointerEvents: 'none',
                 }} />
                 <input
                   type={showPw ? 'text' : 'password'}
@@ -93,29 +124,34 @@ export default function Login({ onLogin }) {
                 <button
                   type="button"
                   onClick={() => setShowPw(v => !v)}
+                  tabIndex={-1}
                   style={{
-                    position: 'absolute', right: '0.625rem', top: '50%', transform: 'translateY(-50%)',
+                    position: 'absolute', right: '0.625rem', top: '50%',
+                    transform: 'translateY(-50%)',
                     background: 'none', border: 'none', padding: '0.2rem',
-                    color: 'var(--text3)', cursor: 'pointer', borderRadius: 4,
+                    color: 'var(--text3)', cursor: 'pointer',
                     display: 'flex', alignItems: 'center',
                   }}
-                  tabIndex={-1}
                 >
-                  <i className={`bi bi-eye${showPw ? '-slash' : ''}`} style={{ fontSize: '0.9rem' }} />
+                  <i className={`bi bi-eye${showPw ? '-slash' : ''}`} style={{ fontSize: '0.85rem' }} />
                 </button>
               </div>
             </div>
 
             {error && (
-              <div className="alert alert-error" style={{ marginBottom: '1rem' }}>
+              <div className="alert alert-error" style={{ margin: 0 }}>
                 <i className="bi bi-exclamation-circle" />
                 {error}
               </div>
             )}
 
-            <button type="submit" className="btn-primary w-full" disabled={loading}
-              style={{ padding: '0.625rem', justifyContent: 'center', fontSize: '0.9rem' }}>
-              {loading ? <span className="spinner" /> : <i className="bi bi-arrow-right-circle" />}
+            <button
+              type="submit"
+              className="btn-primary w-full"
+              disabled={loading}
+              style={{ padding: '0.6rem', justifyContent: 'center', fontSize: '0.875rem', marginTop: 4 }}
+            >
+              {loading ? <span className="spinner" /> : <i className="bi bi-arrow-right-circle-fill" />}
               {loading ? 'Einloggen…' : 'Einloggen'}
             </button>
           </form>

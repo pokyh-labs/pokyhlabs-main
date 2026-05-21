@@ -10,8 +10,8 @@ function StepHeader({ number, title, subtitle, done, active }) {
       <div style={{
         width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: done ? 'var(--success-bg)' : active ? 'var(--accent-dim)' : 'var(--bg3)',
-        border: `1px solid ${done ? 'var(--success-border)' : active ? 'rgba(108,71,255,0.35)' : 'var(--border)'}`,
+        background: done ? 'var(--success-bg)' : active ? 'var(--accent-dim)' : 'rgba(12,12,12,0.05)',
+        border: `1px solid ${done ? 'var(--success-border)' : active ? 'rgba(89,61,248,0.30)' : 'var(--border)'}`,
         color: done ? 'var(--success)' : active ? 'var(--accent)' : 'var(--text3)',
         fontSize: done ? '0.9rem' : '0.82rem',
         fontWeight: 600,

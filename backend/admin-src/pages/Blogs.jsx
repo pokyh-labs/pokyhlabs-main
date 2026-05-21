@@ -11,15 +11,15 @@ const TOOLBAR_GROUPS = [
     { tag: 'h4', label: 'H4', title: 'Überschrift 4' },
   ]},
   { key: 'inline', items: [
-    { tag: 'strong', label: 'B', title: 'Fett', style: { fontWeight: 700 } },
-    { tag: 'em',     label: 'I', title: 'Kursiv', style: { fontStyle: 'italic' } },
-    { tag: 'u',      label: 'U', title: 'Unterstrichen', style: { textDecoration: 'underline' } },
-    { tag: 's',      label: 'S', title: 'Durchgestrichen', style: { textDecoration: 'line-through' } },
+    { tag: 'strong', label: 'B', title: 'Fett',           style: { fontWeight: 700 } },
+    { tag: 'em',     label: 'I', title: 'Kursiv',         style: { fontStyle: 'italic' } },
+    { tag: 'u',      label: 'U', title: 'Unterstrichen',  style: { textDecoration: 'underline' } },
+    { tag: 's',      label: 'S', title: 'Durchgestrichen',style: { textDecoration: 'line-through' } },
   ]},
   { key: 'structure', items: [
-    { tag: 'a',  label: 'Link',   title: 'Hyperlink einfügen' },
+    { tag: 'a',  label: 'Link',    title: 'Hyperlink einfügen' },
     { tag: 'ul', label: '• Liste', title: 'Aufzählung' },
-    { tag: 'ol', label: '1. Liste', title: 'Nummerierte Liste' },
+    { tag: 'ol', label: '1. Liste',title: 'Nummerierte Liste' },
   ]},
   { key: 'code', items: [
     { tag: 'code',       label: '</>',  title: 'Code (inline)' },
@@ -41,15 +41,15 @@ function BlogEditor({ blog, onSave, onCancel }) {
       ? { title: blog.title, content: blog.content, excerpt: blog.excerpt || '', status: blog.status, image_alt: blog.image_alt || '' }
       : { ...EMPTY_FORM }
   );
-  const [imageFile, setImageFile] = useState(null);
+  const [imageFile, setImageFile]     = useState(null);
   const [imagePreview, setImagePreview] = useState(blog?.image_url || null);
-  const [saving, setSaving] = useState(false);
-  const [importing, setImporting] = useState(false);
-  const [error, setError] = useState('');
-  const [viewMode, setViewMode] = useState('split');
-  const taRef = useRef();
+  const [saving, setSaving]           = useState(false);
+  const [importing, setImporting]     = useState(false);
+  const [error, setError]             = useState('');
+  const [viewMode, setViewMode]       = useState('split');
+  const taRef         = useRef();
   const htmlImportRef = useRef();
-  const pdfImportRef = useRef();
+  const pdfImportRef  = useRef();
 
   function set(k, v) { setForm(f => ({ ...f, [k]: v })); }
 
@@ -85,7 +85,7 @@ function BlogEditor({ blog, onSave, onCancel }) {
     setTimeout(() => {
       ta.focus();
       ta.selectionStart = start + ins.length;
-      ta.selectionEnd = start + ins.length;
+      ta.selectionEnd   = start + ins.length;
     }, 0);
   }
 
@@ -98,7 +98,6 @@ function BlogEditor({ blog, onSave, onCancel }) {
       try {
         const parser = new DOMParser();
         const doc = parser.parseFromString(html, 'text/html');
-        // Strip dangerous elements
         doc.querySelectorAll('script, style, iframe, link, meta, noscript').forEach(el => el.remove());
         if (!form.title && doc.title) set('title', doc.title);
         set('content', doc.body?.innerHTML || '');
@@ -119,7 +118,7 @@ function BlogEditor({ blog, onSave, onCancel }) {
     try {
       const fd = new FormData();
       fd.append('pdf', file);
-      const res = await apiFetch('/blogs/import/pdf', { method: 'POST', body: fd });
+      const res  = await apiFetch('/blogs/import/pdf', { method: 'POST', body: fd });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Import fehlgeschlagen');
       set('content', data.content);
@@ -165,16 +164,18 @@ function BlogEditor({ blog, onSave, onCancel }) {
     }
   }
 
-  const divider = <div style={{ width: 1, height: 18, background: 'var(--border)', margin: '0 2px', flexShrink: 0 }} />;
+  const divider = (
+    <div style={{ width: 1, height: 16, background: 'var(--border)', margin: '0 2px', flexShrink: 0 }} />
+  );
 
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 style={{ color: 'var(--text)', fontSize: '1.4rem', fontWeight: 600, letterSpacing: '-0.02em' }}>
+          <h2 style={{ color: 'var(--text)', fontSize: '1.3rem', fontWeight: 600, letterSpacing: '-0.03em' }}>
             {blog ? 'Blog bearbeiten' : 'Neuer Blog'}
           </h2>
-          <p style={{ color: 'var(--text3)', fontSize: '0.82rem', marginTop: 4 }}>
+          <p style={{ color: 'var(--text3)', fontSize: '0.8rem', marginTop: 3 }}>
             Inhalt erstellen und veröffentlichen
           </p>
         </div>
@@ -184,8 +185,8 @@ function BlogEditor({ blog, onSave, onCancel }) {
       </div>
 
       <form onSubmit={handleSubmit}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '1rem' }}>
-          {/* Main editor column */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 288px', gap: '0.875rem' }}>
+          {/* Main editor */}
           <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {/* Title */}
             <div className="form-group" style={{ marginBottom: 0 }}>
@@ -195,14 +196,16 @@ function BlogEditor({ blog, onSave, onCancel }) {
                 onChange={e => set('title', e.target.value)}
                 placeholder="Blog-Titel…"
                 required
-                style={{ fontSize: '1.05rem', fontWeight: 500 }}
+                style={{ fontSize: '1rem', fontWeight: 500 }}
               />
             </div>
 
             {/* Toolbar */}
             <div style={{
               display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center',
-              padding: '6px 0', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)',
+              padding: '5px 0',
+              borderTop: '1px solid var(--border)',
+              borderBottom: '1px solid var(--border)',
             }}>
               {TOOLBAR_GROUPS.map((group, gi) => (
                 <React.Fragment key={group.key}>
@@ -211,7 +214,7 @@ function BlogEditor({ blog, onSave, onCancel }) {
                     <button
                       key={tag} type="button" className="btn-outline btn-sm"
                       onClick={() => insertTag(tag)} title={title}
-                      style={{ padding: '2px 7px', fontSize: '0.77rem', minWidth: 28, ...(btnStyle || {}) }}
+                      style={{ padding: '2px 6px', fontSize: '0.75rem', minWidth: 26, ...(btnStyle || {}) }}
                     >
                       {label}
                     </button>
@@ -219,15 +222,15 @@ function BlogEditor({ blog, onSave, onCancel }) {
                 </React.Fragment>
               ))}
 
-              {/* View mode toggles */}
-              <div style={{ marginLeft: 'auto', display: 'flex', gap: 2 }}>
+              {/* View mode */}
+              <div style={{ marginLeft: 'auto', display: 'flex', gap: 1 }}>
                 {Object.entries(VIEW_LABELS).map(([mode, label]) => (
                   <button
                     key={mode} type="button"
                     onClick={() => setViewMode(mode)}
                     className="btn-outline btn-sm"
                     style={{
-                      padding: '2px 9px', fontSize: '0.75rem',
+                      padding: '2px 8px', fontSize: '0.73rem',
                       ...(viewMode === mode
                         ? { background: 'var(--accent)', color: '#fff', borderColor: 'var(--accent)' }
                         : {}),
@@ -240,21 +243,21 @@ function BlogEditor({ blog, onSave, onCancel }) {
             </div>
 
             {/* Import bar */}
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
               <input ref={htmlImportRef} type="file" accept=".html,.htm" style={{ display: 'none' }} onChange={handleHtmlImport} />
-              <input ref={pdfImportRef} type="file" accept=".pdf" style={{ display: 'none' }} onChange={handlePdfImport} />
+              <input ref={pdfImportRef}  type="file" accept=".pdf"       style={{ display: 'none' }} onChange={handlePdfImport} />
 
               <button type="button" className="btn-outline btn-sm" onClick={() => htmlImportRef.current?.click()}>
-                <i className="bi bi-file-earmark-code" /> HTML importieren
+                <i className="bi bi-file-earmark-code" /> HTML
               </button>
               <button type="button" className="btn-outline btn-sm" disabled={importing} onClick={() => pdfImportRef.current?.click()}>
                 {importing
-                  ? <><span className="spinner" style={{ width: 11, height: 11, margin: '0 2px 0 0' }} />Importiere…</>
-                  : <><i className="bi bi-file-earmark-pdf" /> PDF importieren</>}
+                  ? <><span className="spinner" style={{ width: 10, height: 10 }} />Importiere…</>
+                  : <><i className="bi bi-file-earmark-pdf" /> PDF</>}
               </button>
 
-              <span style={{ marginLeft: 'auto', color: 'var(--text3)', fontSize: '0.73rem' }}>
-                {wordCount} Wörter · {readTime} Min. Lesezeit
+              <span style={{ marginLeft: 'auto', color: 'var(--text3)', fontSize: '0.72rem' }}>
+                {wordCount} Wörter · {readTime} Min.
               </span>
             </div>
 
@@ -262,8 +265,8 @@ function BlogEditor({ blog, onSave, onCancel }) {
             <div style={{
               display: 'grid',
               gridTemplateColumns: viewMode === 'split' ? '1fr 1fr' : '1fr',
-              gap: 8,
-              minHeight: 400,
+              gap: 6,
+              minHeight: 380,
             }}>
               {viewMode !== 'preview' && (
                 <textarea
@@ -273,24 +276,24 @@ function BlogEditor({ blog, onSave, onCancel }) {
                   placeholder="HTML-Inhalt eingeben oder Datei importieren…"
                   required
                   className="font-mono"
-                  style={{ minHeight: 400, fontSize: '0.78rem', lineHeight: 1.65, resize: 'vertical' }}
+                  style={{ minHeight: 380, fontSize: '0.77rem', lineHeight: 1.65, resize: 'vertical' }}
                 />
               )}
               {viewMode !== 'edit' && (
                 <div
                   style={{
-                    minHeight: 400,
-                    padding: '1rem 1.25rem',
+                    minHeight: 380,
+                    padding: '1rem 1.125rem',
                     border: '1px solid var(--border)',
                     borderRadius: 6,
                     overflow: 'auto',
-                    background: 'var(--bg)',
+                    background: '#fff',
                     lineHeight: 1.75,
-                    fontSize: '0.9rem',
+                    fontSize: '0.875rem',
                     color: 'var(--text)',
                   }}
                   dangerouslySetInnerHTML={{
-                    __html: form.content || '<p style="color:var(--text3);font-style:italic;margin:0">Vorschau erscheint hier…</p>',
+                    __html: form.content || '<p style="color:#999;font-style:italic;margin:0">Vorschau erscheint hier…</p>',
                   }}
                 />
               )}
@@ -303,15 +306,15 @@ function BlogEditor({ blog, onSave, onCancel }) {
                 value={form.excerpt}
                 onChange={e => set('excerpt', e.target.value)}
                 placeholder="Kurze Zusammenfassung für die Blog-Liste…"
-                style={{ minHeight: 72, resize: 'vertical' }}
+                style={{ minHeight: 64, resize: 'vertical' }}
               />
             </div>
           </div>
 
           {/* Sidebar */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
             <div className="card">
-              <h6 style={{ color: 'var(--text)', marginBottom: '1rem', fontWeight: 600, fontSize: '0.875rem' }}>
+              <h6 style={{ color: 'var(--text)', marginBottom: '0.875rem', fontWeight: 600, fontSize: '0.8125rem' }}>
                 Einstellungen
               </h6>
 
@@ -327,26 +330,30 @@ function BlogEditor({ blog, onSave, onCancel }) {
                 <label className="form-label">Titelbild</label>
                 <input type="file" accept="image/jpeg,image/png,image/gif,image/webp" onChange={onImageChange} />
                 {imagePreview && (
-                  <div style={{ marginTop: '0.75rem' }}>
+                  <div style={{ marginTop: '0.625rem' }}>
                     <img src={imagePreview} alt="Vorschau" style={{
-                      width: '100%', maxHeight: 140, borderRadius: 8, objectFit: 'cover',
+                      width: '100%', maxHeight: 130, borderRadius: 7, objectFit: 'cover',
                       border: '1px solid var(--border)',
                     }} />
                     <button type="button" className="btn-outline btn-sm w-full"
                       onClick={() => { setImageFile(null); setImagePreview(null); }}
-                      style={{ justifyContent: 'center', marginTop: '0.5rem' }}>
-                      <i className="bi bi-x-circle" /> Bild entfernen
+                      style={{ justifyContent: 'center', marginTop: '0.4rem' }}>
+                      <i className="bi bi-x-circle" /> Entfernen
                     </button>
                   </div>
                 )}
-                <p style={{ color: 'var(--text3)', fontSize: '0.73rem', marginTop: '0.375rem' }}>
+                <p style={{ color: 'var(--text3)', fontSize: '0.72rem', marginTop: '0.3rem' }}>
                   JPEG, PNG, GIF, WebP – max. 5 MB
                 </p>
               </div>
 
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label">Bild Alt-Text</label>
-                <input value={form.image_alt} onChange={e => set('image_alt', e.target.value)} placeholder="Bildbeschreibung…" />
+                <input
+                  value={form.image_alt}
+                  onChange={e => set('image_alt', e.target.value)}
+                  placeholder="Bildbeschreibung…"
+                />
               </div>
             </div>
 
@@ -357,7 +364,7 @@ function BlogEditor({ blog, onSave, onCancel }) {
             )}
 
             <button type="submit" className="btn-primary w-full" disabled={saving}
-              style={{ padding: '0.625rem', justifyContent: 'center' }}>
+              style={{ padding: '0.6rem', justifyContent: 'center' }}>
               {saving ? <span className="spinner" /> : <i className="bi bi-floppy" />}
               {saving ? 'Speichern…' : 'Speichern'}
             </button>
@@ -370,15 +377,12 @@ function BlogEditor({ blog, onSave, onCancel }) {
 
 export default function Blogs() {
   const { request, loading } = useApi();
-  const [blogs, setBlogs] = useState([]);
-  const [view, setView] = useState('list');
+  const [blogs, setBlogs]   = useState([]);
+  const [view, setView]     = useState('list');
   const [editBlog, setEditBlog] = useState(null);
 
   async function load() {
-    try {
-      const data = await request('/blogs/admin/all');
-      setBlogs(data);
-    } catch {}
+    try { setBlogs(await request('/blogs/admin/all')); } catch {}
   }
 
   useEffect(() => { load(); }, []);
@@ -389,25 +393,33 @@ export default function Blogs() {
       await request(`/blogs/${id}`, { method: 'DELETE' });
       toast('Blog gelöscht');
       load();
-    } catch (err) {
-      toast(err.message, 'error');
-    }
+    } catch (err) { toast(err.message, 'error'); }
   }
 
   function openEditor(blog = null) { setEditBlog(blog); setView('editor'); }
-  function closeEditor() { setView('list'); setEditBlog(null); load(); }
+  function closeEditor()           { setView('list'); setEditBlog(null); load(); }
   function fmt(d) { return d ? new Date(d).toLocaleDateString('de-DE') : '–'; }
 
   if (view === 'editor') {
-    return <BlogEditor blog={editBlog} onSave={closeEditor} onCancel={() => { setView('list'); setEditBlog(null); }} />;
+    return (
+      <BlogEditor
+        blog={editBlog}
+        onSave={closeEditor}
+        onCancel={() => { setView('list'); setEditBlog(null); }}
+      />
+    );
   }
 
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 style={{ color: 'var(--text)', fontSize: '1.4rem', fontWeight: 600, letterSpacing: '-0.02em' }}>Blogs</h2>
-          <p style={{ color: 'var(--text3)', fontSize: '0.82rem', marginTop: 4 }}>Alle Beiträge verwalten</p>
+          <h2 style={{ color: 'var(--text)', fontSize: '1.3rem', fontWeight: 600, letterSpacing: '-0.03em' }}>
+            Blogs
+          </h2>
+          <p style={{ color: 'var(--text3)', fontSize: '0.8rem', marginTop: 3 }}>
+            Alle Beiträge verwalten
+          </p>
         </div>
         <button className="btn-primary" onClick={() => openEditor()}>
           <i className="bi bi-plus-lg" />Neuer Blog
@@ -417,12 +429,12 @@ export default function Blogs() {
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
         {loading ? (
           <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text3)' }}>
-            <span className="spinner" style={{ width: 20, height: 20, borderTopColor: 'var(--accent)' }} />
+            <span className="spinner" style={{ width: 18, height: 18, borderTopColor: 'var(--accent)', borderColor: 'rgba(0,0,0,0.08)' }} />
           </div>
         ) : blogs.length === 0 ? (
           <div style={{ padding: '3.5rem', textAlign: 'center', color: 'var(--text3)' }}>
-            <i className="bi bi-journal-x" style={{ fontSize: '2rem', display: 'block', marginBottom: '0.875rem' }} />
-            <p style={{ marginBottom: '1.25rem', fontSize: '0.875rem' }}>Noch keine Blogs. Erstelle deinen ersten!</p>
+            <i className="bi bi-journal-x" style={{ fontSize: '1.75rem', display: 'block', marginBottom: '0.75rem' }} />
+            <p style={{ marginBottom: '1.25rem', fontSize: '0.8125rem' }}>Noch keine Blogs. Erstelle deinen ersten!</p>
             <button className="btn-primary" onClick={() => openEditor()} style={{ margin: '0 auto' }}>
               <i className="bi bi-plus-lg" />Jetzt erstellen
             </button>
@@ -439,19 +451,26 @@ export default function Blogs() {
             <tbody>
               {blogs.map(b => (
                 <tr key={b.id}>
-                  <td style={{ width: 60 }}>
+                  <td style={{ width: 56 }}>
                     {b.image_url
-                      ? <img src={b.image_url} alt="" style={{ width: 46, height: 34, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--border)' }} />
+                      ? <img src={b.image_url} alt="" style={{
+                          width: 42, height: 32, objectFit: 'cover',
+                          borderRadius: 6, border: '1px solid var(--border)',
+                        }} />
                       : <div style={{
-                          width: 46, height: 34, borderRadius: 6, background: 'var(--bg3)',
-                          border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          width: 42, height: 32, borderRadius: 6,
+                          background: 'rgba(12,12,12,0.05)',
+                          border: '1px solid var(--border)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
                         }}>
-                          <i className="bi bi-image" style={{ color: 'var(--text3)', fontSize: '1rem' }} />
+                          <i className="bi bi-image" style={{ color: 'var(--text3)', fontSize: '0.875rem' }} />
                         </div>}
                   </td>
                   <td style={{ maxWidth: 260 }}>
-                    <div className="truncate" style={{ color: 'var(--text)', fontWeight: 500 }}>{b.title}</div>
-                    <div style={{ color: 'var(--text3)', fontSize: '0.72rem', marginTop: 2 }}>/{b.slug}</div>
+                    <div className="truncate" style={{ color: 'var(--text)', fontWeight: 500, fontSize: '0.8125rem' }}>
+                      {b.title}
+                    </div>
+                    <div style={{ color: 'var(--text3)', fontSize: '0.7rem', marginTop: 1 }}>/{b.slug}</div>
                   </td>
                   <td>
                     <span className={`badge badge-${b.status}`}>
@@ -459,8 +478,8 @@ export default function Blogs() {
                       {b.status === 'published' ? 'Veröffentlicht' : 'Entwurf'}
                     </span>
                   </td>
-                  <td style={{ color: 'var(--text3)', fontSize: '0.8rem' }}>{fmt(b.created_at)}</td>
-                  <td style={{ color: 'var(--text3)', fontSize: '0.85rem' }}>{b.views ?? 0}</td>
+                  <td style={{ color: 'var(--text3)', fontSize: '0.78rem' }}>{fmt(b.created_at)}</td>
+                  <td style={{ color: 'var(--text3)', fontSize: '0.8rem' }}>{b.views ?? 0}</td>
                   <td>
                     <div className="flex gap-1">
                       <button className="btn-outline btn-sm btn-icon" onClick={() => openEditor(b)} title="Bearbeiten">
