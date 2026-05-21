@@ -138,8 +138,8 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
         ease: "none",
         scrollTrigger: {
           trigger: whiteRef.current,
-          start: "top 80%",
-          end: "center top",
+          start: "top 40%",
+          end: "bottom 25%",
           scrub: true,
         },
       });
@@ -379,13 +379,12 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
           backgroundColor: "#fafafa",
           minHeight: "240vh",
           color: "#0c0c0c",
-          overflow: "hidden",
           marginTop: "-1px",
         }}
       >
         {/* The line — one continuous curve that paints itself as you scroll */}
         <svg
-          viewBox="0 0 100 480"
+          viewBox="0 0 100 340"
           preserveAspectRatio="none"
           aria-hidden="true"
           style={{
@@ -395,11 +394,12 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
             height: "100%",
             pointerEvents: "none",
             zIndex: 0,
+            overflow: "visible",
           }}
         >
           <path
             ref={linePathRef}
-            d="M 50 0 C 88 42, 12 85, 50 128 C 88 170, 12 213, 50 256 C 88 298, 12 341, 50 384 C 88 426, 12 469, 50 480"
+            d="M 50 0 C 88 42, 12 85, 50 128 C 88 170, 12 213, 50 256 C 88 298, 80 332, 220 340"
             fill="none"
             stroke="var(--ink)"
             strokeLinecap="round"

@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "postinstall": "npm install --prefix backend",
+    "postinstall": "cd backend && npm install",
     "dev": "concurrently --names \"frontend,backend\" -c \"cyan,green\" \"next dev\" \"npm run dev --prefix backend\"",
     "dev:frontend": "next dev",
     "dev:backend": "npm run dev --prefix backend",
