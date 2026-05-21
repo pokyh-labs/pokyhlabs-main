@@ -86,4 +86,18 @@ const uploadPdf = multer({
   },
 });
 
-module.exports = { upload, processUpload, uploadPdf };
+const uploadHtml = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, UPLOAD_DIR),
+    filename: (req, file, cb) => cb(null, `${crypto.randomBytes(16).toString('hex')}.html`),
+  }),
+  limits: { fileSize: 10 * 1024 * 1024, files: 1 },
+  fileFilter: (req, file, cb) => {
+    const okMime = ['text/html', 'application/xhtml+xml', 'text/plain'].includes(file.mimetype);
+    const okExt = /\.(html?|xhtml)$/i.test(file.originalname);
+    if (okMime || okExt) return cb(null, true);
+    cb(new Error('Only HTML files are allowed'), false);
+  },
+});
+
+module.exports = { upload, processUpload, uploadPdf, uploadHtml };

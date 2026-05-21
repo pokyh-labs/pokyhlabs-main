@@ -1,11 +1,11 @@
 const router = require('express').Router();
 const {
-  getPublished, getBySlug, getAll, create, update, deleteBlog, stats, blogValidators, importPdf
+  getPublished, getBySlug, getAll, create, update, deleteBlog, stats, blogValidators, importPdf, importHtml
 } = require('../controllers/blogController');
 const { authenticate } = require('../middleware/authenticate');
 const { authorize } = require('../middleware/authorize');
 const { apiRateLimiter, adminRateLimiter, uploadRateLimiter } = require('../middleware/rateLimiter');
-const { upload, processUpload, uploadPdf } = require('../middleware/upload');
+const { upload, processUpload, uploadPdf, uploadHtml } = require('../middleware/upload');
 
 // Public routes
 router.get('/', apiRateLimiter, getPublished);
@@ -29,10 +29,16 @@ router.put('/:id',
 
 router.delete('/:id', authenticate, authorize('admin', 'editor'), adminRateLimiter, deleteBlog);
 
-// PDF import (must come before /:id routes, uses POST so no conflict)
+// PDF import
 router.post('/import/pdf',
   authenticate, authorize('admin', 'editor'), adminRateLimiter, uploadRateLimiter,
   uploadPdf.single('pdf'), importPdf
+);
+
+// HTML import
+router.post('/import/html',
+  authenticate, authorize('admin', 'editor'), adminRateLimiter, uploadRateLimiter,
+  uploadHtml.single('html'), importHtml
 );
 
 module.exports = router;

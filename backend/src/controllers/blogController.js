@@ -2,10 +2,23 @@ const { body, param, query, validationResult } = require('express-validator');
 const { Op } = require('sequelize');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
+const pdfParse = require('pdf-parse');
 const { Blog, User } = require('../models');
 const { sanitizeBlogContent, sanitizeText } = require('../middleware/sanitize');
 const { cache, KEYS, BLOG_SINGLE_TTL, BLOG_LIST_TTL, STATS_TTL, invalidateBlogCache } = require('../config/cache');
 const logger = require('../utils/logger');
+
+// 'canvas' is aliased to '@napi-rs/canvas' in package.json so pdfjs-dist can find it.
+const { createCanvas, DOMMatrix, Path2D } = require('canvas');
+if (typeof global.DOMMatrix === 'undefined') global.DOMMatrix = DOMMatrix;
+if (typeof global.Path2D === 'undefined') global.Path2D = Path2D;
+const pdfjsLib = require('pdfjs-dist/legacy/build/pdf.js');
+const cheerio = require('cheerio');
+
+const UPLOAD_DIR = path.resolve(process.env.UPLOAD_PATH || './uploads');
+const PDF_SCALE = 2.0;   // 144 DPI — high quality
+const PDF_MAX_PAGES = 30;
 
 const blogValidators = [
   body('title').trim().notEmpty().isLength({ min: 3, max: 255 }),
@@ -179,50 +192,137 @@ async function stats(req, res) {
   res.json(result);
 }
 
-// Admin: import PDF and return extracted HTML
+// Render all pages of a PDF as PNG images with transparent background
+async function renderPdfToImages(buffer) {
+  const uint8 = new Uint8Array(buffer);
+  const pdf = await pdfjsLib.getDocument({ data: uint8, verbosity: 0 }).promise;
+  const totalPages = Math.min(pdf.numPages, PDF_MAX_PAGES);
+  const results = [];
+
+  for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+    const page = await pdf.getPage(pageNum);
+    const viewport = page.getViewport({ scale: PDF_SCALE });
+    const w = Math.round(viewport.width);
+    const h = Math.round(viewport.height);
+
+    // Canvas starts transparent — no white pre-fill → background stays transparent
+    const canvas = createCanvas(w, h);
+    const ctx = canvas.getContext('2d');
+
+    await page.render({ canvasContext: ctx, viewport }).promise;
+    page.cleanup();
+
+    // Save as PNG (transparent background preserved)
+    const filename = `pdf-${crypto.randomBytes(8).toString('hex')}-p${pageNum}.png`;
+    const filepath = path.join(UPLOAD_DIR, filename);
+    fs.writeFileSync(filepath, canvas.toBuffer('image/png'));
+    results.push({ page: pageNum, url: `/uploads/${filename}` });
+  }
+
+  return { total: pdf.numPages, rendered: totalPages, pages: results };
+}
+
+// Strip background colors from an inline style string
+function stripBgFromStyle(style) {
+  return (style || '')
+    .replace(/background(?:-color)?\s*:[^;]+;?/gi, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
+// Admin: import PDF — renders every page as transparent-bg PNG → embeds in HTML
 async function importPdf(req, res) {
   if (!req.file) return err(res, 400, 'No PDF file uploaded');
 
   const filePath = req.file.path;
+  let cleaned = false;
+  const cleanup = () => {
+    if (!cleaned && fs.existsSync(filePath)) {
+      try { fs.unlinkSync(filePath); } catch (_) {}
+      cleaned = true;
+    }
+  };
+
   try {
-    const pdfParse = require('pdf-parse');
     const buffer = fs.readFileSync(filePath);
+    cleanup();
 
     // Validate PDF magic bytes: %PDF
     if (buffer[0] !== 0x25 || buffer[1] !== 0x50 || buffer[2] !== 0x44 || buffer[3] !== 0x46) {
-      fs.unlinkSync(filePath);
       return err(res, 400, 'Invalid PDF file');
     }
 
-    const data = await pdfParse(buffer);
-    fs.unlinkSync(filePath);
+    const { total, rendered, pages } = await renderPdfToImages(buffer);
 
-    function escHtml(str) {
-      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    }
+    // Build HTML: one <figure> per page, image is the full rendered page
+    const html = pages.map(({ page, url }) =>
+      `<figure><img src="${url}" alt="Seite ${page}"></figure>`
+    ).join('\n');
 
-    const html = data.text
-      .split(/\n{2,}/)
-      .map(p => p.trim())
-      .filter(p => p.length > 0)
-      .map(p => {
-        const lines = p.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-        if (lines.length === 0) return '';
-        if (lines.length === 1 && lines[0].length < 80 && !/[.,;]$/.test(lines[0])) {
-          return `<h2>${escHtml(lines[0])}</h2>`;
-        }
-        return `<p>${lines.map(escHtml).join('<br>')}</p>`;
-      })
-      .filter(Boolean)
-      .join('\n');
+    const truncatedNote = total > rendered
+      ? `\n<p><em>Hinweis: Nur die ersten ${rendered} von ${total} Seiten wurden importiert.</em></p>`
+      : '';
 
-    logger.info('PDF imported', { event: 'pdf_import', userId: req.user.id, pages: data.numpages });
-    res.json({ content: sanitizeBlogContent(html), pages: data.numpages });
+    logger.info('PDF imported', { event: 'pdf_import', userId: req.user.id, pages: total });
+    res.json({ content: sanitizeBlogContent(html + truncatedNote), pages: total });
   } catch (parseErr) {
-    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-    logger.error('PDF parse error', { err: parseErr.message });
+    cleanup();
+    logger.error('PDF parse error', { err: parseErr.message, stack: parseErr.stack?.split('\n').slice(0, 3).join(' | ') });
     err(res, 500, 'Failed to parse PDF');
   }
 }
 
-module.exports = { getPublished, getBySlug, getAll, create, update, deleteBlog, stats, blogValidators, importPdf };
+// Admin: import HTML file — saves embedded images to disk, strips backgrounds
+async function importHtml(req, res) {
+  if (!req.file) return err(res, 400, 'No HTML file uploaded');
+
+  const filePath = req.file.path;
+  let cleaned = false;
+  const cleanup = () => {
+    if (!cleaned && fs.existsSync(filePath)) {
+      try { fs.unlinkSync(filePath); } catch (_) {}
+      cleaned = true;
+    }
+  };
+
+  try {
+    const raw = fs.readFileSync(filePath, 'utf8');
+    cleanup();
+
+    const $ = cheerio.load(raw, { decodeEntities: false });
+
+    // Extract base64-embedded images → save to uploads → swap src
+    $('img').each((_, el) => {
+      const src = $(el).attr('src') || '';
+      const m = src.match(/^data:(image\/[\w+.-]+);base64,(.+)$/i);
+      if (!m) return;
+      const ext = m[1].split('/')[1].replace(/[^a-z0-9]/gi, '').substring(0, 10) || 'png';
+      const data = Buffer.from(m[2], 'base64');
+      const filename = `html-img-${crypto.randomBytes(8).toString('hex')}.${ext}`;
+      fs.writeFileSync(path.join(UPLOAD_DIR, filename), data);
+      $(el).attr('src', `/uploads/${filename}`);
+    });
+
+    // Remove background colors from inline styles and bgcolor attributes
+    $('[style]').each((_, el) => {
+      const cleaned = stripBgFromStyle($(el).attr('style'));
+      if (cleaned) $(el).attr('style', cleaned);
+      else $(el).removeAttr('style');
+    });
+    $('[bgcolor]').removeAttr('bgcolor');
+    $('[background]').removeAttr('background');
+
+    // Extract body content (or full html if no body tag)
+    const bodyContent = $('body').length ? $('body').html() : $.html();
+    const content = sanitizeBlogContent(bodyContent || '');
+
+    logger.info('HTML imported', { event: 'html_import', userId: req.user.id });
+    res.json({ content });
+  } catch (parseErr) {
+    cleanup();
+    logger.error('HTML parse error', { err: parseErr.message });
+    err(res, 500, 'Failed to parse HTML');
+  }
+}
+
+module.exports = { getPublished, getBySlug, getAll, create, update, deleteBlog, stats, blogValidators, importPdf, importHtml };

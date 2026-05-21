@@ -99,7 +99,7 @@ function NavLinks() {
     { href: "/", label: "Home" },
     { href: "/#about", label: "About" },
     { href: "/works", label: "Works" },
-    { href: "/contact", label: "Contact" },
+    { href: "/blog", label: "Blog" },
   ];
   return (
     <div

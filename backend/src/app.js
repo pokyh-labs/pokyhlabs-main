@@ -137,7 +137,7 @@ async function start() {
   try {
     await sequelize.authenticate();
     logger.info('Database connected');
-    await sequelize.sync({ alter: process.env.NODE_ENV !== 'production' });
+    await sequelize.sync({ force: false });
     logger.info('Database synced');
 
     app.listen(PORT, () => {
