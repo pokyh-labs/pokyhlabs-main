@@ -1,3 +1,5 @@
+@import "lenis/dist/lenis.css";
+
 :root {
   --bg: #e4e2dc;
   --ink: #593df8;
@@ -10,9 +12,9 @@
   padding: 0;
 }
 
-html, body {
-  height: 100%;
-  overflow-x: hidden;
+html {
+  /* Lenis handles scrolling */
+  overflow-x: clip;
 }
 
 body {
@@ -20,6 +22,7 @@ body {
   color: var(--ink);
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
   cursor: default;
+  overflow-x: clip;
 }
 
 .ui > * {

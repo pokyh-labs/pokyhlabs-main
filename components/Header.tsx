@@ -97,7 +97,7 @@ export default function Header() {
 function NavLinks() {
   const links = [
     { href: "/", label: "Home" },
-    { href: "/about", label: "About" },
+    { href: "/#about", label: "About" },
     { href: "/works", label: "Works" },
     { href: "/contact", label: "Contact" },
   ];
