@@ -138,10 +138,8 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
         ease: "none",
         scrollTrigger: {
           trigger: whiteRef.current,
-          // Drawing tip travels from the lower viewport up toward the top,
-          // so the user clearly sees the line being painted as they scroll.
           start: "top 80%",
-          end: "bottom 25%",
+          end: "center top",
           scrub: true,
         },
       });
@@ -387,7 +385,7 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
       >
         {/* The line — one continuous curve that paints itself as you scroll */}
         <svg
-          viewBox="0 0 100 340"
+          viewBox="0 0 100 480"
           preserveAspectRatio="none"
           aria-hidden="true"
           style={{
@@ -401,7 +399,7 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
         >
           <path
             ref={linePathRef}
-            d="M 50 0 C 88 42, 12 85, 50 128 C 88 170, 12 213, 50 256 C 88 298, 12 335, 50 340"
+            d="M 50 0 C 88 42, 12 85, 50 128 C 88 170, 12 213, 50 256 C 88 298, 12 341, 50 384 C 88 426, 12 469, 50 480"
             fill="none"
             stroke="var(--ink)"
             strokeLinecap="round"
