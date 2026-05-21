@@ -1,0 +1,10 @@
+node_modules
+.env
+.env.*
+logs/
+uploads/*
+!uploads/.gitkeep
+admin-src/
+vite.config.js
+*.md
+.git

@@ -1,0 +1,48 @@
+{
+  "name": "pokyhlabs-backend",
+  "version": "1.0.0",
+  "description": "Secure Node.js Blog Backend with Admin Dashboard & Cloudflare Tunnel",
+  "main": "src/app.js",
+  "scripts": {
+    "start": "node src/app.js",
+    "dev": "nodemon src/app.js",
+    "build": "vite build",
+    "preview": "vite preview",
+    "add-admin": "node scripts/setup-admin.js",
+    "security-test": "node scripts/security-test.js",
+    "generate-secrets": "node -e \"const c=require('crypto');console.log('JWT_SECRET='+c.randomBytes(64).toString('hex'));console.log('JWT_REFRESH_SECRET='+c.randomBytes(64).toString('hex'));console.log('ENCRYPTION_KEY='+c.randomBytes(32).toString('hex'));\""
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "compression": "^1.7.4",
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-async-errors": "^3.1.1",
+    "express-rate-limit": "^7.1.5",
+    "express-validator": "^7.0.1",
+    "helmet": "^7.1.0",
+    "hpp": "^0.2.3",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.1",
+    "mysql2": "^3.6.5",
+    "node-cache": "^5.1.2",
+    "pdf-parse": "^2.4.5",
+    "sanitize-html": "^2.11.0",
+    "sequelize": "^6.35.2",
+    "sharp": "^0.33.1",
+    "slugify": "^1.6.6",
+    "uuid": "^9.0.1",
+    "winston": "^3.11.0",
+    "winston-daily-rotate-file": "^4.7.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.2.1",
+    "nodemon": "^3.0.2",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "vite": "^5.0.12"
+  }
+}
