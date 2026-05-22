@@ -13,8 +13,12 @@ const ALLOWED_HTML_TAGS = [
 
 const ALLOWED_ATTRIBUTES = {
   'a': ['href', 'title', 'target', 'rel'],
-  'img': ['src', 'alt', 'title', 'width', 'height'],
-  '*': ['class'],
+  'img': ['src', 'alt', 'title', 'width', 'height', 'style'],
+  'td': ['colspan', 'rowspan', 'style'],
+  'th': ['colspan', 'rowspan', 'style'],
+  'table': ['style'],
+  'tr': ['style'],
+  '*': ['class', 'style'],
 };
 
 // Force rel="noopener noreferrer" on any link with target="_blank"
@@ -29,8 +33,8 @@ function sanitizeBlogContent(dirty) {
   return sanitizeHtml(dirty, {
     allowedTags: ALLOWED_HTML_TAGS,
     allowedAttributes: ALLOWED_ATTRIBUTES,
-    allowedSchemes: ['http', 'https', 'mailto'],
-    allowedSchemesAppliedToAttributes: ['href', 'src'],
+    allowedSchemes: ['http', 'https', 'mailto', 'data'],
+    allowedSchemesAppliedToAttributes: ['href'],
     allowProtocolRelative: false,
     enforceHtmlBoundary: true,
     transformTags: { a: enforceNoOpener },

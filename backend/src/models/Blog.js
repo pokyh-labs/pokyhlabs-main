@@ -14,6 +14,8 @@ module.exports = (sequelize) => {
     author_id: { type: DataTypes.INTEGER, allowNull: false },
     published_at: { type: DataTypes.DATE, allowNull: true },
     views: { type: DataTypes.INTEGER, defaultValue: 0 },
+    content_format: { type: DataTypes.STRING(10), defaultValue: 'html', allowNull: false },
+    content_markdown: { type: DataTypes.TEXT, allowNull: true },
   }, {
     tableName: 'blogs',
     hooks: {

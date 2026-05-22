@@ -345,132 +345,121 @@ function ErrorState({ message }: { message: string }) {
 import { forwardRef } from "react"
 
 const BlogCard = forwardRef<HTMLElement, { blog: Blog; index: number }>(({ blog, index }, ref) => (
-  <article ref={ref as React.Ref<HTMLElement>} style={{ borderTop: "1px solid #2a2a2a", padding: "3.5rem 0" }}>
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "baseline",
-        marginBottom: "1.5rem",
-      }}
+  <article ref={ref as React.Ref<HTMLElement>} style={{ borderTop: "1px solid #2a2a2a" }}>
+    <a
+      href={`/blog/${blog.slug}`}
+      style={{ display: "block", padding: "3.5rem 0", textDecoration: "none", cursor: "pointer" }}
     >
-      <span
+      <div
         style={{
-          fontFamily: "var(--font-dm-mono), monospace",
-          fontSize: "12px",
-          color: "#593DF8",
-          letterSpacing: "0.15em",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "baseline",
+          marginBottom: "1.5rem",
         }}
       >
-        {String(index + 1).padStart(2, "0")}
-      </span>
-      <span
-        style={{
-          fontFamily: "var(--font-dm-mono), monospace",
-          fontSize: "12px",
-          color: "#444",
-          letterSpacing: "0.08em",
-        }}
-      >
-        {formatDate(blog.published_at)}
-      </span>
-    </div>
-
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "2rem" }}>
-      <div style={{ flex: 1 }}>
-        <h2
+        <span
           style={{
-            fontSize: "clamp(1.5rem, 3vw, 2.5rem)",
-            fontWeight: 500,
-            lineHeight: 1.1,
-            letterSpacing: "-0.02em",
-            marginBottom: "1rem",
-            color: "#fff",
-            fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+            fontFamily: "var(--font-dm-mono), monospace",
+            fontSize: "12px",
+            color: "#593DF8",
+            letterSpacing: "0.15em",
           }}
         >
-          {blog.title}
-        </h2>
-        {blog.excerpt && (
-          <p
+          {String(index + 1).padStart(2, "0")}
+        </span>
+        <span
+          style={{
+            fontFamily: "var(--font-dm-mono), monospace",
+            fontSize: "12px",
+            color: "#444",
+            letterSpacing: "0.08em",
+          }}
+        >
+          {formatDate(blog.published_at)}
+        </span>
+      </div>
+
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "2rem" }}>
+        <div style={{ flex: 1 }}>
+          <h2
             style={{
-              fontSize: "clamp(0.9rem, 1.2vw, 1.05rem)",
-              lineHeight: 1.7,
-              color: "#888",
-              marginBottom: "1.5rem",
-              maxWidth: "600px",
+              fontSize: "clamp(1.5rem, 3vw, 2.5rem)",
+              fontWeight: 500,
+              lineHeight: 1.1,
+              letterSpacing: "-0.02em",
+              marginBottom: "1rem",
+              color: "#fff",
               fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
             }}
           >
-            {blog.excerpt}
-          </p>
-        )}
-        <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
-          {blog.author && (
+            {blog.title}
+          </h2>
+          {blog.excerpt && (
+            <p
+              style={{
+                fontSize: "clamp(0.9rem, 1.2vw, 1.05rem)",
+                lineHeight: 1.7,
+                color: "#888",
+                marginBottom: "1.5rem",
+                maxWidth: "600px",
+                fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+              }}
+            >
+              {blog.excerpt}
+            </p>
+          )}
+          <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
+            {blog.author && (
+              <span
+                style={{
+                  fontFamily: "var(--font-dm-mono), monospace",
+                  fontSize: "11px",
+                  letterSpacing: "0.08em",
+                  padding: "5px 12px",
+                  borderRadius: "999px",
+                  border: "1px solid #2a2a2a",
+                  color: "#555",
+                }}
+              >
+                {blog.author.username}
+              </span>
+            )}
             <span
               style={{
                 fontFamily: "var(--font-dm-mono), monospace",
                 fontSize: "11px",
                 letterSpacing: "0.08em",
-                padding: "5px 12px",
-                borderRadius: "999px",
-                border: "1px solid #2a2a2a",
-                color: "#555",
+                color: "#444",
               }}
             >
-              {blog.author.username}
+              {blog.views} views
             </span>
-          )}
-          <span
-            style={{
-              fontFamily: "var(--font-dm-mono), monospace",
-              fontSize: "11px",
-              letterSpacing: "0.08em",
-              color: "#444",
-            }}
+          </div>
+        </div>
+
+        <div
+          aria-hidden="true"
+          style={{
+            flexShrink: 0,
+            width: "52px",
+            height: "52px",
+            borderRadius: "50%",
+            border: "1px solid #2a2a2a",
+            display: "grid",
+            placeItems: "center",
+            color: "#fff",
+          }}
+        >
+          <svg
+            viewBox="0 0 24 24"
+            style={{ width: 16, height: 16, stroke: "currentColor", fill: "none", strokeWidth: 1.8 }}
           >
-            {blog.views} views
-          </span>
+            <path d="M7 17 L17 7 M9 7 H17 V15" />
+          </svg>
         </div>
       </div>
-
-      <a
-        href={`/blog/${blog.slug}`}
-        aria-label={`Read ${blog.title}`}
-        style={{
-          flexShrink: 0,
-          width: "52px",
-          height: "52px",
-          borderRadius: "50%",
-          border: "1px solid #2a2a2a",
-          display: "grid",
-          placeItems: "center",
-          color: "#fff",
-          textDecoration: "none",
-          transition: "background 0.25s, border-color 0.25s, transform 0.25s",
-        }}
-        onMouseEnter={(e) => {
-          const el = e.currentTarget as HTMLAnchorElement
-          el.style.background = "#593DF8"
-          el.style.borderColor = "#593DF8"
-          el.style.transform = "rotate(45deg)"
-        }}
-        onMouseLeave={(e) => {
-          const el = e.currentTarget as HTMLAnchorElement
-          el.style.background = "transparent"
-          el.style.borderColor = "#2a2a2a"
-          el.style.transform = ""
-        }}
-      >
-        <svg
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-          style={{ width: 16, height: 16, stroke: "currentColor", fill: "none", strokeWidth: 1.8 }}
-        >
-          <path d="M7 17 L17 7 M9 7 H17 V15" />
-        </svg>
-      </a>
-    </div>
+    </a>
   </article>
 ))
 BlogCard.displayName = "BlogCard"

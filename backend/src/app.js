@@ -138,6 +138,9 @@ async function start() {
     await sequelize.authenticate();
     logger.info('Database connected');
     await sequelize.sync({ force: false });
+    // Add columns that may not exist in older DB instances
+    await sequelize.query("ALTER TABLE blogs ADD COLUMN content_format TEXT NOT NULL DEFAULT 'html'").catch(() => {});
+    await sequelize.query("ALTER TABLE blogs ADD COLUMN content_markdown TEXT").catch(() => {});
     logger.info('Database synced');
 
     app.listen(PORT, () => {

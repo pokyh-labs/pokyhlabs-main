@@ -3,23 +3,38 @@ const { Op } = require('sequelize');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
-const pdfParse = require('pdf-parse');
 const { Blog, User } = require('../models');
 const { sanitizeBlogContent, sanitizeText } = require('../middleware/sanitize');
 const { validateMagicBytes } = require('../config/security');
 const { cache, KEYS, BLOG_SINGLE_TTL, BLOG_LIST_TTL, STATS_TTL, invalidateBlogCache } = require('../config/cache');
 const logger = require('../utils/logger');
+const juice = require('juice');
+const { marked } = require('marked');
 
 // 'canvas' is aliased to '@napi-rs/canvas' in package.json so pdfjs-dist can find it.
-const { createCanvas, DOMMatrix, Path2D } = require('canvas');
-if (typeof global.DOMMatrix === 'undefined') global.DOMMatrix = DOMMatrix;
-if (typeof global.Path2D === 'undefined') global.Path2D = Path2D;
-const pdfjsLib = require('pdfjs-dist/legacy/build/pdf.js');
+let createCanvas, DOMMatrix, Path2D, pdfjsLib;
+try {
+  const canvas = require('canvas');
+  createCanvas = canvas.createCanvas;
+  DOMMatrix = canvas.DOMMatrix;
+  Path2D = canvas.Path2D;
+  if (typeof global.DOMMatrix === 'undefined' && DOMMatrix) global.DOMMatrix = DOMMatrix;
+  if (typeof global.Path2D === 'undefined' && Path2D) global.Path2D = Path2D;
+  pdfjsLib = require('pdfjs-dist/legacy/build/pdf.js');
+  // Disable web worker for Node.js environment
+  pdfjsLib.GlobalWorkerOptions.workerSrc = '';
+} catch (e) {
+  logger.warn('PDF rendering dependencies not available', { err: e.message });
+}
+
 const cheerio = require('cheerio');
 
 const UPLOAD_DIR = path.resolve(process.env.UPLOAD_PATH || './uploads');
-const PDF_SCALE = 2.0;   // 144 DPI — high quality
+const PDF_SCALE = 2.0;
 const PDF_MAX_PAGES = 30;
+
+// Configure marked for safe HTML rendering
+marked.setOptions({ breaks: true, gfm: true });
 
 const blogValidators = [
   body('title').trim().notEmpty().isLength({ min: 3, max: 255 }),
@@ -27,6 +42,8 @@ const blogValidators = [
   body('excerpt').optional().trim().isLength({ max: 500 }),
   body('image_alt').optional().trim().isLength({ max: 255 }),
   body('status').optional().isIn(['draft', 'published']),
+  body('content_format').optional().isIn(['html', 'markdown', 'blocks']),
+  body('content_markdown').optional().trim(),
 ];
 
 function ok(res) { return (data) => res.json(data); }
@@ -106,17 +123,34 @@ async function getAll(req, res) {
   res.json(blogs);
 }
 
+function resolveContent(format, content, content_markdown) {
+  if (format === 'blocks') {
+    // content is already pre-built combined HTML from the frontend
+    return { html: sanitizeBlogContent(content), raw: content_markdown || null };
+  }
+  if (format === 'markdown') {
+    const md = content_markdown || content;
+    return { html: sanitizeBlogContent(marked.parse(md)), raw: md };
+  }
+  return { html: sanitizeBlogContent(content), raw: null };
+}
+
 // Admin: create blog
 async function create(req, res) {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
-  const { title, content, excerpt, status, image_alt } = req.body;
+  const { title, content, excerpt, status, image_alt, content_format, content_markdown } = req.body;
   const image_url = req.file ? `/uploads/${req.file.filename}` : null;
+
+  const format = ['blocks', 'markdown', 'html'].includes(content_format) ? content_format : 'html';
+  const { html: htmlContent, raw } = resolveContent(format, content, content_markdown);
 
   const blog = await Blog.create({
     title: sanitizeText(title),
-    content: sanitizeBlogContent(content),
+    content: htmlContent,
+    content_format: format,
+    content_markdown: raw,
     excerpt: excerpt ? sanitizeText(excerpt) : null,
     image_url,
     image_alt: image_alt ? sanitizeText(image_alt) : null,
@@ -137,11 +171,19 @@ async function update(req, res) {
   const blog = await Blog.findByPk(req.params.id);
   if (!blog) return err(res, 404, 'Blog not found');
 
-  const { title, content, excerpt, status, image_alt } = req.body;
+  const { title, content, excerpt, status, image_alt, content_format, content_markdown } = req.body;
   const updates = {};
 
   if (title !== undefined) updates.title = sanitizeText(title);
-  if (content !== undefined) updates.content = sanitizeBlogContent(content);
+  if (content !== undefined) {
+    const format = ['blocks', 'markdown', 'html'].includes(content_format)
+      ? content_format
+      : (blog.content_format || 'html');
+    const { html, raw } = resolveContent(format, content, content_markdown);
+    updates.content_format = format;
+    updates.content = html;
+    updates.content_markdown = raw;
+  }
   if (excerpt !== undefined) updates.excerpt = sanitizeText(excerpt);
   if (status !== undefined) updates.status = status;
   if (image_alt !== undefined) updates.image_alt = sanitizeText(image_alt);
@@ -193,10 +235,12 @@ async function stats(req, res) {
   res.json(result);
 }
 
-// Render all pages of a PDF as PNG images with transparent background
+// Render all pages of a PDF as PNG images
 async function renderPdfToImages(buffer) {
+  if (!pdfjsLib || !createCanvas) throw new Error('PDF rendering not available');
   const uint8 = new Uint8Array(buffer);
-  const pdf = await pdfjsLib.getDocument({ data: uint8, verbosity: 0 }).promise;
+  const loadingTask = pdfjsLib.getDocument({ data: uint8, verbosity: 0, disableFontFace: true });
+  const pdf = await loadingTask.promise;
   const totalPages = Math.min(pdf.numPages, PDF_MAX_PAGES);
   const results = [];
 
@@ -206,32 +250,27 @@ async function renderPdfToImages(buffer) {
     const w = Math.round(viewport.width);
     const h = Math.round(viewport.height);
 
-    // Canvas starts transparent — no white pre-fill → background stays transparent
     const canvas = createCanvas(w, h);
     const ctx = canvas.getContext('2d');
+
+    // White background so text is readable
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, w, h);
 
     await page.render({ canvasContext: ctx, viewport }).promise;
     page.cleanup();
 
-    // Save as PNG (transparent background preserved)
     const filename = `pdf-${crypto.randomBytes(8).toString('hex')}-p${pageNum}.png`;
     const filepath = path.join(UPLOAD_DIR, filename);
     fs.writeFileSync(filepath, canvas.toBuffer('image/png'));
     results.push({ page: pageNum, url: `/uploads/${filename}` });
   }
 
+  pdf.destroy();
   return { total: pdf.numPages, rendered: totalPages, pages: results };
 }
 
-// Strip background colors from an inline style string
-function stripBgFromStyle(style) {
-  return (style || '')
-    .replace(/background(?:-color)?\s*:[^;]+;?/gi, '')
-    .replace(/\s{2,}/g, ' ')
-    .trim();
-}
-
-// Admin: import PDF — renders every page as transparent-bg PNG → embeds in HTML
+// Admin: import PDF — renders every page as PNG → embeds in HTML
 async function importPdf(req, res) {
   if (!req.file) return err(res, 400, 'No PDF file uploaded');
 
@@ -273,7 +312,7 @@ async function importPdf(req, res) {
   }
 }
 
-// Admin: import HTML file — saves embedded images to disk, strips backgrounds
+// Admin: import HTML file — inlines CSS from <style> blocks, saves embedded images
 async function importHtml(req, res) {
   if (!req.file) return err(res, 400, 'No HTML file uploaded');
 
@@ -290,17 +329,15 @@ async function importHtml(req, res) {
     const raw = fs.readFileSync(filePath, 'utf8');
     cleanup();
 
-    const $ = cheerio.load(raw, { decodeEntities: false });
+    // Inline CSS from <style> blocks into element style attributes
+    const inlined = juice(raw, { removeStyleTags: true, preserveImportant: true });
 
-    // Allowed MIME types and their canonical extensions for embedded images
+    const $ = cheerio.load(inlined, { decodeEntities: false });
+
     const EMBED_MIME_TO_EXT = {
-      'image/jpeg': 'jpg',
-      'image/jpg': 'jpg',
-      'image/png': 'png',
-      'image/gif': 'gif',
-      'image/webp': 'webp',
+      'image/jpeg': 'jpg', 'image/jpg': 'jpg',
+      'image/png': 'png', 'image/gif': 'gif', 'image/webp': 'webp',
     };
-    // Max size per embedded image: 5 MB
     const MAX_EMBED_BYTES = 5 * 1024 * 1024;
 
     // Extract base64-embedded images → save to uploads → swap src
@@ -310,30 +347,24 @@ async function importHtml(req, res) {
       if (!m) return;
       const mime = m[1].toLowerCase();
       const ext = EMBED_MIME_TO_EXT[mime];
-      if (!ext) return; // reject unknown/disallowed MIME types
+      if (!ext) return;
       const data = Buffer.from(m[2], 'base64');
-      if (data.length > MAX_EMBED_BYTES) return; // skip oversized images
-      if (!validateMagicBytes(data)) return; // reject non-image content
+      if (data.length > MAX_EMBED_BYTES) return;
+      if (!validateMagicBytes(data)) return;
       const filename = `html-img-${crypto.randomBytes(8).toString('hex')}.${ext}`;
       fs.writeFileSync(path.join(UPLOAD_DIR, filename), data);
       $(el).attr('src', `/uploads/${filename}`);
     });
 
-    // Remove background colors from inline styles and bgcolor attributes
-    $('[style]').each((_, el) => {
-      const cleaned = stripBgFromStyle($(el).attr('style'));
-      if (cleaned) $(el).attr('style', cleaned);
-      else $(el).removeAttr('style');
-    });
     $('[bgcolor]').removeAttr('bgcolor');
     $('[background]').removeAttr('background');
 
-    // Extract body content (or full html if no body tag)
+    const title = $('title').text().trim() || '';
     const bodyContent = $('body').length ? $('body').html() : $.html();
     const content = sanitizeBlogContent(bodyContent || '');
 
     logger.info('HTML imported', { event: 'html_import', userId: req.user.id });
-    res.json({ content });
+    res.json({ content, title });
   } catch (parseErr) {
     cleanup();
     logger.error('HTML parse error', { err: parseErr.message });
