@@ -27,8 +27,8 @@ async function authenticate(req, res, next) {
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET, {
       algorithms: ['HS256'],
-      issuer: 'pokyhlabs',
-      audience: 'pokyhlabs-api',
+      issuer: process.env.JWT_ISSUER || 'pokyhlabs',
+      audience: process.env.JWT_AUDIENCE || 'pokyhlabs-api',
     });
 
     req.user = {

@@ -12,7 +12,7 @@ async function getStatus(req, res) {
     installed: await tunnelService.isInstalled(),
     authenticated: tunnelService.isAuthenticated(),
     version: runtime.running ? await tunnelService.getVersion().catch(() => null) : null,
-    localService: `http://localhost:${process.env.PORT || 3001}`,
+    localService: `http://${process.env.HOST || '127.0.0.1'}:${process.env.PORT || 3001}`,
     config: config ? {
       id: config.id,
       tunnel_name: config.tunnel_name,

@@ -12,8 +12,8 @@ function generateTokens(user) {
   const accessToken = jwt.sign(payload, process.env.JWT_SECRET, {
     algorithm: 'HS256',
     expiresIn: ACCESS_EXPIRES,
-    issuer: 'pokyhlabs',
-    audience: 'pokyhlabs-api',
+    issuer: process.env.JWT_ISSUER || 'pokyhlabs',
+    audience: process.env.JWT_AUDIENCE || 'pokyhlabs-api',
   });
   const refreshToken = crypto.randomBytes(64).toString('hex');
   return { accessToken, refreshToken };

@@ -1,8 +1,37 @@
+# dependencies
 node_modules/
+
+# environment
 .env
+.env.local
+.env.*.local
+!.env.example
+
+# database
+data/*.sqlite
+data/*.sqlite-journal
+data/*.sqlite-shm
+data/*.sqlite-wal
+data/*.db
+
+# uploads (user-generated content)
 uploads/*
 !uploads/.gitkeep
+
+# logs
 logs/*
 !logs/.gitkeep
 *.log
+
+# os
 .DS_Store
+Thumbs.db
+
+# editor
+.vscode/
+.idea/
+
+# secrets
+*.pem
+*.key
+*.cert

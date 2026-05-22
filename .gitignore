@@ -13,19 +13,29 @@
 
 # env files
 .env
-.env*.local
-.env.development
-.env.production
+.env.local
+.env.*.local
+!.env.example
+
+# database
+*.sqlite
+*.sqlite-journal
+*.sqlite-shm
+*.sqlite-wal
+*.db
 
 # misc
 .DS_Store
 Thumbs.db
 *.pem
+*.key
+*.cert
 
 # debug logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+*.log
 
 # vercel
 .vercel

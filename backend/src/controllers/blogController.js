@@ -6,6 +6,7 @@ const crypto = require('crypto');
 const pdfParse = require('pdf-parse');
 const { Blog, User } = require('../models');
 const { sanitizeBlogContent, sanitizeText } = require('../middleware/sanitize');
+const { validateMagicBytes } = require('../config/security');
 const { cache, KEYS, BLOG_SINGLE_TTL, BLOG_LIST_TTL, STATS_TTL, invalidateBlogCache } = require('../config/cache');
 const logger = require('../utils/logger');
 
@@ -291,13 +292,28 @@ async function importHtml(req, res) {
 
     const $ = cheerio.load(raw, { decodeEntities: false });
 
+    // Allowed MIME types and their canonical extensions for embedded images
+    const EMBED_MIME_TO_EXT = {
+      'image/jpeg': 'jpg',
+      'image/jpg': 'jpg',
+      'image/png': 'png',
+      'image/gif': 'gif',
+      'image/webp': 'webp',
+    };
+    // Max size per embedded image: 5 MB
+    const MAX_EMBED_BYTES = 5 * 1024 * 1024;
+
     // Extract base64-embedded images → save to uploads → swap src
     $('img').each((_, el) => {
       const src = $(el).attr('src') || '';
-      const m = src.match(/^data:(image\/[\w+.-]+);base64,(.+)$/i);
+      const m = src.match(/^data:(image\/[\w+-]+);base64,([A-Za-z0-9+/=]+)$/i);
       if (!m) return;
-      const ext = m[1].split('/')[1].replace(/[^a-z0-9]/gi, '').substring(0, 10) || 'png';
+      const mime = m[1].toLowerCase();
+      const ext = EMBED_MIME_TO_EXT[mime];
+      if (!ext) return; // reject unknown/disallowed MIME types
       const data = Buffer.from(m[2], 'base64');
+      if (data.length > MAX_EMBED_BYTES) return; // skip oversized images
+      if (!validateMagicBytes(data)) return; // reject non-image content
       const filename = `html-img-${crypto.randomBytes(8).toString('hex')}.${ext}`;
       fs.writeFileSync(path.join(UPLOAD_DIR, filename), data);
       $(el).attr('src', `/uploads/${filename}`);

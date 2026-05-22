@@ -12,10 +12,18 @@ const ALLOWED_HTML_TAGS = [
 ];
 
 const ALLOWED_ATTRIBUTES = {
-  'a': ['href', 'title', 'target'],
+  'a': ['href', 'title', 'target', 'rel'],
   'img': ['src', 'alt', 'title', 'width', 'height'],
   '*': ['class'],
 };
+
+// Force rel="noopener noreferrer" on any link with target="_blank"
+function enforceNoOpener(tagName, attribs) {
+  if (attribs.target === '_blank') {
+    return { tagName, attribs: { ...attribs, rel: 'noopener noreferrer' } };
+  }
+  return { tagName, attribs };
+}
 
 function sanitizeBlogContent(dirty) {
   return sanitizeHtml(dirty, {
@@ -25,6 +33,7 @@ function sanitizeBlogContent(dirty) {
     allowedSchemesAppliedToAttributes: ['href', 'src'],
     allowProtocolRelative: false,
     enforceHtmlBoundary: true,
+    transformTags: { a: enforceNoOpener },
   });
 }
 
