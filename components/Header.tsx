@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useState } from "react";
 
 const SPRING = "cubic-bezier(0.32, 0.72, 0, 1)";
@@ -29,10 +28,10 @@ export default function Header() {
         alignItems: "center",
         padding: "12px 22px",
         background: scrolled
-          ? "rgba(228, 226, 220, 0.92)"
+          ? "rgba(228, 226, 220, 0.62)"
           : "transparent",
-        backdropFilter: scrolled ? "blur(20px) saturate(1.8)" : "none",
-        WebkitBackdropFilter: scrolled ? "blur(20px) saturate(1.8)" : "none",
+        backdropFilter: scrolled ? "blur(24px) saturate(1.6)" : "none",
+        WebkitBackdropFilter: scrolled ? "blur(24px) saturate(1.6)" : "none",
         borderRadius: scrolled ? 999 : 0,
         boxShadow: scrolled
           ? "0 1px 0 rgba(0,0,0,0.06), 0 4px 24px rgba(0,0,0,0.08)"
@@ -52,12 +51,12 @@ export default function Header() {
         aria-label="pokyh.studio home"
         style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}
       >
-        <Image
+        <img
           src="/assets/logo.png"
           alt="pokyh.studio logo"
           width={34}
           height={34}
-          style={{ display: "block", objectFit: "contain" }}
+          style={{ display: "block", objectFit: "contain", width: 34, height: 34 }}
         />
         <span
           style={{

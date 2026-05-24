@@ -31,6 +31,7 @@ const logsRoutes       = require('./routes/logs');
 const systemRoutes     = require('./routes/system');
 const seoRoutes        = require('./routes/seo');
 const cloudflareRoutes = require('./routes/cloudflare');
+const inquiryRoutes    = require('./routes/inquiries');
 const requestLogger    = require('./middleware/requestLogger');
 const errorLogger      = require('./middleware/errorLogger');
 
@@ -121,6 +122,7 @@ app.use('/api/logs',        logsRoutes);
 app.use('/api/system',      systemRoutes);
 app.use('/api/seo',         seoRoutes);
 app.use('/api/cloudflare',  cloudflareRoutes);
+app.use('/api/inquiries',   inquiryRoutes);
 
 // SPA routing for admin
 app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, '../public/admin/index.html')));
@@ -148,30 +150,36 @@ app.use((err, req, res, next) => {
   res.status(status).json({ error: status < 500 ? err.message : 'Internal server error' });
 });
 
-// Start
-async function start() {
-  try {
-    await sequelize.authenticate();
-    logger.info('Database connected');
-    await sequelize.sync({ force: false });
-    // Add columns that may not exist in older DB instances
-    await sequelize.query("ALTER TABLE blogs ADD COLUMN content_format TEXT NOT NULL DEFAULT 'html'").catch(() => {});
-    await sequelize.query("ALTER TABLE blogs ADD COLUMN content_markdown TEXT").catch(() => {});
-    logger.info('Database synced');
-
-    app.listen(PORT, () => {
-      logger.info(`Server running on http://localhost:${PORT} (${process.env.NODE_ENV || 'development'})`);
-    });
-  } catch (err) {
-    logger.error('Failed to start', {
-      name: err.name,
-      message: err.message || '(no message)',
-      code: err.original?.code || err.code,
-    });
-    process.exit(1);
-  }
+// Database initialisation (called by server.js or standalone start below)
+async function initDatabase() {
+  await sequelize.authenticate();
+  logger.info('Database connected');
+  await sequelize.sync({ force: false });
+  // Add columns that may not exist in older DB instances
+  await sequelize.query("ALTER TABLE blogs ADD COLUMN content_format TEXT NOT NULL DEFAULT 'html'").catch(() => {});
+  await sequelize.query("ALTER TABLE blogs ADD COLUMN content_markdown TEXT").catch(() => {});
+  await sequelize.query("ALTER TABLE inquiries ADD COLUMN createdAt DATETIME").catch(() => {});
+  await sequelize.query("ALTER TABLE inquiries ADD COLUMN updatedAt DATETIME").catch(() => {});
+  await sequelize.query("ALTER TABLE inquiries ADD COLUMN deadline DATE").catch(() => {});
+  logger.info('Database synced');
 }
 
-start();
+// Only auto-start when this file is the entry point (e.g. npm run dev:backend)
+if (require.main === module) {
+  initDatabase()
+    .then(() => {
+      app.listen(PORT, () => {
+        logger.info(`Server running on http://localhost:${PORT} (${process.env.NODE_ENV || 'development'})`);
+      });
+    })
+    .catch(err => {
+      logger.error('Failed to start', {
+        name: err.name,
+        message: err.message || '(no message)',
+        code: err.original?.code || err.code,
+      });
+      process.exit(1);
+    });
+}
 
-module.exports = app;
+module.exports = { app, initDatabase };

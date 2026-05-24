@@ -1,18 +1,8 @@
 import type { NextConfig } from "next"
 
-const BACKEND = process.env.BACKEND_URL ?? "http://localhost:3001"
-
 const nextConfig: NextConfig = {
   compress: true,
   poweredByHeader: false,
-  async rewrites() {
-    return [
-      { source: "/api/:path*",     destination: `${BACKEND}/api/:path*` },
-      { source: "/uploads/:path*", destination: `${BACKEND}/uploads/:path*` },
-      { source: "/admin",          destination: `${BACKEND}/admin` },
-      { source: "/admin/:path*",   destination: `${BACKEND}/admin/:path*` },
-    ]
-  },
   images: {
     formats: ["image/avif", "image/webp"],
     minimumCacheTTL: 86400,

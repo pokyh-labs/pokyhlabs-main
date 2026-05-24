@@ -4,6 +4,7 @@ import "./globals.css"
 import { siteConfig, structuredData } from "@/lib/seo.config"
 import Header from "@/components/Header"
 import Footer from "@/components/Footer"
+import RevealObserver from "@/components/RevealObserver"
 
 const instrumentSerif = Instrument_Serif({
   weight: "400",
@@ -127,6 +128,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {children}
         </main>
         <Footer />
+        <RevealObserver />
       </body>
     </html>
   )

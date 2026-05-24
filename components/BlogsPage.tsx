@@ -1,8 +1,9 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, forwardRef } from "react"
 import gsap from "gsap"
 import { ScrollTrigger } from "gsap/ScrollTrigger"
+
 interface Blog {
   id: number
   title: string
@@ -16,35 +17,21 @@ interface Blog {
 }
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  })
+  return new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
 }
 
 export default function BlogsPage() {
   const contentRef = useRef<HTMLDivElement>(null)
   const headlineRef = useRef<HTMLHeadingElement>(null)
-  const cardsRef = useRef<(HTMLElement | null)[]>([])
   const [blogs, setBlogs] = useState<Blog[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     fetch("/api/blogs?limit=20")
-      .then((r) => {
-        if (!r.ok) throw new Error("API error")
-        return r.json()
-      })
-      .then((data) => {
-        setBlogs(data.blogs ?? [])
-        setLoading(false)
-      })
-      .catch(() => {
-        setError("Could not load blog posts.")
-        setLoading(false)
-      })
+      .then((r) => { if (!r.ok) throw new Error("API error"); return r.json() })
+      .then((data) => { setBlogs(data.blogs ?? []); setLoading(false) })
+      .catch(() => { setError("Could not load blog posts."); setLoading(false) })
   }, [])
 
   useEffect(() => {
@@ -108,111 +95,36 @@ export default function BlogsPage() {
     }
   }, [])
 
-  // Animate cards after blogs have loaded
-  useEffect(() => {
-    if (loading || !contentRef.current) return
-    cardsRef.current.forEach((el) => {
-      if (!el) return
-      gsap.fromTo(
-        el,
-        { opacity: 0, y: 50 },
-        {
-          opacity: 1,
-          y: 0,
-          ease: "none",
-          scrollTrigger: {
-            trigger: el,
-            start: "top 85%",
-            end: "top 55%",
-            scrub: true,
-          },
-        }
-      )
-    })
-  }, [loading])
-
   return (
     <div style={{ backgroundColor: "var(--bg)", minHeight: "100vh" }}>
       {/* Hero */}
-      <div
-        style={{
-          position: "relative",
-          height: "100vh",
-          width: "100%",
-          backgroundColor: "var(--bg)",
-          zIndex: 1,
-        }}
-      >
+      <div style={{ position: "relative", height: "100vh", width: "100%", backgroundColor: "var(--bg)", zIndex: 1 }}>
         <div className="headline-wrapper">
           <div className="headline-content">
             <h1
               ref={headlineRef}
-              style={{
-                width: "100%",
-                color: "#0c0c0c",
-                fontWeight: 500,
-                fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
-                lineHeight: 1.05,
-                letterSpacing: "-0.02em",
-                fontSize: "clamp(28px, 5.6vw, 96px)",
-                userSelect: "none",
-              }}
+              style={{ width: "100%", color: "#0c0c0c", fontWeight: 500, fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif', lineHeight: 1.05, letterSpacing: "-0.02em", fontSize: "clamp(28px, 5.6vw, 96px)", userSelect: "none" }}
             >
-              <span
-                className="blog-line"
-                data-text="Blog."
-                suppressHydrationWarning
-                style={{ display: "block" }}
-              >
+              <span className="blog-line" data-text="Blog." suppressHydrationWarning style={{ display: "block" }}>
                 Blog.
               </span>
             </h1>
-            <p
-              style={{
-                marginTop: "1.5rem",
-                fontFamily: "var(--font-dm-mono), 'JetBrains Mono', monospace",
-                fontSize: "clamp(1rem, 1.4vw, 1.25rem)",
-                fontWeight: 400,
-                letterSpacing: "0.15em",
-                textTransform: "uppercase",
-                color: "#0c0c0c",
-                opacity: 0.7,
-                userSelect: "none",
-                animation: "chIn 0.6s cubic-bezier(0.22, 0.61, 0.36, 1) 900ms both",
-              }}
-            >
+            <p style={{ marginTop: "1.5rem", fontFamily: "var(--font-dm-mono), 'JetBrains Mono', monospace", fontSize: "clamp(1rem, 1.4vw, 1.25rem)", fontWeight: 400, letterSpacing: "0.15em", textTransform: "uppercase", color: "#0c0c0c", opacity: 0.7, userSelect: "none", animation: "chIn 0.6s cubic-bezier(0.22, 0.61, 0.36, 1) 900ms both" }}>
               Thoughts, updates &amp; insights.
             </p>
           </div>
         </div>
       </div>
 
-      {/* Dark section — blog posts */}
+      {/* Dark section */}
       <div
         ref={contentRef}
-        style={{
-          position: "relative",
-          zIndex: 2,
-          backgroundColor: "#1a1a1a",
-          minHeight: "100vh",
-          padding: "10vh 5vw",
-          color: "#fff",
-          overflow: "hidden",
-        }}
+        style={{ position: "relative", zIndex: 2, backgroundColor: "#1a1a1a", minHeight: "100vh", padding: "10vh 5vw", color: "#fff", overflow: "hidden" }}
       >
         <div style={{ maxWidth: "1000px", margin: "0 auto" }}>
           <div
-            style={{
-              fontFamily: "var(--font-dm-mono), monospace",
-              fontSize: "12px",
-              letterSpacing: "0.2em",
-              textTransform: "uppercase",
-              color: "#555",
-              marginBottom: "5rem",
-              display: "flex",
-              alignItems: "center",
-              gap: "14px",
-            }}
+            data-reveal
+            style={{ fontFamily: "var(--font-dm-mono), monospace", fontSize: "12px", letterSpacing: "0.2em", textTransform: "uppercase", color: "#555", marginBottom: "5rem", display: "flex", alignItems: "center", gap: "14px" }}
           >
             <span style={{ display: "inline-block", width: "28px", height: "1px", background: "#555" }} />
             Latest Articles
@@ -227,14 +139,7 @@ export default function BlogsPage() {
           ) : (
             <>
               {blogs.map((blog, i) => (
-                <BlogCard
-                  key={blog.id}
-                  blog={blog}
-                  index={i}
-                  ref={(el: HTMLElement | null) => {
-                    cardsRef.current[i] = el
-                  }}
-                />
+                <BlogCard key={blog.id} blog={blog} index={i} />
               ))}
               <div style={{ borderTop: "1px solid #2a2a2a" }} />
             </>
@@ -250,33 +155,9 @@ function LoadingState() {
     <div style={{ display: "flex", flexDirection: "column", gap: "0" }}>
       {[0, 1, 2].map((i) => (
         <div key={i} style={{ borderTop: "1px solid #2a2a2a", padding: "3.5rem 0" }}>
-          <div
-            style={{
-              height: "12px",
-              width: "40px",
-              background: "#2a2a2a",
-              borderRadius: "4px",
-              marginBottom: "1.5rem",
-              animation: "pulse 1.5s ease-in-out infinite",
-            }}
-          />
-          <div
-            style={{
-              height: "clamp(1.5rem, 3vw, 2.5rem)",
-              width: `${60 + i * 10}%`,
-              background: "#222",
-              borderRadius: "4px",
-              marginBottom: "1rem",
-            }}
-          />
-          <div
-            style={{
-              height: "14px",
-              width: "80%",
-              background: "#1e1e1e",
-              borderRadius: "4px",
-            }}
-          />
+          <div style={{ height: "12px", width: "40px", background: "#2a2a2a", borderRadius: "4px", marginBottom: "1.5rem", animation: "pulse 1.5s ease-in-out infinite" }} />
+          <div style={{ height: "clamp(1.5rem, 3vw, 2.5rem)", width: `${60 + i * 10}%`, background: "#222", borderRadius: "4px", marginBottom: "1rem" }} />
+          <div style={{ height: "14px", width: "80%", background: "#1e1e1e", borderRadius: "4px" }} />
           <style>{`@keyframes pulse{0%,100%{opacity:.4}50%{opacity:.9}}`}</style>
         </div>
       ))}
@@ -286,28 +167,9 @@ function LoadingState() {
 
 function EmptyState() {
   return (
-    <div
-      style={{
-        minHeight: "40vh",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        textAlign: "center",
-        gap: "1.5rem",
-      }}
-    >
-      <p style={{ fontSize: "clamp(1.5rem, 3vw, 2.5rem)", fontWeight: 400, color: "#333", lineHeight: 1.3 }}>
-        No posts yet.
-      </p>
-      <p
-        style={{
-          fontFamily: "var(--font-dm-mono), monospace",
-          fontSize: "13px",
-          letterSpacing: "0.08em",
-          color: "#444",
-        }}
-      >
+    <div data-reveal style={{ minHeight: "40vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", gap: "1.5rem" }}>
+      <p style={{ fontSize: "clamp(1.5rem, 3vw, 2.5rem)", fontWeight: 400, color: "#333", lineHeight: 1.3 }}>No posts yet.</p>
+      <p style={{ fontFamily: "var(--font-dm-mono), monospace", fontSize: "13px", letterSpacing: "0.08em", color: "#444" }}>
         Check back soon — articles are on the way.
       </p>
     </div>
@@ -316,147 +178,72 @@ function EmptyState() {
 
 function ErrorState({ message }: { message: string }) {
   return (
-    <div
-      style={{
-        minHeight: "40vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        textAlign: "center",
-      }}
-    >
-      <p
-        style={{
-          fontFamily: "var(--font-dm-mono), monospace",
-          fontSize: "13px",
-          letterSpacing: "0.08em",
-          color: "#555",
-        }}
-      >
+    <div data-reveal style={{ minHeight: "40vh", display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
+      <p style={{ fontFamily: "var(--font-dm-mono), monospace", fontSize: "13px", letterSpacing: "0.08em", color: "#555" }}>
         {message}
       </p>
     </div>
   )
 }
 
-import { forwardRef } from "react"
-
-const BlogCard = forwardRef<HTMLElement, { blog: Blog; index: number }>(({ blog, index }, ref) => (
-  <article ref={ref as React.Ref<HTMLElement>} style={{ borderTop: "1px solid #2a2a2a" }}>
-    <a
-      href={`/blog/${blog.slug}`}
-      style={{ display: "block", padding: "3.5rem 0", textDecoration: "none", cursor: "pointer" }}
-    >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "baseline",
-          marginBottom: "1.5rem",
-        }}
-      >
-        <span
-          style={{
-            fontFamily: "var(--font-dm-mono), monospace",
-            fontSize: "12px",
-            color: "#593DF8",
-            letterSpacing: "0.15em",
-          }}
+function BlogCard({ blog, index }: { blog: Blog; index: number }) {
+  return (
+    <article style={{ borderTop: "1px solid #2a2a2a" }}>
+      <a href={`/blog/${blog.slug}`} style={{ display: "block", padding: "3.5rem 0", textDecoration: "none", cursor: "pointer" }}>
+        <div
+          data-reveal
+          style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "1.5rem" }}
         >
-          {String(index + 1).padStart(2, "0")}
-        </span>
-        <span
-          style={{
-            fontFamily: "var(--font-dm-mono), monospace",
-            fontSize: "12px",
-            color: "#444",
-            letterSpacing: "0.08em",
-          }}
-        >
-          {formatDate(blog.published_at)}
-        </span>
-      </div>
+          <span style={{ fontFamily: "var(--font-dm-mono), monospace", fontSize: "12px", color: "#593DF8", letterSpacing: "0.15em" }}>
+            {String(index + 1).padStart(2, "0")}
+          </span>
+          <span style={{ fontFamily: "var(--font-dm-mono), monospace", fontSize: "12px", color: "#444", letterSpacing: "0.08em" }}>
+            {formatDate(blog.published_at)}
+          </span>
+        </div>
 
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "2rem" }}>
-        <div style={{ flex: 1 }}>
-          <h2
-            style={{
-              fontSize: "clamp(1.5rem, 3vw, 2.5rem)",
-              fontWeight: 500,
-              lineHeight: 1.1,
-              letterSpacing: "-0.02em",
-              marginBottom: "1rem",
-              color: "#fff",
-              fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
-            }}
-          >
-            {blog.title}
-          </h2>
-          {blog.excerpt && (
-            <p
-              style={{
-                fontSize: "clamp(0.9rem, 1.2vw, 1.05rem)",
-                lineHeight: 1.7,
-                color: "#888",
-                marginBottom: "1.5rem",
-                maxWidth: "600px",
-                fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
-              }}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "2rem" }}>
+          <div style={{ flex: 1 }}>
+            <h2
+              data-reveal
+              style={{ "--rd": "80ms", fontSize: "clamp(1.5rem, 3vw, 2.5rem)", fontWeight: 500, lineHeight: 1.1, letterSpacing: "-0.02em", marginBottom: "1rem", color: "#fff", fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' } as React.CSSProperties}
             >
-              {blog.excerpt}
-            </p>
-          )}
-          <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
-            {blog.author && (
-              <span
-                style={{
-                  fontFamily: "var(--font-dm-mono), monospace",
-                  fontSize: "11px",
-                  letterSpacing: "0.08em",
-                  padding: "5px 12px",
-                  borderRadius: "999px",
-                  border: "1px solid #2a2a2a",
-                  color: "#555",
-                }}
+              {blog.title}
+            </h2>
+            {blog.excerpt && (
+              <p
+                data-reveal
+                style={{ "--rd": "160ms", fontSize: "clamp(0.9rem, 1.2vw, 1.05rem)", lineHeight: 1.7, color: "#888", marginBottom: "1.5rem", maxWidth: "600px", fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' } as React.CSSProperties}
               >
-                {blog.author.username}
-              </span>
+                {blog.excerpt}
+              </p>
             )}
-            <span
-              style={{
-                fontFamily: "var(--font-dm-mono), monospace",
-                fontSize: "11px",
-                letterSpacing: "0.08em",
-                color: "#444",
-              }}
+            <div
+              data-reveal
+              style={{ "--rd": "220ms", display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" } as React.CSSProperties}
             >
-              {blog.views} views
-            </span>
+              {blog.author && (
+                <span style={{ fontFamily: "var(--font-dm-mono), monospace", fontSize: "11px", letterSpacing: "0.08em", padding: "5px 12px", borderRadius: "999px", border: "1px solid #2a2a2a", color: "#555" }}>
+                  {blog.author.username}
+                </span>
+              )}
+              <span style={{ fontFamily: "var(--font-dm-mono), monospace", fontSize: "11px", letterSpacing: "0.08em", color: "#444" }}>
+                {blog.views} views
+              </span>
+            </div>
+          </div>
+
+          <div
+            aria-hidden="true"
+            data-reveal
+            style={{ "--rd": "200ms", flexShrink: 0, width: "52px", height: "52px", borderRadius: "50%", border: "1px solid #2a2a2a", display: "grid", placeItems: "center", color: "#fff" } as React.CSSProperties}
+          >
+            <svg viewBox="0 0 24 24" style={{ width: 16, height: 16, stroke: "currentColor", fill: "none", strokeWidth: 1.8 }}>
+              <path d="M7 17 L17 7 M9 7 H17 V15" />
+            </svg>
           </div>
         </div>
-
-        <div
-          aria-hidden="true"
-          style={{
-            flexShrink: 0,
-            width: "52px",
-            height: "52px",
-            borderRadius: "50%",
-            border: "1px solid #2a2a2a",
-            display: "grid",
-            placeItems: "center",
-            color: "#fff",
-          }}
-        >
-          <svg
-            viewBox="0 0 24 24"
-            style={{ width: 16, height: 16, stroke: "currentColor", fill: "none", strokeWidth: 1.8 }}
-          >
-            <path d="M7 17 L17 7 M9 7 H17 V15" />
-          </svg>
-        </div>
-      </div>
-    </a>
-  </article>
-))
-BlogCard.displayName = "BlogCard"
+      </a>
+    </article>
+  )
+}

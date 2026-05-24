@@ -1,42 +1,26 @@
 services:
 
-  # ── Express Backend API ────────────────────────────────────────────
-  backend:
+  # ── Unified App (Next.js + Express on one port) ───────────────────
+  app:
     build:
       context: .
-      dockerfile: Dockerfile.backend
+      dockerfile: Dockerfile
     restart: unless-stopped
     env_file: .env
     environment:
       NODE_ENV: production
       SQLITE_PATH: /app/data/database.sqlite
     ports:
-      - "${PORT:-3001}:${PORT:-3001}"
+      - "${PORT:-3000}:${PORT:-3000}"
     volumes:
-      - ./backend/uploads:/app/uploads
+      - ./backend/uploads:/app/backend/uploads
       - ./backend/logs:/app/logs
       - sqlite_data:/app/data
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:${PORT:-3001}/api/blogs"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:${PORT:-3000}/api/blogs"]
       interval: 15s
       timeout: 5s
       retries: 3
-
-  # ── Next.js Frontend ───────────────────────────────────────────────
-  frontend:
-    build:
-      context: .
-      dockerfile: Dockerfile.frontend
-    restart: unless-stopped
-    env_file: .env
-    ports:
-      - "3000:3000"
-    environment:
-      NODE_ENV: production
-      BACKEND_URL: http://backend:3001
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://backend:3001/api}
-    depends_on:
-      - backend
 
   # ── Cloudflare Tunnel (optional, aktivieren mit --profile tunnel) ──
   cloudflared:
@@ -44,7 +28,7 @@ services:
     restart: unless-stopped
     command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
     depends_on:
-      backend:
+      app:
         condition: service_healthy
     profiles:
       - tunnel

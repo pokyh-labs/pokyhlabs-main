@@ -1,16 +1,28 @@
 import React from 'react';
 
 const PAGE_TITLES = {
-  dashboard: 'Dashboard',
-  blogs:     'Blogs',
-  tunnel:    'Cloudflare Tunnel',
-  users:     'Benutzerverwaltung',
-  logs:      'Logs & Analysen',
-  seo:       'SEO Editor',
+  dashboard:  'Dashboard',
+  blogs:      'Blogs',
+  inquiries:  'Inquiries',
+  tunnel:     'Cloudflare Tunnel',
+  users:      'Benutzerverwaltung',
+  logs:       'Logs & Analysen',
+  seo:        'SEO Editor',
+};
+
+const PAGE_ICONS = {
+  dashboard:  'bi-squares-fill',
+  blogs:      'bi-journal-text',
+  inquiries:  'bi-envelope-fill',
+  tunnel:     'bi-diagram-3-fill',
+  users:      'bi-person-fill',
+  logs:       'bi-bar-chart-fill',
+  seo:        'bi-search',
 };
 
 export default function Topbar({ page, user, onMenuToggle }) {
   const title = PAGE_TITLES[page] || 'Dashboard';
+  const icon  = PAGE_ICONS[page]  || 'bi-squares-fill';
   const now = new Date();
   const hour = now.getHours();
   const greeting = hour < 12 ? 'Guten Morgen' : hour < 18 ? 'Guten Tag' : 'Guten Abend';
@@ -40,7 +52,13 @@ export default function Topbar({ page, user, onMenuToggle }) {
       </button>
 
       {/* Page title */}
-      <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <i className={`bi ${icon}`} style={{
+          fontSize: '0.95rem',
+          color: 'var(--accent)',
+          lineHeight: 1,
+          flexShrink: 0,
+        }} />
         <h1 style={{
           fontSize: '0.9375rem',
           fontWeight: 600,

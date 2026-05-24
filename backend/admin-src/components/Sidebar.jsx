@@ -3,12 +3,13 @@ import { clearTokens, apiFetch } from '../hooks/useApi';
 import { toast } from '../hooks/useToast';
 
 const NAV = [
-  { id: 'dashboard', icon: 'bi-squares-fill',     label: 'Dashboard',  roles: ['admin'] },
-  { id: 'blogs',     icon: 'bi-journal-text',     label: 'Blogs',      roles: ['admin', 'editor'] },
-  { id: 'users',     icon: 'bi-person-fill',      label: 'Benutzer',   roles: ['admin'] },
-  { id: 'logs',      icon: 'bi-bar-chart-fill',   label: 'Logs',       roles: ['admin'] },
-  { id: 'seo',       icon: 'bi-search',           label: 'SEO',        roles: ['admin'] },
-  { id: 'tunnel',    icon: 'bi-diagram-3-fill',   label: 'Tunnel',     roles: ['admin'] },
+  { id: 'dashboard',  icon: 'bi-squares-fill',     label: 'Dashboard',   roles: ['admin'] },
+  { id: 'blogs',      icon: 'bi-journal-text',     label: 'Blogs',       roles: ['admin', 'editor'] },
+  { id: 'inquiries',  icon: 'bi-envelope-fill',    label: 'Inquiries',   roles: ['admin'] },
+  { id: 'users',      icon: 'bi-person-fill',      label: 'Benutzer',    roles: ['admin'] },
+  { id: 'logs',       icon: 'bi-bar-chart-fill',   label: 'Logs',        roles: ['admin'] },
+  { id: 'seo',        icon: 'bi-search',           label: 'SEO',         roles: ['admin'] },
+  { id: 'tunnel',     icon: 'bi-diagram-3-fill',   label: 'Tunnel',      roles: ['admin'] },
 ];
 
 export default function Sidebar({ user, page, onPageChange, onLogout, open, onClose }) {
@@ -43,15 +44,18 @@ export default function Sidebar({ user, page, onPageChange, onLogout, open, onCl
       }}>
         <div style={{
           width: 32, height: 32,
-          background: 'var(--accent)',
           borderRadius: 9,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           flexShrink: 0,
-          boxShadow: '0 2px 8px rgba(89,61,248,0.40)',
+          overflow: 'hidden',
         }}>
-          <i className="bi bi-shield-lock-fill" style={{ color: '#fff', fontSize: '0.875rem' }} />
+          <img
+            src="/assets/logo.png"
+            alt="pokyh.studio"
+            style={{ width: 32, height: 32, objectFit: 'contain', display: 'block' }}
+          />
         </div>
         <div>
           <div style={{

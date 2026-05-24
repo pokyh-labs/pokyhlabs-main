@@ -60,17 +60,18 @@ export default function Login({ onLogin }) {
         {/* Brand */}
         <div style={{ textAlign: 'center', marginBottom: '2.25rem' }}>
           <div style={{
-            width: 52,
-            height: 52,
-            background: 'var(--accent)',
-            borderRadius: 15,
+            width: 56,
+            height: 56,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             margin: '0 auto 1.125rem',
-            boxShadow: '0 6px 24px rgba(89,61,248,0.28), 0 2px 8px rgba(89,61,248,0.15)',
           }}>
-            <i className="bi bi-shield-lock-fill" style={{ fontSize: '1.35rem', color: '#fff' }} />
+            <img
+              src="/assets/logo.png"
+              alt="pokyh.studio"
+              style={{ width: 56, height: 56, objectFit: 'contain', display: 'block' }}
+            />
           </div>
           <h1 style={{
             color: 'var(--text)',

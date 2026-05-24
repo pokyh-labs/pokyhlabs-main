@@ -4,12 +4,12 @@
   "private": true,
   "scripts": {
     "postinstall": "cd backend && npm install",
-    "dev": "concurrently --names \"frontend,backend\" -c \"cyan,green\" \"next dev\" \"npm run dev --prefix backend\"",
+    "dev": "node server.js",
     "dev:frontend": "next dev",
     "dev:backend": "npm run dev --prefix backend",
     "build": "next build && npm run build --prefix backend",
     "build:backend": "npm run build --prefix backend",
-    "start": "next start",
+    "start": "node server.js",
     "start:backend": "npm run start --prefix backend",
     "add-admin": "npm run add-admin --prefix backend",
     "generate-secrets": "npm run generate-secrets --prefix backend",
@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",
+    "dotenv": "^17.4.2",
     "gsap": "^3.15.0",
     "lenis": "^1.3.23",
     "next": "^16.2.6",

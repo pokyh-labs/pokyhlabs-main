@@ -3,110 +3,78 @@
 import { useEffect, useRef, useState, useCallback } from "react"
 import gsap from "gsap"
 import { ScrollTrigger } from "gsap/ScrollTrigger"
-import { services, budgets, timelines } from "@/lib/services.config"
 
-type Step = 1 | 2 | 3 | 4
+type Step = 1 | 2 | 3 | 4 | 5 | 6
 
-const ICONS: Record<string, React.ReactNode> = {
-  frontend: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} style={{ width: 22, height: 22 }}>
-      <polyline points="16 18 22 12 16 6" />
-      <polyline points="8 6 2 12 8 18" />
-    </svg>
-  ),
-  backend: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} style={{ width: 22, height: 22 }}>
-      <ellipse cx="12" cy="5" rx="9" ry="3" />
-      <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
-      <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
-    </svg>
-  ),
-  threejs: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} style={{ width: 22, height: 22 }}>
-      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-      <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
-      <line x1="12" y1="22.08" x2="12" y2="12" />
-    </svg>
-  ),
-  seo: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} style={{ width: 22, height: 22 }}>
-      <circle cx="11" cy="11" r="8" />
-      <line x1="21" y1="21" x2="16.65" y2="16.65" />
-      <line x1="11" y1="8" x2="11" y2="14" />
-      <line x1="8" y1="11" x2="14" y2="11" />
-    </svg>
-  ),
-  hosting: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} style={{ width: 22, height: 22 }}>
-      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-    </svg>
-  ),
-  wordpress: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} style={{ width: 22, height: 22 }}>
-      <rect x="3" y="3" width="18" height="18" rx="2" />
-      <path d="M7 8h2l2 8 2-5 2 5 2-8h2" />
-    </svg>
-  ),
-  ecommerce: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} style={{ width: 22, height: 22 }}>
-      <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-      <line x1="3" y1="6" x2="21" y2="6" />
-      <path d="M16 10a4 4 0 0 1-8 0" />
-    </svg>
-  ),
-  "react-native": (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} style={{ width: 22, height: 22 }}>
-      <circle cx="12" cy="12" r="2" />
-      <ellipse cx="12" cy="12" rx="10" ry="4" />
-      <ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(60 12 12)" />
-      <ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(120 12 12)" />
-    </svg>
-  ),
-  flutter: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} style={{ width: 22, height: 22 }}>
-      <path d="M13.5 2L3 12.5l3.5 3.5L20 2z" />
-      <path d="M6.5 16L13 22.5l3.5-3.5-6.5-6.5z" />
-      <path d="M13 16l3.5 3.5" />
-    </svg>
-  ),
-}
+const SERVICES = [
+  {
+    id: "website",
+    label: "Website",
+    description: "Landing page, corporate site or web app",
+    icon: (
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={1.4} style={{ width: 22, height: 22 }}>
+        <rect x="2" y="3" width="16" height="13" rx="2" />
+        <path d="M2 7h16" />
+        <circle cx="5" cy="5" r=".6" fill="currentColor" stroke="none" />
+        <circle cx="7.5" cy="5" r=".6" fill="currentColor" stroke="none" />
+      </svg>
+    ),
+  },
+  {
+    id: "app",
+    label: "App",
+    description: "iOS, Android or cross-platform",
+    icon: (
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={1.4} style={{ width: 22, height: 22 }}>
+        <rect x="5" y="2" width="10" height="16" rx="2.5" />
+        <circle cx="10" cy="15.5" r=".7" fill="currentColor" stroke="none" />
+        <path d="M8 4.5h4" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+  {
+    id: "hosting",
+    label: "Hosting",
+    description: "Managed hosting, SSL & uptime monitoring",
+    icon: (
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={1.4} style={{ width: 22, height: 22 }}>
+        <rect x="2" y="4" width="16" height="5" rx="1.5" />
+        <rect x="2" y="11" width="16" height="5" rx="1.5" />
+        <circle cx="15" cy="6.5" r=".7" fill="currentColor" stroke="none" />
+        <circle cx="15" cy="13.5" r=".7" fill="currentColor" stroke="none" />
+      </svg>
+    ),
+  },
+]
 
-function useStepTransition(step: Step) {
-  const ref = useRef<HTMLDivElement>(null)
-  const prev = useRef(step)
-
-  useEffect(() => {
-    if (!ref.current || prev.current === step) return
-    prev.current = step
-    gsap.fromTo(
-      ref.current,
-      { opacity: 0, y: 24 },
-      { opacity: 1, y: 0, duration: 0.45, ease: "power2.out" }
-    )
-  }, [step])
-
-  return ref
-}
+const STEPS = [
+  { n: 1, label: "Services" },
+  { n: 2, label: "Project" },
+  { n: 3, label: "Company" },
+  { n: 4, label: "Deadline" },
+  { n: 5, label: "Contact" },
+]
 
 export default function ContactPage() {
   const headlineRef = useRef<HTMLHeadingElement>(null)
-  const contentRef = useRef<HTMLDivElement>(null)
+  const formRef = useRef<HTMLDivElement>(null)
+  const stepIndicatorRef = useRef<HTMLDivElement>(null)
 
   const [step, setStep] = useState<Step>(1)
-  const [selected, setSelected] = useState<string[]>([])
-  const [budget, setBudget] = useState("")
-  const [timeline, setTimeline] = useState("")
-  const [brief, setBrief] = useState("")
+  const [services, setServices] = useState<string[]>([])
+  const [include3d, setInclude3d] = useState(false)
+  const [description, setDescription] = useState("")
+  const [company, setCompany] = useState("")
+  const [deadline, setDeadline] = useState("")
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
-  const [company, setCompany] = useState("")
   const [errors, setErrors] = useState<Record<string, string>>({})
-
-  const stepRef = useStepTransition(step)
+  const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
     gsap.registerPlugin(ScrollTrigger)
 
+    // Cursor glow
     const cursor = document.createElement("div")
     cursor.style.cssText =
       "position:fixed;top:0;left:0;width:400px;height:400px;border-radius:50%;" +
@@ -117,6 +85,7 @@ export default function ContactPage() {
       gsap.to(cursor, { x: e.clientX, y: e.clientY, duration: 0.8, ease: "power3.out" })
     window.addEventListener("mousemove", moveCursor)
 
+    // Headline character animation
     if (headlineRef.current) {
       const lines = headlineRef.current.querySelectorAll<HTMLSpanElement>(".contact-line")
       lines.forEach((line, li) => {
@@ -140,18 +109,38 @@ export default function ContactPage() {
       })
     }
 
-    if (contentRef.current) {
+    // Curved top on scroll
+    if (formRef.current) {
       gsap.fromTo(
-        contentRef.current,
+        formRef.current,
         { borderTopLeftRadius: "0%", borderTopRightRadius: "0%" },
         {
           borderTopLeftRadius: "50% 150px",
           borderTopRightRadius: "50% 150px",
           ease: "none",
           scrollTrigger: {
-            trigger: contentRef.current,
+            trigger: formRef.current,
             start: "top bottom",
             end: "top top",
+            scrub: true,
+          },
+        }
+      )
+    }
+
+    // Step indicator scroll reveal
+    if (stepIndicatorRef.current) {
+      gsap.fromTo(
+        stepIndicatorRef.current,
+        { opacity: 0, y: 40 },
+        {
+          opacity: 1,
+          y: 0,
+          ease: "none",
+          scrollTrigger: {
+            trigger: stepIndicatorRef.current,
+            start: "top 90%",
+            end: "top 65%",
             scrub: true,
           },
         }
@@ -166,263 +155,232 @@ export default function ContactPage() {
   }, [])
 
   const toggleService = useCallback((id: string) => {
-    setSelected((prev) =>
-      prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]
-    )
-    setErrors((e) => ({ ...e, services: "" }))
+    setServices(prev => {
+      const next = prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
+      if (!next.includes("website")) setInclude3d(false)
+      return next
+    })
+    setErrors(e => ({ ...e, services: "" }))
   }, [])
 
-  const advance = () => {
-    if (step === 1) {
-      if (selected.length === 0) {
-        setErrors({ services: "Please select at least one service." })
-        return
-      }
-    }
-    if (step === 2) {
-      const e: Record<string, string> = {}
-      if (!budget) e.budget = "Please select a budget."
-      if (!timeline) e.timeline = "Please select a timeline."
-      if (Object.keys(e).length > 0) { setErrors(e); return }
-    }
-    if (step === 3) {
-      const e: Record<string, string> = {}
+  const goNext = () => {
+    const e: Record<string, string> = {}
+    if (step === 1 && services.length === 0) e.services = "Select at least one service."
+    if (step === 5) {
       if (!name.trim()) e.name = "Name is required."
       if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.email = "Valid email required."
-      if (Object.keys(e).length > 0) { setErrors(e); return }
     }
+    if (Object.keys(e).length) { setErrors(e); return }
     setErrors({})
-    setStep((s) => (s + 1) as Step)
+    setStep(s => (s + 1) as Step)
   }
 
-  const handleSubmit = () => {
-    const serviceNames = selected
-      .map((id) => services.find((s) => s.id === id)?.name ?? id)
-      .join(", ")
-    const body = [
-      `Services: ${serviceNames}`,
-      `Budget: ${budgets.find((b) => b.id === budget)?.label ?? budget}`,
-      `Timeline: ${timelines.find((t) => t.id === timeline)?.label ?? timeline}`,
-      brief ? `Brief: ${brief}` : null,
-      `Name: ${name}`,
-      `Email: ${email}`,
-      company ? `Company: ${company}` : null,
-    ]
-      .filter(Boolean)
-      .join("\n")
+  const goBack = () => {
+    setErrors({})
+    setStep(s => (s - 1) as Step)
+  }
 
-    window.location.href = `mailto:hello@pokyh.studio?subject=New Project – ${name}&body=${encodeURIComponent(body)}`
-    setStep(4)
+  const handleSubmit = async () => {
+    const e: Record<string, string> = {}
+    if (!name.trim()) e.name = "Name is required."
+    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.email = "Valid email required."
+    if (Object.keys(e).length) { setErrors(e); return }
+
+    const finalServices = services.includes("website") && include3d
+      ? [...services, "threejs"]
+      : services
+
+    setSubmitting(true)
+    try {
+      const res = await fetch("/api/inquiries", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          services: finalServices,
+          description: description.trim() || null,
+          company: company.trim() || null,
+          deadline: deadline || null,
+          name: name.trim(),
+          email: email.trim().toLowerCase(),
+        }),
+      })
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        setErrors({ submit: (d as { error?: string }).error ?? "Something went wrong. Please try again." })
+        return
+      }
+      setStep(6)
+    } catch {
+      setErrors({ submit: "Network error. Please try again." })
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
     <div style={{ backgroundColor: "var(--bg)", minHeight: "100vh" }}>
+      <style>{`
+        .svc-btn { transition: border-color 0.18s, background 0.18s, transform 0.18s; cursor:pointer; text-align:left; }
+        .svc-btn:hover { transform: translateY(-2px); }
+        .c-input { transition: border-color 0.18s; }
+        .c-input:focus { outline: none; }
+        .c-btn { transition: transform 0.18s, opacity 0.18s; }
+        .c-btn:hover:not([disabled]) { transform: translateY(-1px); }
+        .c-back { transition: color 0.18s; }
+        .c-back:hover { color: rgba(255,255,255,0.85) !important; }
+      `}</style>
+
       {/* ── Hero ── */}
       <div style={{ position: "relative", height: "100vh", width: "100%", backgroundColor: "var(--bg)", zIndex: 1 }}>
-        <div className="headline-wrapper">
-          <div className="headline-content">
-            <h1
-              ref={headlineRef}
-              style={{
-                color: "#0c0c0c",
-                fontWeight: 500,
-                fontFamily: 'var(--font-inter), "Inter", "Helvetica Neue", sans-serif',
-                lineHeight: 1.05,
-                letterSpacing: "-0.02em",
-                fontSize: "clamp(28px, 5.6vw, 96px)",
-                userSelect: "none",
-              }}
-            >
-              <span className="contact-line" data-text="Let's work." suppressHydrationWarning style={{ display: "block" }}>
-                Let's work.
-              </span>
-            </h1>
-            <p
-              style={{
-                marginTop: "1.5rem",
-                fontFamily: "var(--font-dm-mono), monospace",
-                fontSize: "clamp(0.75rem, 1.1vw, 1rem)",
-                fontWeight: 400,
-                letterSpacing: "0.2em",
-                textTransform: "uppercase",
-                color: "#0c0c0c",
-                opacity: 0.5,
-                animation: "chIn 0.6s cubic-bezier(0.22, 0.61, 0.36, 1) 900ms both",
-              }}
-            >
-              Configure your project below.
-            </p>
-          </div>
+        <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 clamp(28px, 6vw, 100px)" }}>
+          <p style={{
+            fontFamily: "var(--font-dm-mono)",
+            fontSize: 11,
+            letterSpacing: "0.2em",
+            textTransform: "uppercase",
+            color: "var(--black)",
+            opacity: 0.4,
+            marginBottom: "1.75rem",
+            animation: "chIn 0.5s cubic-bezier(0.22,0.61,0.36,1) 100ms both",
+          }}>
+            pokyh.studio — Contact
+          </p>
+          <h1
+            ref={headlineRef}
+            suppressHydrationWarning
+            style={{
+              color: "var(--black)",
+              fontWeight: 500,
+              fontFamily: "var(--font-inter)",
+              lineHeight: 1.04,
+              letterSpacing: "-0.03em",
+              fontSize: "clamp(3rem, 8.5vw, 9.5rem)",
+              userSelect: "none",
+            }}
+          >
+            <span className="contact-line" data-text="Let's work." style={{ display: "block" }}>
+              Let&apos;s work.
+            </span>
+          </h1>
+          <p style={{
+            marginTop: "2rem",
+            fontFamily: "var(--font-inter)",
+            fontSize: "clamp(0.9rem, 1.2vw, 1.1rem)",
+            color: "var(--black)",
+            opacity: 0.45,
+            maxWidth: 400,
+            lineHeight: 1.65,
+            fontWeight: 400,
+            animation: "chIn 0.6s cubic-bezier(0.22,0.61,0.36,1) 900ms both",
+          }}>
+            Tell us about your project and we&apos;ll get back within 24 hours.
+          </p>
         </div>
 
-        <div
-          style={{
-            position: "absolute",
-            bottom: 40,
-            left: 28,
-            right: 28,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <div
-            style={{
-              fontFamily: "var(--font-dm-mono), monospace",
-              fontSize: 11,
-              letterSpacing: "0.18em",
-              textTransform: "uppercase",
-              color: "#0c0c0c",
-              opacity: 0.4,
-              display: "flex",
-              gap: 20,
-              animation: "chIn 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) 1200ms both",
-            }}
-          >
-            <span>hello@pokyh.studio</span>
-          </div>
-          <div
-            style={{
-              fontFamily: "var(--font-dm-mono), monospace",
-              fontSize: 11,
-              letterSpacing: "0.18em",
-              textTransform: "uppercase",
-              color: "#0c0c0c",
-              opacity: 0.4,
-              animation: "chIn 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) 1350ms both",
-            }}
-          >
+        <div style={{
+          position: "absolute",
+          bottom: 40,
+          left: "clamp(28px, 6vw, 100px)",
+          right: "clamp(28px, 6vw, 100px)",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}>
+          <span style={{ fontFamily: "var(--font-dm-mono)", fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--black)", opacity: 0.35, animation: "chIn 0.5s cubic-bezier(0.22,0.61,0.36,1) 1200ms both" }}>
+            hello@pokyh.studio
+          </span>
+          <span style={{ fontFamily: "var(--font-dm-mono)", fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--black)", opacity: 0.35, animation: "chIn 0.5s cubic-bezier(0.22,0.61,0.36,1) 1400ms both" }}>
             Response within 24h
-          </div>
+          </span>
         </div>
       </div>
 
       {/* ── Form section ── */}
       <div
-        ref={contentRef}
+        ref={formRef}
         style={{
           position: "relative",
           zIndex: 2,
           backgroundColor: "#1a1a1a",
           minHeight: "100vh",
-          padding: "10vh 5vw 12vh",
+          padding: "clamp(60px,10vh,120px) clamp(28px,6vw,100px) clamp(80px,14vh,160px)",
           color: "#fff",
           overflow: "hidden",
         }}
       >
-        <div style={{ maxWidth: "900px", margin: "0 auto" }}>
+        <div style={{ maxWidth: 700, margin: "0 auto" }}>
 
           {/* Step indicator */}
-          {step < 4 && (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 0,
-                marginBottom: "5rem",
-              }}
-            >
-              {[
-                { n: 1, label: "Services" },
-                { n: 2, label: "Details" },
-                { n: 3, label: "Contact" },
-              ].map(({ n, label }, i) => (
-                <div key={n} style={{ display: "flex", alignItems: "center", flex: i < 2 ? 1 : undefined }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-                    <div
-                      style={{
-                        width: 28,
-                        height: 28,
-                        borderRadius: "50%",
-                        border: `1px solid ${step >= n ? "#593DF8" : "#333"}`,
-                        background: step === n ? "#593DF8" : step > n ? "#593DF8" : "transparent",
-                        display: "grid",
-                        placeItems: "center",
-                        transition: "all 0.3s ease",
-                      }}
-                    >
-                      {step > n ? (
-                        <svg viewBox="0 0 12 12" fill="none" style={{ width: 10, height: 10 }}>
-                          <polyline points="2,6 5,9 10,3" stroke="#fff" strokeWidth={1.5} strokeLinecap="round" />
-                        </svg>
-                      ) : (
-                        <span
-                          style={{
-                            fontFamily: "var(--font-dm-mono), monospace",
-                            fontSize: 10,
-                            color: step >= n ? "#fff" : "#555",
-                          }}
-                        >
-                          {String(n).padStart(2, "0")}
-                        </span>
-                      )}
+          {step < 6 && (
+            <div ref={stepIndicatorRef} style={{ display: "flex", alignItems: "center", marginBottom: "clamp(44px,8vh,80px)" }}>
+              {STEPS.map(({ n, label }, i) => {
+                const done = step > n
+                const active = step === n
+                return (
+                  <div key={n} style={{ display: "flex", alignItems: "center", flex: i < STEPS.length - 1 ? 1 : undefined }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 9, flexShrink: 0 }}>
+                      <div style={{
+                        width: 26, height: 26, borderRadius: "50%",
+                        border: `1px solid ${done || active ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.12)"}`,
+                        background: done ? "rgba(255,255,255,0.88)" : active ? "rgba(255,255,255,0.08)" : "transparent",
+                        display: "grid", placeItems: "center", flexShrink: 0, transition: "all 0.3s",
+                      }}>
+                        {done ? (
+                          <svg viewBox="0 0 12 12" fill="none" style={{ width: 9, height: 9 }}>
+                            <polyline points="2,6 5,9 10,3" stroke="#1a1a1a" strokeWidth={1.8} strokeLinecap="round" />
+                          </svg>
+                        ) : (
+                          <span style={{ fontFamily: "var(--font-dm-mono)", fontSize: 9, color: active ? "rgba(255,255,255,0.88)" : "rgba(255,255,255,0.2)" }}>
+                            {String(n).padStart(2, "0")}
+                          </span>
+                        )}
+                      </div>
+                      <span style={{ fontFamily: "var(--font-dm-mono)", fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: done || active ? "rgba(255,255,255,0.65)" : "rgba(255,255,255,0.2)", transition: "color 0.3s" }}>
+                        {label}
+                      </span>
                     </div>
-                    <span
-                      style={{
-                        fontFamily: "var(--font-dm-mono), monospace",
-                        fontSize: 11,
-                        letterSpacing: "0.15em",
-                        textTransform: "uppercase",
-                        color: step >= n ? "#fff" : "#444",
-                        transition: "color 0.3s ease",
-                      }}
-                    >
-                      {label}
-                    </span>
+                    {i < STEPS.length - 1 && (
+                      <div style={{ flex: 1, height: 1, margin: "0 14px", background: done ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.06)", transition: "background 0.3s" }} />
+                    )}
                   </div>
-                  {i < 2 && (
-                    <div
-                      style={{
-                        flex: 1,
-                        height: 1,
-                        margin: "0 16px",
-                        background: step > n ? "#593DF8" : "#2a2a2a",
-                        transition: "background 0.3s ease",
-                      }}
-                    />
-                  )}
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
 
-          {/* Step content */}
-          <div ref={stepRef}>
+          {/* Step content — key remounts, each step animates its own children */}
+          <div key={step}>
             {step === 1 && (
-              <Step1
-                selected={selected}
+              <StepServices
+                services={services}
+                include3d={include3d}
                 onToggle={toggleService}
+                onToggle3d={() => setInclude3d(v => !v)}
                 error={errors.services}
-                onNext={advance}
+                onNext={goNext}
               />
             )}
             {step === 2 && (
-              <Step2
-                budget={budget}
-                setBudget={setBudget}
-                timeline={timeline}
-                setTimeline={setTimeline}
-                brief={brief}
-                setBrief={setBrief}
-                errors={errors}
-                onBack={() => setStep(1)}
-                onNext={advance}
-              />
+              <StepDescription value={description} onChange={setDescription} onBack={goBack} onNext={goNext} />
             )}
             {step === 3 && (
-              <Step3
-                name={name}
-                setName={setName}
-                email={email}
-                setEmail={setEmail}
-                company={company}
-                setCompany={setCompany}
+              <StepCompany value={company} onChange={setCompany} onBack={goBack} onNext={goNext} />
+            )}
+            {step === 4 && (
+              <StepDeadline value={deadline} onChange={setDeadline} onBack={goBack} onNext={goNext} />
+            )}
+            {step === 5 && (
+              <StepContact
+                name={name} setName={setName}
+                email={email} setEmail={setEmail}
                 errors={errors}
-                onBack={() => setStep(2)}
+                submitting={submitting}
+                submitError={errors.submit}
+                onBack={goBack}
                 onSubmit={handleSubmit}
               />
             )}
-            {step === 4 && <Step4 name={name} />}
+            {step === 6 && <StepSuccess name={name} />}
           </div>
         </div>
       </div>
@@ -430,190 +388,69 @@ export default function ContactPage() {
   )
 }
 
-/* ── Step 1: Services ─────────────────────────────────────────────────────── */
-function Step1({
-  selected,
-  onToggle,
-  error,
-  onNext,
-}: {
-  selected: string[]
-  onToggle: (id: string) => void
-  error?: string
-  onNext: () => void
+/* ── Step 1: Services ─────────────────────────────────────────────── */
+function StepServices({ services, include3d, onToggle, onToggle3d, error, onNext }: {
+  services: string[]; include3d: boolean
+  onToggle: (id: string) => void; onToggle3d: () => void
+  error?: string; onNext: () => void
 }) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const websiteSelected = services.includes("website")
+
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      const tl = gsap.timeline({ defaults: { ease: "power2.out" } })
+      tl.fromTo("[data-a='heading']",   { autoAlpha: 0, y: 28 }, { autoAlpha: 1, y: 0, duration: 0.5 })
+        .fromTo("[data-a='card']",      { autoAlpha: 0, y: 26 }, { autoAlpha: 1, y: 0, duration: 0.42, stagger: 0.09 }, "-=0.22")
+        .fromTo("[data-a='nav']",       { autoAlpha: 0, y: 18 }, { autoAlpha: 1, y: 0, duration: 0.38 }, "-=0.12")
+    }, containerRef)
+    return () => ctx.revert()
+  }, [])
+
   return (
-    <div>
-      <div style={{ marginBottom: "2.5rem" }}>
-        <h2
-          style={{
-            fontSize: "clamp(1.6rem, 2.4vw, 2.4rem)",
-            fontWeight: 500,
-            letterSpacing: "-0.02em",
-            color: "#fff",
-            fontFamily: 'var(--font-inter), "Inter", "Helvetica Neue", sans-serif',
-            marginBottom: "0.75rem",
-          }}
-        >
-          What do you need?
-        </h2>
-        <p
-          style={{
-            fontFamily: "var(--font-dm-mono), monospace",
-            fontSize: 12,
-            color: "#555",
-            letterSpacing: "0.1em",
-          }}
-        >
-          Select all that apply — multiple selections are welcome.
-        </p>
+    <div ref={containerRef}>
+      <div data-a="heading">
+        <StepHeading label="01" title="What do you need?" sub="Select all that apply." />
       </div>
 
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
-          gap: 12,
-          marginBottom: "2.5rem",
+          gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+          gap: 10,
+          marginBottom: websiteSelected ? "1rem" : "2.5rem",
         }}
       >
-        {services.map((svc) => {
-          const active = selected.includes(svc.id)
+        {SERVICES.map(svc => {
+          const active = services.includes(svc.id)
           return (
             <button
               key={svc.id}
+              data-a="card"
               onClick={() => onToggle(svc.id)}
+              className="svc-btn"
               style={{
-                background: active ? "rgba(89,61,248,0.12)" : "#111",
-                border: `1px solid ${active ? "#593DF8" : "#2a2a2a"}`,
-                borderRadius: 12,
-                padding: "1.4rem 1.4rem 1.2rem",
-                cursor: "pointer",
-                textAlign: "left",
+                background: active ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.02)",
+                border: `1px solid ${active ? "rgba(255,255,255,0.22)" : "rgba(255,255,255,0.07)"}`,
+                borderRadius: 14,
+                padding: "1.2rem 1.2rem 1.1rem",
                 color: "#fff",
-                transition: "border-color 0.2s, background 0.2s, transform 0.15s",
-                transform: active ? "translateY(-2px)" : "none",
                 position: "relative",
               }}
-              onMouseEnter={(e) => {
-                if (!active) (e.currentTarget as HTMLElement).style.borderColor = "#3d3d3d"
-              }}
-              onMouseLeave={(e) => {
-                if (!active) (e.currentTarget as HTMLElement).style.borderColor = "#2a2a2a"
-              }}
             >
-              {/* Badge */}
-              {svc.badge && (
-                <span
-                  style={{
-                    position: "absolute",
-                    top: 12,
-                    right: 12,
-                    fontFamily: "var(--font-dm-mono), monospace",
-                    fontSize: 9,
-                    letterSpacing: "0.15em",
-                    textTransform: "uppercase",
-                    color: active ? "#593DF8" : "#555",
-                    border: `1px solid ${active ? "#593DF8" : "#333"}`,
-                    padding: "3px 7px",
-                    borderRadius: 999,
-                    transition: "color 0.2s, border-color 0.2s",
-                  }}
-                >
-                  {svc.badge}
-                </span>
-              )}
-
-              {/* Icon */}
-              <div
-                style={{
-                  color: active ? "#593DF8" : "#555",
-                  marginBottom: "1rem",
-                  transition: "color 0.2s",
-                }}
-              >
-                {ICONS[svc.id]}
+              <div style={{ color: active ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.28)", marginBottom: "0.8rem", transition: "color 0.18s" }}>
+                {svc.icon}
               </div>
-
-              {/* Name */}
-              <div
-                style={{
-                  fontSize: "1rem",
-                  fontWeight: 600,
-                  letterSpacing: "-0.01em",
-                  marginBottom: "0.4rem",
-                  fontFamily: 'var(--font-inter), "Inter", "Helvetica Neue", sans-serif',
-                  color: active ? "#fff" : "#ccc",
-                  transition: "color 0.2s",
-                }}
-              >
-                {svc.name}
+              <div style={{ fontFamily: "var(--font-inter)", fontSize: "0.9rem", fontWeight: 600, letterSpacing: "-0.015em", color: active ? "#fff" : "rgba(255,255,255,0.55)", marginBottom: "0.3rem", transition: "color 0.18s" }}>
+                {svc.label}
               </div>
-
-              {/* Pitch */}
-              <div
-                style={{
-                  fontSize: 13,
-                  lineHeight: 1.5,
-                  color: active ? "#aaa" : "#555",
-                  fontFamily: 'var(--font-inter), "Inter", "Helvetica Neue", sans-serif',
-                  marginBottom: svc.detail ? "0.6rem" : 0,
-                  transition: "color 0.2s",
-                }}
-              >
-                {svc.pitch}
+              <div style={{ fontFamily: "var(--font-inter)", fontSize: "0.75rem", lineHeight: 1.5, color: active ? "rgba(255,255,255,0.42)" : "rgba(255,255,255,0.22)", transition: "color 0.18s" }}>
+                {svc.description}
               </div>
-
-              {/* Detail — shown when selected */}
               {active && (
-                <div
-                  style={{
-                    fontSize: 12,
-                    lineHeight: 1.6,
-                    color: "#777",
-                    fontFamily: 'var(--font-inter), "Inter", "Helvetica Neue", sans-serif',
-                    borderTop: "1px solid #2a2a2a",
-                    paddingTop: "0.7rem",
-                    marginTop: "0.4rem",
-                  }}
-                >
-                  {svc.detail}
-                </div>
-              )}
-
-              {/* Price */}
-              {svc.price && (
-                <div
-                  style={{
-                    marginTop: "0.8rem",
-                    fontFamily: "var(--font-dm-mono), monospace",
-                    fontSize: 13,
-                    color: "#593DF8",
-                    fontWeight: 500,
-                  }}
-                >
-                  {svc.price}
-                </div>
-              )}
-
-              {/* Checkmark */}
-              {active && (
-                <div
-                  style={{
-                    position: "absolute",
-                    top: 12,
-                    right: svc.badge ? "auto" : 12,
-                    left: svc.badge ? "auto" : "auto",
-                    width: 20,
-                    height: 20,
-                    borderRadius: "50%",
-                    background: "#593DF8",
-                    display: "grid",
-                    placeItems: "center",
-                  }}
-                >
-                  <svg viewBox="0 0 12 12" fill="none" style={{ width: 10, height: 10 }}>
-                    <polyline points="2,6 5,9 10,3" stroke="#fff" strokeWidth={1.5} strokeLinecap="round" />
+                <div style={{ position: "absolute", top: 10, right: 10, width: 18, height: 18, borderRadius: "50%", background: "rgba(255,255,255,0.88)", display: "grid", placeItems: "center" }}>
+                  <svg viewBox="0 0 12 12" fill="none" style={{ width: 8, height: 8 }}>
+                    <polyline points="2,6 5,9 10,3" stroke="#1a1a1a" strokeWidth={2} strokeLinecap="round" />
                   </svg>
                 </div>
               )}
@@ -622,340 +459,283 @@ function Step1({
         })}
       </div>
 
-      {error && (
-        <p style={{ fontFamily: "var(--font-dm-mono), monospace", fontSize: 12, color: "#ff6b6b", marginBottom: "1.5rem" }}>
-          {error}
-        </p>
+      {websiteSelected && (
+        <div style={{ marginBottom: "2.5rem" }}>
+          <button
+            onClick={onToggle3d}
+            className="svc-btn"
+            style={{
+              width: "100%",
+              background: include3d ? "rgba(89,61,248,0.12)" : "rgba(255,255,255,0.02)",
+              border: `1px solid ${include3d ? "rgba(89,61,248,0.45)" : "rgba(255,255,255,0.1)"}`,
+              borderRadius: 14,
+              padding: "1rem 1.2rem",
+              color: "#fff",
+              display: "flex",
+              alignItems: "center",
+              gap: 14,
+            }}
+          >
+            <div style={{
+              width: 20, height: 20, borderRadius: 6,
+              border: `1.5px solid ${include3d ? "rgba(89,61,248,0.7)" : "rgba(255,255,255,0.2)"}`,
+              background: include3d ? "rgba(89,61,248,0.25)" : "transparent",
+              display: "grid", placeItems: "center", flexShrink: 0, transition: "all 0.18s",
+            }}>
+              {include3d && (
+                <svg viewBox="0 0 12 12" fill="none" style={{ width: 8, height: 8 }}>
+                  <polyline points="2,6 5,9 10,3" stroke="#a78bfa" strokeWidth={2} strokeLinecap="round" />
+                </svg>
+              )}
+            </div>
+            <div style={{ textAlign: "left" }}>
+              <div style={{ fontFamily: "var(--font-inter)", fontSize: "0.875rem", fontWeight: 500, color: include3d ? "#c4b5fd" : "rgba(255,255,255,0.55)", letterSpacing: "-0.01em", transition: "color 0.18s" }}>
+                Add 3D & WebGL elements
+              </div>
+              <div style={{ fontFamily: "var(--font-inter)", fontSize: "0.75rem", color: "rgba(255,255,255,0.22)", marginTop: 2 }}>
+                Immersive 3D experiences in the browser — no app needed
+              </div>
+            </div>
+          </button>
+        </div>
       )}
 
-      <NavRow onNext={onNext} nextLabel="Next — Details →" />
+      {error && <ErrorMsg msg={error} style={{ marginBottom: "1.5rem" }} />}
+      <div data-a="nav"><NavRow onNext={onNext} nextLabel="Continue" /></div>
     </div>
   )
 }
 
-/* ── Step 2: Details ──────────────────────────────────────────────────────── */
-function Step2({
-  budget, setBudget, timeline, setTimeline, brief, setBrief,
-  errors, onBack, onNext,
-}: {
-  budget: string; setBudget: (v: string) => void
-  timeline: string; setTimeline: (v: string) => void
-  brief: string; setBrief: (v: string) => void
-  errors: Record<string, string>
-  onBack: () => void; onNext: () => void
+/* ── Step 2: Description ──────────────────────────────────────────── */
+function StepDescription({ value, onChange, onBack, onNext }: {
+  value: string; onChange: (v: string) => void; onBack: () => void; onNext: () => void
 }) {
-  return (
-    <div>
-      <div style={{ marginBottom: "3rem" }}>
-        <h2
-          style={{
-            fontSize: "clamp(1.6rem, 2.4vw, 2.4rem)",
-            fontWeight: 500,
-            letterSpacing: "-0.02em",
-            color: "#fff",
-            fontFamily: 'var(--font-inter), "Inter", "Helvetica Neue", sans-serif',
-            marginBottom: "0.75rem",
-          }}
-        >
-          Tell us about the project.
-        </h2>
-        <p style={{ fontFamily: "var(--font-dm-mono), monospace", fontSize: 12, color: "#555", letterSpacing: "0.1em" }}>
-          Helps us send you a precise quote.
-        </p>
-      </div>
-
-      {/* Budget */}
-      <fieldset style={{ border: "none", padding: 0, marginBottom: "2.5rem" }}>
-        <legend
-          style={{
-            fontFamily: "var(--font-dm-mono), monospace",
-            fontSize: 11,
-            letterSpacing: "0.2em",
-            textTransform: "uppercase",
-            color: "#555",
-            marginBottom: "1rem",
-            display: "flex",
-            gap: 10,
-            alignItems: "center",
-          }}
-        >
-          <span style={{ display: "inline-block", width: 20, height: 1, background: "#555" }} />
-          Budget
-        </legend>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-          {budgets.map((b) => (
-            <button
-              key={b.id}
-              onClick={() => { setBudget(b.id); }}
-              style={{
-                background: budget === b.id ? "#593DF8" : "transparent",
-                border: `1px solid ${budget === b.id ? "#593DF8" : "#2a2a2a"}`,
-                borderRadius: 999,
-                padding: "10px 18px",
-                cursor: "pointer",
-                color: budget === b.id ? "#fff" : "#888",
-                fontFamily: 'var(--font-inter), "Inter", "Helvetica Neue", sans-serif',
-                fontSize: 13,
-                fontWeight: 500,
-                transition: "all 0.2s",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "flex-start",
-                gap: 2,
-              }}
-            >
-              <span>{b.label}</span>
-              <span style={{ fontSize: 10, opacity: 0.7, fontFamily: "var(--font-dm-mono), monospace", letterSpacing: "0.1em" }}>
-                {b.note}
-              </span>
-            </button>
-          ))}
-        </div>
-        {errors.budget && (
-          <p style={{ fontFamily: "var(--font-dm-mono), monospace", fontSize: 12, color: "#ff6b6b", marginTop: "0.5rem" }}>
-            {errors.budget}
-          </p>
-        )}
-      </fieldset>
-
-      {/* Timeline */}
-      <fieldset style={{ border: "none", padding: 0, marginBottom: "2.5rem" }}>
-        <legend
-          style={{
-            fontFamily: "var(--font-dm-mono), monospace",
-            fontSize: 11,
-            letterSpacing: "0.2em",
-            textTransform: "uppercase",
-            color: "#555",
-            marginBottom: "1rem",
-            display: "flex",
-            gap: 10,
-            alignItems: "center",
-          }}
-        >
-          <span style={{ display: "inline-block", width: 20, height: 1, background: "#555" }} />
-          Timeline
-        </legend>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-          {timelines.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => setTimeline(t.id)}
-              style={{
-                background: timeline === t.id ? "#593DF8" : "transparent",
-                border: `1px solid ${timeline === t.id ? "#593DF8" : "#2a2a2a"}`,
-                borderRadius: 999,
-                padding: "10px 18px",
-                cursor: "pointer",
-                color: timeline === t.id ? "#fff" : "#888",
-                fontFamily: 'var(--font-inter), "Inter", "Helvetica Neue", sans-serif',
-                fontSize: 13,
-                fontWeight: 500,
-                transition: "all 0.2s",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "flex-start",
-                gap: 2,
-              }}
-            >
-              <span>{t.label}</span>
-              <span style={{ fontSize: 10, opacity: 0.7, fontFamily: "var(--font-dm-mono), monospace", letterSpacing: "0.1em" }}>
-                {t.note}
-              </span>
-            </button>
-          ))}
-        </div>
-        {errors.timeline && (
-          <p style={{ fontFamily: "var(--font-dm-mono), monospace", fontSize: 12, color: "#ff6b6b", marginTop: "0.5rem" }}>
-            {errors.timeline}
-          </p>
-        )}
-      </fieldset>
-
-      {/* Brief */}
-      <div style={{ marginBottom: "3rem" }}>
-        <label
-          style={{
-            fontFamily: "var(--font-dm-mono), monospace",
-            fontSize: 11,
-            letterSpacing: "0.2em",
-            textTransform: "uppercase",
-            color: "#555",
-            marginBottom: "1rem",
-            display: "flex",
-            gap: 10,
-            alignItems: "center",
-          }}
-        >
-          <span style={{ display: "inline-block", width: 20, height: 1, background: "#555" }} />
-          Project brief{" "}
-          <span style={{ color: "#333", letterSpacing: "0.05em", textTransform: "none", fontSize: 10 }}>
-            optional
-          </span>
-        </label>
-        <textarea
-          value={brief}
-          onChange={(e) => setBrief(e.target.value)}
-          placeholder="Describe your project in a few sentences. What problem are you solving? Who are your users?"
-          rows={5}
-          style={{
-            width: "100%",
-            background: "#111",
-            border: "1px solid #2a2a2a",
-            borderRadius: 10,
-            padding: "1rem 1.2rem",
-            color: "#fff",
-            fontFamily: 'var(--font-inter), "Inter", "Helvetica Neue", sans-serif',
-            fontSize: 14,
-            lineHeight: 1.6,
-            resize: "vertical",
-            outline: "none",
-            transition: "border-color 0.2s",
-          }}
-          onFocus={(e) => (e.currentTarget.style.borderColor = "#593DF8")}
-          onBlur={(e) => (e.currentTarget.style.borderColor = "#2a2a2a")}
-        />
-      </div>
-
-      <NavRow onBack={onBack} onNext={onNext} nextLabel="Next — Contact →" />
-    </div>
-  )
-}
-
-/* ── Step 3: Contact info ─────────────────────────────────────────────────── */
-function Step3({
-  name, setName, email, setEmail, company, setCompany,
-  errors, onBack, onSubmit,
-}: {
-  name: string; setName: (v: string) => void
-  email: string; setEmail: (v: string) => void
-  company: string; setCompany: (v: string) => void
-  errors: Record<string, string>
-  onBack: () => void; onSubmit: () => void
-}) {
-  return (
-    <div>
-      <div style={{ marginBottom: "3rem" }}>
-        <h2
-          style={{
-            fontSize: "clamp(1.6rem, 2.4vw, 2.4rem)",
-            fontWeight: 500,
-            letterSpacing: "-0.02em",
-            color: "#fff",
-            fontFamily: 'var(--font-inter), "Inter", "Helvetica Neue", sans-serif',
-            marginBottom: "0.75rem",
-          }}
-        >
-          How can we reach you?
-        </h2>
-        <p style={{ fontFamily: "var(--font-dm-mono), monospace", fontSize: 12, color: "#555", letterSpacing: "0.1em" }}>
-          We'll get back to you within 24 hours.
-        </p>
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem 2rem", marginBottom: "3rem" }}>
-        <FormField
-          label="Name"
-          value={name}
-          onChange={setName}
-          placeholder="Your name"
-          error={errors.name}
-          required
-        />
-        <FormField
-          label="Email"
-          type="email"
-          value={email}
-          onChange={setEmail}
-          placeholder="your@email.com"
-          error={errors.email}
-          required
-        />
-        <FormField
-          label="Company"
-          value={company}
-          onChange={setCompany}
-          placeholder="Your company (optional)"
-          style={{ gridColumn: "1 / -1" }}
-        />
-      </div>
-
-      <NavRow onBack={onBack} onNext={onSubmit} nextLabel="Send enquiry →" isFinal />
-    </div>
-  )
-}
-
-/* ── Step 4: Success ──────────────────────────────────────────────────────── */
-function Step4({ name }: { name: string }) {
-  const ref = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (!ref.current) return
-    gsap.fromTo(ref.current, { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" })
+    const ctx = gsap.context(() => {
+      const tl = gsap.timeline({ defaults: { ease: "power2.out" } })
+      tl.fromTo("[data-a='heading']",  { autoAlpha: 0, y: 28 }, { autoAlpha: 1, y: 0, duration: 0.5 })
+        .fromTo("[data-a='field']",    { autoAlpha: 0, y: 22 }, { autoAlpha: 1, y: 0, duration: 0.45 }, "-=0.2")
+        .fromTo("[data-a='nav']",      { autoAlpha: 0, y: 18 }, { autoAlpha: 1, y: 0, duration: 0.38 }, "-=0.15")
+    }, containerRef)
+    return () => ctx.revert()
   }, [])
 
   return (
-    <div ref={ref} style={{ textAlign: "center", padding: "6rem 0" }}>
-      {/* Checkmark circle */}
-      <div
-        style={{
-          width: 72,
-          height: 72,
-          borderRadius: "50%",
-          background: "rgba(89,61,248,0.15)",
-          border: "1px solid #593DF8",
-          display: "grid",
-          placeItems: "center",
-          margin: "0 auto 2.5rem",
-        }}
-      >
-        <svg viewBox="0 0 24 24" fill="none" style={{ width: 28, height: 28 }}>
-          <polyline points="4,12 9,17 20,7" stroke="#593DF8" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+    <div ref={containerRef}>
+      <div data-a="heading"><StepHeading label="02" title="Describe your project." sub="Optional — helps us give you a precise quote." /></div>
+      <div data-a="field">
+        <textarea
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          placeholder="What are you building? Who are your users? Any references or ideas?"
+          rows={6}
+          className="c-input"
+          style={{
+            width: "100%",
+            background: "rgba(255,255,255,0.03)",
+            border: "1px solid rgba(255,255,255,0.08)",
+            borderRadius: 14,
+            padding: "1.1rem 1.25rem",
+            color: "rgba(255,255,255,0.82)",
+            fontFamily: "var(--font-inter)",
+            fontSize: "0.95rem",
+            lineHeight: 1.7,
+            resize: "vertical",
+            marginBottom: "2.5rem",
+            boxSizing: "border-box",
+          }}
+          onFocus={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.22)")}
+          onBlur={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)")}
+        />
+      </div>
+      <div data-a="nav"><NavRow onBack={onBack} onNext={onNext} nextLabel="Continue" /></div>
+    </div>
+  )
+}
+
+/* ── Step 3: Company ──────────────────────────────────────────────── */
+function StepCompany({ value, onChange, onBack, onNext }: {
+  value: string; onChange: (v: string) => void; onBack: () => void; onNext: () => void
+}) {
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      const tl = gsap.timeline({ defaults: { ease: "power2.out" } })
+      tl.fromTo("[data-a='heading']", { autoAlpha: 0, y: 28 }, { autoAlpha: 1, y: 0, duration: 0.5 })
+        .fromTo("[data-a='field']",   { autoAlpha: 0, y: 22 }, { autoAlpha: 1, y: 0, duration: 0.45 }, "-=0.2")
+        .fromTo("[data-a='nav']",     { autoAlpha: 0, y: 18 }, { autoAlpha: 1, y: 0, duration: 0.38 }, "-=0.15")
+    }, containerRef)
+    return () => ctx.revert()
+  }, [])
+
+  return (
+    <div ref={containerRef}>
+      <div data-a="heading"><StepHeading label="03" title="What's the company?" sub="Optional — leave blank if personal." /></div>
+      <div data-a="field">
+        <input
+          type="text"
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          placeholder="Company or brand name"
+          className="c-input"
+          style={{
+            width: "100%",
+            background: "transparent",
+            border: "none",
+            borderBottom: "1px solid rgba(255,255,255,0.1)",
+            padding: "0.75rem 0",
+            color: "#fff",
+            fontFamily: "var(--font-inter)",
+            fontSize: "clamp(1.2rem, 2.5vw, 1.6rem)",
+            fontWeight: 300,
+            letterSpacing: "-0.02em",
+            marginBottom: "3rem",
+            boxSizing: "border-box",
+          }}
+          onFocus={e => (e.currentTarget.style.borderBottomColor = "rgba(255,255,255,0.38)")}
+          onBlur={e => (e.currentTarget.style.borderBottomColor = "rgba(255,255,255,0.1)")}
+          onKeyDown={e => { if (e.key === "Enter") onNext() }}
+        />
+      </div>
+      <div data-a="nav"><NavRow onBack={onBack} onNext={onNext} nextLabel="Continue" /></div>
+    </div>
+  )
+}
+
+/* ── Step 4: Deadline ─────────────────────────────────────────────── */
+function StepDeadline({ value, onChange, onBack, onNext }: {
+  value: string; onChange: (v: string) => void; onBack: () => void; onNext: () => void
+}) {
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  const minDate = (() => {
+    const d = new Date()
+    d.setDate(d.getDate() + 7)
+    return d.toISOString().split("T")[0]
+  })()
+
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      const tl = gsap.timeline({ defaults: { ease: "power2.out" } })
+      tl.fromTo("[data-a='heading']", { autoAlpha: 0, y: 28 }, { autoAlpha: 1, y: 0, duration: 0.5 })
+        .fromTo("[data-a='field']",   { autoAlpha: 0, y: 22 }, { autoAlpha: 1, y: 0, duration: 0.45 }, "-=0.2")
+        .fromTo("[data-a='nav']",     { autoAlpha: 0, y: 18 }, { autoAlpha: 1, y: 0, duration: 0.38 }, "-=0.15")
+    }, containerRef)
+    return () => ctx.revert()
+  }, [])
+
+  return (
+    <div ref={containerRef}>
+      <div data-a="heading">
+        <StepHeading label="04" title="When do you need it?" sub="Optional — earliest possible is 1 week from today." />
+      </div>
+      <div data-a="field" style={{ marginBottom: "3rem" }}>
+        <style>{`
+          .deadline-input::-webkit-calendar-picker-indicator { filter: invert(1) opacity(0.4); cursor: pointer; }
+          .deadline-input::-webkit-inner-spin-button { display: none; }
+        `}</style>
+        <input
+          type="date"
+          value={value}
+          min={minDate}
+          onChange={e => onChange(e.target.value)}
+          className="c-input deadline-input"
+          style={{
+            width: "100%",
+            background: "transparent",
+            border: "none",
+            borderBottom: "1px solid rgba(255,255,255,0.1)",
+            padding: "0.75rem 0",
+            color: value ? "#fff" : "rgba(255,255,255,0.25)",
+            fontFamily: "var(--font-inter)",
+            fontSize: "clamp(1.2rem, 2.5vw, 1.6rem)",
+            fontWeight: 300,
+            letterSpacing: "-0.02em",
+            boxSizing: "border-box",
+            colorScheme: "dark",
+          }}
+          onFocus={e => (e.currentTarget.style.borderBottomColor = "rgba(255,255,255,0.38)")}
+          onBlur={e => (e.currentTarget.style.borderBottomColor = "rgba(255,255,255,0.1)")}
+        />
+      </div>
+      <div data-a="nav"><NavRow onBack={onBack} onNext={onNext} nextLabel="Continue" /></div>
+    </div>
+  )
+}
+
+/* ── Step 5: Contact ──────────────────────────────────────────────── */
+function StepContact({ name, setName, email, setEmail, errors, submitting, submitError, onBack, onSubmit }: {
+  name: string; setName: (v: string) => void
+  email: string; setEmail: (v: string) => void
+  errors: Record<string, string>; submitting: boolean
+  submitError?: string; onBack: () => void; onSubmit: () => void
+}) {
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      const tl = gsap.timeline({ defaults: { ease: "power2.out" } })
+      tl.fromTo("[data-a='heading']", { autoAlpha: 0, y: 28 }, { autoAlpha: 1, y: 0, duration: 0.5 })
+        .fromTo("[data-a='field']",   { autoAlpha: 0, y: 22 }, { autoAlpha: 1, y: 0, duration: 0.42, stagger: 0.1 }, "-=0.2")
+        .fromTo("[data-a='nav']",     { autoAlpha: 0, y: 18 }, { autoAlpha: 1, y: 0, duration: 0.38 }, "-=0.15")
+    }, containerRef)
+    return () => ctx.revert()
+  }, [])
+
+  return (
+    <div ref={containerRef}>
+      <div data-a="heading"><StepHeading label="05" title="How can we reach you?" sub="We'll reply within 24 hours." /></div>
+      <div style={{ display: "flex", flexDirection: "column", gap: "2.25rem", marginBottom: "3rem" }}>
+        <div data-a="field">
+          <UnderlineField label="Your name" value={name} onChange={setName} placeholder="Full name" error={errors.name} onEnter={onSubmit} />
+        </div>
+        <div data-a="field">
+          <UnderlineField label="Email address" type="email" value={email} onChange={setEmail} placeholder="your@email.com" error={errors.email} onEnter={onSubmit} />
+        </div>
+      </div>
+      {submitError && <ErrorMsg msg={submitError} style={{ marginBottom: "1.5rem" }} />}
+      <div data-a="nav"><NavRow onBack={onBack} onNext={onSubmit} nextLabel={submitting ? "Sending…" : "Send enquiry"} isFinal disabled={submitting} /></div>
+    </div>
+  )
+}
+
+/* ── Step 6: Success ──────────────────────────────────────────────── */
+function StepSuccess({ name }: { name: string }) {
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      const tl = gsap.timeline({ defaults: { ease: "power2.out" } })
+      tl.fromTo("[data-a='icon']",    { autoAlpha: 0, scale: 0.7 }, { autoAlpha: 1, scale: 1, duration: 0.55, ease: "back.out(1.8)" })
+        .fromTo("[data-a='title']",   { autoAlpha: 0, y: 24 },      { autoAlpha: 1, y: 0, duration: 0.5 }, "-=0.2")
+        .fromTo("[data-a='sub']",     { autoAlpha: 0, y: 18 },      { autoAlpha: 1, y: 0, duration: 0.42 }, "-=0.2")
+        .fromTo("[data-a='link']",    { autoAlpha: 0, y: 14 },      { autoAlpha: 1, y: 0, duration: 0.38 }, "-=0.15")
+    }, containerRef)
+    return () => ctx.revert()
+  }, [])
+
+  return (
+    <div ref={containerRef} style={{ textAlign: "center", padding: "5rem 0 7rem" }}>
+      <div data-a="icon" style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.14)", display: "grid", placeItems: "center", margin: "0 auto 2.5rem" }}>
+        <svg viewBox="0 0 24 24" fill="none" style={{ width: 24, height: 24 }}>
+          <polyline points="4,12 9,17 20,7" stroke="rgba(255,255,255,0.75)" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </div>
-
-      <h2
-        style={{
-          fontSize: "clamp(2rem, 3.5vw, 3.5rem)",
-          fontWeight: 500,
-          letterSpacing: "-0.02em",
-          color: "#fff",
-          fontFamily: 'var(--font-inter), "Inter", "Helvetica Neue", sans-serif',
-          marginBottom: "1rem",
-        }}
-      >
+      <h2 data-a="title" style={{ fontSize: "clamp(2rem, 4vw, 3.5rem)", fontWeight: 400, letterSpacing: "-0.03em", color: "#fff", fontFamily: "var(--font-inter)", marginBottom: "1rem" }}>
         {name ? `Thanks, ${name}.` : "Thanks."}
       </h2>
-
-      <p
-        style={{
-          fontFamily: 'var(--font-inter), "Inter", "Helvetica Neue", sans-serif',
-          fontSize: "clamp(1rem, 1.4vw, 1.2rem)",
-          color: "#666",
-          lineHeight: 1.6,
-          maxWidth: 420,
-          margin: "0 auto 3rem",
-        }}
-      >
-        Your enquiry is on its way. We&apos;ll review your project and get back to you within 24 hours.
+      <p data-a="sub" style={{ fontFamily: "var(--font-inter)", fontSize: "clamp(0.9rem, 1.3vw, 1.05rem)", color: "rgba(255,255,255,0.33)", lineHeight: 1.7, maxWidth: 360, margin: "0 auto 3.5rem" }}>
+        Your enquiry is on its way. We&apos;ll review your project and get back to you soon.
       </p>
-
       <a
+        data-a="link"
         href="/"
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 10,
-          fontFamily: "var(--font-dm-mono), monospace",
-          fontSize: 12,
-          letterSpacing: "0.15em",
-          textTransform: "uppercase",
-          color: "#555",
-          textDecoration: "none",
-          transition: "color 0.2s",
-        }}
-        onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = "#fff")}
-        onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "#555")}
+        style={{ fontFamily: "var(--font-dm-mono)", fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.28)", textDecoration: "none", transition: "color 0.2s" }}
+        onMouseEnter={e => ((e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.65)")}
+        onMouseLeave={e => ((e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.28)")}
       >
         ← Back to home
       </a>
@@ -963,114 +743,98 @@ function Step4({ name }: { name: string }) {
   )
 }
 
-/* ── Shared components ────────────────────────────────────────────────────── */
-function FormField({
-  label, value, onChange, placeholder, type = "text", required, error, style,
-}: {
-  label: string; value: string; onChange: (v: string) => void
-  placeholder?: string; type?: string; required?: boolean
-  error?: string; style?: React.CSSProperties
-}) {
+/* ── Shared ──────────────────────────────────────────────────────── */
+function StepHeading({ label, title, sub }: { label: string; title: string; sub: string }) {
   return (
-    <div style={style}>
-      <label
-        style={{
-          display: "block",
-          fontFamily: "var(--font-dm-mono), monospace",
-          fontSize: 11,
-          letterSpacing: "0.2em",
-          textTransform: "uppercase",
-          color: "#555",
-          marginBottom: "0.6rem",
-        }}
-      >
-        {label} {required && <span style={{ color: "#593DF8" }}>*</span>}
-      </label>
-      <input
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        style={{
-          width: "100%",
-          background: "transparent",
-          border: "none",
-          borderBottom: `1px solid ${error ? "#ff6b6b" : "#2a2a2a"}`,
-          outline: "none",
-          padding: "0.6rem 0",
-          color: "#fff",
-          fontFamily: 'var(--font-inter), "Inter", "Helvetica Neue", sans-serif',
-          fontSize: 15,
-          transition: "border-color 0.2s",
-        }}
-        onFocus={(e) => { if (!error) e.currentTarget.style.borderBottomColor = "#593DF8" }}
-        onBlur={(e) => { if (!error) e.currentTarget.style.borderBottomColor = "#2a2a2a" }}
-      />
-      {error && (
-        <p style={{ fontFamily: "var(--font-dm-mono), monospace", fontSize: 11, color: "#ff6b6b", marginTop: "0.4rem" }}>
-          {error}
-        </p>
-      )}
+    <div style={{ marginBottom: "clamp(1.75rem, 4vh, 3rem)" }}>
+      <p style={{ fontFamily: "var(--font-dm-mono)", fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(255,255,255,0.2)", marginBottom: "0.85rem" }}>
+        {label}
+      </p>
+      <h2 style={{ fontSize: "clamp(1.6rem, 3.2vw, 2.8rem)", fontWeight: 400, letterSpacing: "-0.03em", color: "#fff", fontFamily: "var(--font-inter)", marginBottom: "0.55rem" }}>
+        {title}
+      </h2>
+      <p style={{ fontFamily: "var(--font-inter)", fontSize: "0.875rem", color: "rgba(255,255,255,0.28)", lineHeight: 1.5 }}>
+        {sub}
+      </p>
     </div>
   )
 }
 
-function NavRow({
-  onBack, onNext, nextLabel, isFinal,
-}: {
-  onBack?: () => void; onNext: () => void
-  nextLabel: string; isFinal?: boolean
+function UnderlineField({ label, value, onChange, placeholder, type = "text", error, onEnter }: {
+  label: string; value: string; onChange: (v: string) => void
+  placeholder: string; type?: string; error?: string; onEnter?: () => void
 }) {
   return (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "1rem", borderTop: "1px solid #2a2a2a" }}>
+    <div>
+      <label style={{ display: "block", fontFamily: "var(--font-dm-mono)", fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.28)", marginBottom: "0.6rem" }}>
+        {label}
+      </label>
+      <input
+        type={type}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="c-input"
+        onKeyDown={e => { if (e.key === "Enter" && onEnter) onEnter() }}
+        style={{
+          width: "100%",
+          background: "transparent",
+          border: "none",
+          borderBottom: `1px solid ${error ? "rgba(255,80,80,0.55)" : "rgba(255,255,255,0.1)"}`,
+          padding: "0.6rem 0",
+          color: "#fff",
+          fontFamily: "var(--font-inter)",
+          fontSize: "clamp(1.1rem, 2vw, 1.4rem)",
+          fontWeight: 300,
+          letterSpacing: "-0.02em",
+          boxSizing: "border-box",
+        }}
+        onFocus={e => { if (!error) e.currentTarget.style.borderBottomColor = "rgba(255,255,255,0.38)" }}
+        onBlur={e => { if (!error) e.currentTarget.style.borderBottomColor = "rgba(255,255,255,0.1)" }}
+      />
+      {error && <ErrorMsg msg={error} style={{ marginTop: "0.4rem" }} />}
+    </div>
+  )
+}
+
+function ErrorMsg({ msg, style: s }: { msg: string; style?: React.CSSProperties }) {
+  return (
+    <p style={{ fontFamily: "var(--font-dm-mono)", fontSize: 11, color: "rgba(255,100,100,0.85)", letterSpacing: "0.04em", ...s }}>
+      {msg}
+    </p>
+  )
+}
+
+function NavRow({ onBack, onNext, nextLabel, isFinal, disabled }: {
+  onBack?: () => void; onNext: () => void; nextLabel: string; isFinal?: boolean; disabled?: boolean
+}) {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "1.5rem", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
       {onBack ? (
         <button
           onClick={onBack}
-          style={{
-            background: "transparent",
-            border: "none",
-            cursor: "pointer",
-            fontFamily: "var(--font-dm-mono), monospace",
-            fontSize: 12,
-            letterSpacing: "0.15em",
-            textTransform: "uppercase",
-            color: "#555",
-            transition: "color 0.2s",
-            padding: "4px 0",
-          }}
-          onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = "#fff")}
-          onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "#555")}
+          className="c-back"
+          style={{ background: "transparent", border: "none", cursor: "pointer", fontFamily: "var(--font-dm-mono)", fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.22)", padding: "4px 0" }}
         >
           ← Back
         </button>
-      ) : (
-        <div />
-      )}
-
+      ) : <div />}
       <button
         onClick={onNext}
+        disabled={disabled}
+        className="c-btn"
         style={{
-          background: isFinal ? "#593DF8" : "#fff",
-          color: isFinal ? "#fff" : "#0c0c0c",
+          background: "rgba(255,255,255,0.92)",
+          color: "#111",
           border: "none",
           borderRadius: 999,
-          padding: "12px 28px",
-          fontSize: 14,
+          padding: "13px 32px",
+          fontSize: "0.875rem",
           fontWeight: 600,
-          cursor: "pointer",
-          fontFamily: 'var(--font-inter), "Inter", "Helvetica Neue", sans-serif',
+          cursor: disabled ? "not-allowed" : "pointer",
+          fontFamily: "var(--font-inter)",
           letterSpacing: "-0.01em",
-          transition: "transform 0.2s, background 0.2s",
-        }}
-        onMouseEnter={(e) => {
-          const el = e.currentTarget as HTMLElement
-          el.style.transform = "translateY(-2px)"
-          if (isFinal) el.style.background = "#7055fa"
-        }}
-        onMouseLeave={(e) => {
-          const el = e.currentTarget as HTMLElement
-          el.style.transform = ""
-          if (isFinal) el.style.background = "#593DF8"
+          opacity: disabled ? 0.5 : 1,
         }}
       >
         {nextLabel}

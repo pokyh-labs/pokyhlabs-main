@@ -42,7 +42,7 @@ export default function Footer() {
         }}
       >
         {/* Brand column */}
-        <div>
+        <div data-reveal>
           <a
             href="/"
             style={{
@@ -107,7 +107,7 @@ export default function Footer() {
         </div>
 
         {/* Services column */}
-        <nav aria-label="Services">
+        <nav aria-label="Services" data-reveal style={{ "--rd": "100ms" } as React.CSSProperties}>
           <p
             style={{
               fontSize: 10,
@@ -137,7 +137,7 @@ export default function Footer() {
         </nav>
 
         {/* Navigation column */}
-        <nav aria-label="Footer navigation">
+        <nav aria-label="Footer navigation" data-reveal style={{ "--rd": "200ms" } as React.CSSProperties}>
           <p
             style={{
               fontSize: 10,
@@ -167,7 +167,7 @@ export default function Footer() {
         </nav>
 
         {/* CTA column */}
-        <div>
+        <div data-reveal style={{ "--rd": "300ms" } as React.CSSProperties}>
           <p
             style={{
               fontSize: 10,
@@ -229,6 +229,7 @@ export default function Footer() {
 
       {/* Bottom bar */}
       <div
+        data-reveal
         style={{
           maxWidth: 1200,
           margin: "0 auto",
