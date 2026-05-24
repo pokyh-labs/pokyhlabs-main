@@ -2,6 +2,8 @@ import type { Metadata } from "next"
 import { Instrument_Serif, DM_Mono, Inter } from "next/font/google"
 import "./globals.css"
 import { siteConfig, structuredData } from "@/lib/seo.config"
+import Header from "@/components/Header"
+import Footer from "@/components/Footer"
 
 const instrumentSerif = Instrument_Serif({
   weight: "400",
@@ -72,6 +74,7 @@ export const metadata: Metadata = {
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const gaId = process.env.NEXT_PUBLIC_GA_ID
   return (
     <html lang={siteConfig.lang} className={`${instrumentSerif.variable} ${dmMono.variable} ${inter.variable}`}>
       <head>
@@ -92,8 +95,39 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData.service) }}
         />
+        {/* Speakable schema — marks key content for AI assistants & voice search */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "WebPage",
+              speakable: {
+                "@type": "SpeakableSpecification",
+                cssSelector: ["h1", "h2", "h3", "[data-speakable]"],
+              },
+            }),
+          }}
+        />
+        {/* Google Analytics 4 — aktiviert wenn NEXT_PUBLIC_GA_ID in .env.local gesetzt ist */}
+        {gaId && (
+          <>
+            <script async src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`} />
+            <script
+              dangerouslySetInnerHTML={{
+                __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','${gaId}',{page_path:window.location.pathname})`,
+              }}
+            />
+          </>
+        )}
       </head>
-      <body>{children}</body>
+      <body>
+        <Header />
+        <main id="main-content">
+          {children}
+        </main>
+        <Footer />
+      </body>
     </html>
   )
 }

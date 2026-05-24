@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { siteConfig } from "@/lib/seo.config"
+import { siteConfig, breadcrumbSchema } from "@/lib/seo.config"
 import WorksPage from "@/components/WorksPage"
 
 export const metadata: Metadata = {
@@ -56,5 +56,20 @@ export const metadata: Metadata = {
 }
 
 export default function Works() {
-  return <WorksPage />
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(
+            breadcrumbSchema([
+              { name: "Home", url: siteConfig.url },
+              { name: "Works", url: `${siteConfig.url}/works` },
+            ])
+          ),
+        }}
+      />
+      <WorksPage />
+    </>
+  )
 }

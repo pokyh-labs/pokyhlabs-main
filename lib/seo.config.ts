@@ -88,6 +88,52 @@ export const siteConfig = {
     "sviluppatore web alto adige",
     "web design sudtirolo",
     "studio web alto adige",
+
+    // German — Hosting & Website Builder
+    "website hosting",
+    "webhosting günstig",
+    "hosting südtirol",
+    "website mieten",
+    "managed hosting",
+    "hosting kaufen",
+    "server hosting",
+    "wordpress hosting",
+    "e-commerce hosting",
+    "website erstellen",
+    "homepage erstellen lassen",
+    "webseite aufbauen",
+    "website builder",
+    "homepage baukasten",
+
+    // German — Location long-tail
+    "webdesign bozen",
+    "webdesign meran",
+    "webdesign innsbruck",
+    "webdesign münchen",
+    "website agentur deutschland",
+    "website agentur italien",
+
+    // English — Hosting & Builder
+    "website hosting south tyrol",
+    "cheap website hosting",
+    "managed web hosting",
+    "wordpress hosting italy",
+    "buy website hosting",
+    "web design agency germany",
+    "web developer italy",
+    "website builder south tyrol",
+    "affordable web design europe",
+
+    // Italian — Hosting & Location long-tail
+    "hosting sito web",
+    "hosting alto adige",
+    "hosting economico",
+    "hosting wordpress",
+    "hosting professionale italia",
+    "agenzia web bolzano",
+    "agenzia web merano",
+    "realizzazione sito web alto adige",
+    "sito web economico",
   ],
 
   // ─── Google Search Console & Bing Webmaster ──────────────────────────────
@@ -117,6 +163,7 @@ export const siteConfig = {
     { path: "/works", priority: 0.9, changeFreq: "weekly" as const },
     { path: "/about", priority: 0.8, changeFreq: "monthly" as const },
     { path: "/contact", priority: 0.9, changeFreq: "monthly" as const },
+    { path: "/blog", priority: 0.8, changeFreq: "daily" as const },
   ],
 }
 
@@ -128,18 +175,42 @@ export const structuredData = {
     "@context": "https://schema.org",
     "@type": "Organization",
     name: "pokyh.studio",
-    alternateName: ["pokyh studio", "pokyhlabs", "pokyh"],
+    alternateName: [
+      "pokyh studio",
+      "pokyhlabs",
+      "pokyh",
+      "Digital Studio Südtirol",
+      "Digital Studio South Tyrol",
+      "Studio Digitale Alto Adige",
+    ],
     url: siteConfig.url,
-    logo: `${siteConfig.url}/assets/logo.png`,
+    logo: {
+      "@type": "ImageObject",
+      url: `${siteConfig.url}/assets/logo.png`,
+      width: 512,
+      height: 512,
+    },
     description: siteConfig.descriptions.de,
     email: siteConfig.social.email,
     foundingDate: "2024",
-    areaServed: ["DE", "AT", "CH", "IT"],
-    knowsLanguage: ["de", "en", "it"],
+    numberOfEmployees: { "@type": "QuantitativeValue", value: 2 },
+    areaServed: [
+      { "@type": "Country", name: "Germany", sameAs: "https://www.wikidata.org/wiki/Q183" },
+      { "@type": "Country", name: "Austria", sameAs: "https://www.wikidata.org/wiki/Q40" },
+      { "@type": "Country", name: "Switzerland", sameAs: "https://www.wikidata.org/wiki/Q39" },
+      { "@type": "Country", name: "Italy", sameAs: "https://www.wikidata.org/wiki/Q38" },
+    ],
+    knowsLanguage: [
+      { "@type": "Language", name: "German", alternateName: "Deutsch" },
+      { "@type": "Language", name: "English" },
+      { "@type": "Language", name: "Italian", alternateName: "Italiano" },
+    ],
     contactPoint: {
       "@type": "ContactPoint",
       email: siteConfig.social.email,
       contactType: "customer service",
+      contactOption: "TollFree",
+      areaServed: ["DE", "AT", "CH", "IT"],
       availableLanguage: [
         { "@type": "Language", name: "German" },
         { "@type": "Language", name: "English" },
@@ -153,9 +224,14 @@ export const structuredData = {
     "@context": "https://schema.org",
     "@type": "WebSite",
     name: siteConfig.name,
+    alternateName: ["pokyhlabs", "pokyh studio", "Digital Studio Südtirol"],
     url: siteConfig.url,
     description: siteConfig.descriptions.de,
     inLanguage: ["de", "en", "it"],
+    speakable: {
+      "@type": "SpeakableSpecification",
+      cssSelector: ["h1", "h2", "[data-speakable]"],
+    },
     potentialAction: {
       "@type": "SearchAction",
       target: {
@@ -237,7 +313,126 @@ export const structuredData = {
           description:
             "Schnelle und skalierbare Webanwendungen · Fast and scalable web applications · Applicazioni web veloci e scalabili",
         },
+        {
+          "@type": "OfferCatalog",
+          name: "Hosting / Hosting / Hosting",
+          description:
+            "Verwaltetes Website-Hosting ab €20/mo · Managed website hosting from €20/mo · Hosting gestito da €20/mese",
+        },
+        {
+          "@type": "OfferCatalog",
+          name: "WordPress / WordPress / WordPress",
+          description:
+            "WordPress-Websites und Themes · WordPress websites and themes · Siti web WordPress e temi",
+        },
+        {
+          "@type": "OfferCatalog",
+          name: "E-Commerce / E-Commerce / E-Commerce",
+          description:
+            "Online-Shops und Produktseiten · Online shops and product pages · Negozi online e pagine prodotto",
+        },
+        {
+          "@type": "OfferCatalog",
+          name: "SEO / SEO / SEO",
+          description:
+            "Suchmaschinenoptimierung · Search engine optimization · Ottimizzazione per i motori di ricerca",
+        },
       ],
     },
   },
+}
+
+// ─── BreadcrumbList helper ────────────────────────────────────────────────
+export function breadcrumbSchema(items: Array<{ name: string; url: string }>) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: items.map((item, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      name: item.name,
+      item: item.url,
+    })),
+  }
+}
+
+// ─── Article schema helper ────────────────────────────────────────────────
+export function articleSchema(post: {
+  title: string
+  excerpt: string | null
+  image_url: string | null
+  published_at: string
+  author: string | null
+  slug: string
+}) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: post.title,
+    description: post.excerpt ?? undefined,
+    image: post.image_url ? [post.image_url] : [`${siteConfig.url}/opengraph-image`],
+    datePublished: post.published_at,
+    dateModified: post.published_at,
+    author: {
+      "@type": "Person",
+      name: post.author ?? "pokyh.studio",
+      url: siteConfig.url,
+    },
+    publisher: {
+      "@type": "Organization",
+      name: siteConfig.name,
+      logo: { "@type": "ImageObject", url: `${siteConfig.url}/assets/logo.png` },
+    },
+    url: `${siteConfig.url}/blog/${post.slug}`,
+    mainEntityOfPage: { "@type": "WebPage", "@id": `${siteConfig.url}/blog/${post.slug}` },
+    inLanguage: ["de", "en", "it"],
+  }
+}
+
+// ─── FAQPage schema (Kontaktseite) ────────────────────────────────────────
+export const faqSchema = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: [
+    {
+      "@type": "Question",
+      name: "Was kostet eine professionelle Website? / How much does a professional website cost? / Quanto costa un sito web professionale?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Unsere Websites starten ab €20/Monat für Hosting. Der Preis für Entwicklung hängt vom Umfang ab – kontaktiere uns für ein individuelles Angebot. / Our websites start from €20/month for hosting. Development pricing depends on scope — contact us for a custom quote. / I nostri siti web partono da €20/mese per l'hosting. Il prezzo di sviluppo dipende dall'ambito — contattaci per un preventivo personalizzato.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Welche Dienstleistungen bietet pokyh.studio an? / What services does pokyh.studio offer? / Quali servizi offre pokyh.studio?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Wir bieten: 3D Websites, professionelles Webdesign, Frontend & Backend Entwicklung, SEO, Website Hosting ab €20/mo, WordPress und E-Commerce Lösungen. / We offer: 3D websites, professional web design, frontend & backend development, SEO, hosting from €20/mo, WordPress and e-commerce solutions. / Offriamo: siti web 3D, web design professionale, sviluppo frontend & backend, SEO, hosting da €20/mese, WordPress ed e-commerce.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Bietet pokyh.studio auch Hosting an? / Does pokyh.studio offer hosting? / pokyh.studio offre anche hosting?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Ja! Wir bieten verwaltetes Website-Hosting ab €20/Monat an. / Yes! We offer managed website hosting from €20/month. / Sì! Offriamo hosting gestito a partire da €20/mese.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "In welchen Sprachen arbeitet pokyh.studio? / What languages does pokyh.studio work in? / In quali lingue lavora pokyh.studio?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Wir arbeiten auf Deutsch, Englisch und Italienisch. Wir sind ein Digital Studio aus Südtirol / Alto Adige. / We work in German, English and Italian. We are a digital studio from South Tyrol / Alto Adige. / Lavoriamo in tedesco, inglese e italiano. Siamo uno studio digitale dell'Alto Adige / Südtirol.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Wo ist pokyh.studio ansässig? / Where is pokyh.studio located? / Dove si trova pokyh.studio?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Wir sind in Südtirol / Alto Adige, Italien ansässig und betreuen Kunden in ganz Deutschland, Österreich, der Schweiz und Italien. / We are based in South Tyrol / Alto Adige, Italy and serve clients throughout the DACH region and Italy. / Siamo con sede in Alto Adige / Südtirol, Italia, e serviamo clienti in tutta la regione DACH e in Italia.",
+      },
+    },
+  ],
 }

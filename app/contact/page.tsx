@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { siteConfig } from "@/lib/seo.config"
+import { siteConfig, faqSchema, breadcrumbSchema } from "@/lib/seo.config"
 import ContactPage from "@/components/ContactPage"
 
 export const metadata: Metadata = {
@@ -17,6 +17,10 @@ export const metadata: Metadata = {
     "webdesign kosten",
     "webentwicklung beauftragen",
     "website kaufen kontakt",
+    "hosting anfragen",
+    "website hosting beauftragen",
+    "wordpress beauftragen",
+    "e-commerce beauftragen",
     // EN
     "hire web designer",
     "start web project",
@@ -25,12 +29,19 @@ export const metadata: Metadata = {
     "get website quote",
     "hire web developer",
     "web development inquiry",
+    "hire web hosting",
+    "get hosting quote",
+    "wordpress development inquiry",
+    "e-commerce development quote",
     // IT
     "contattare agenzia web",
     "preventivo sito web",
     "sviluppo web contatto",
     "preventivo web design",
     "richiedere sito web",
+    "richiedere hosting",
+    "preventivo hosting",
+    "sviluppo wordpress contatto",
     // Brand
     "pokyh.studio kontakt",
     "pokyh studio contact",
@@ -56,5 +67,24 @@ export const metadata: Metadata = {
 }
 
 export default function Contact() {
-  return <ContactPage />
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(
+            breadcrumbSchema([
+              { name: "Home", url: siteConfig.url },
+              { name: "Contact", url: `${siteConfig.url}/contact` },
+            ])
+          ),
+        }}
+      />
+      <ContactPage />
+    </>
+  )
 }

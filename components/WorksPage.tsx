@@ -3,7 +3,6 @@
 import { useEffect, useRef, forwardRef } from "react"
 import gsap from "gsap"
 import { ScrollTrigger } from "gsap/ScrollTrigger"
-import Header from "@/components/Header"
 import { projects, type Project } from "@/lib/projects.config"
 
 export default function WorksPage() {
@@ -100,7 +99,6 @@ export default function WorksPage() {
     <div style={{ backgroundColor: "var(--bg)", minHeight: "100vh" }}>
       {/* Hero */}
       <div style={{ position: "relative", height: "100vh", width: "100%", backgroundColor: "var(--bg)", zIndex: 1 }}>
-        <Header />
         <div className="headline-wrapper">
           <div className="headline-content">
             <h1

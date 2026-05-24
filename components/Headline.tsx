@@ -69,6 +69,7 @@ export default function Headline() {
           ))}
         </h1>
         <p
+          data-speakable="true"
           style={{
             marginTop: "1.5rem",
             fontFamily: "var(--font-dm-mono), 'JetBrains Mono', monospace",

@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState, useCallback } from "react"
 import gsap from "gsap"
 import { ScrollTrigger } from "gsap/ScrollTrigger"
-import Header from "@/components/Header"
 import { services, budgets, timelines } from "@/lib/services.config"
 
 type Step = 1 | 2 | 3 | 4
@@ -220,8 +219,6 @@ export default function ContactPage() {
     <div style={{ backgroundColor: "var(--bg)", minHeight: "100vh" }}>
       {/* ── Hero ── */}
       <div style={{ position: "relative", height: "100vh", width: "100%", backgroundColor: "var(--bg)", zIndex: 1 }}>
-        <Header />
-
         <div className="headline-wrapper">
           <div className="headline-content">
             <h1

@@ -36,48 +36,60 @@ export default function Login({ onLogin }) {
       alignItems: 'center',
       justifyContent: 'center',
       minHeight: '100vh',
-      padding: '1rem',
+      padding: '1.5rem',
       background: 'var(--bg)',
     }}>
-      {/* Subtle accent glow */}
+      {/* Background radial glow */}
       <div style={{
         position: 'fixed',
-        top: 0, left: '50%',
+        top: '-10%',
+        left: '50%',
         transform: 'translateX(-50%)',
-        width: 600, height: 300,
-        background: 'radial-gradient(ellipse at 50% 0%, rgba(89,61,248,0.07) 0%, transparent 70%)',
+        width: 700,
+        height: 400,
+        background: 'radial-gradient(ellipse at 50% 0%, rgba(89,61,248,0.06) 0%, transparent 65%)',
         pointerEvents: 'none',
       }} />
 
-      <div style={{ width: '100%', maxWidth: 360, position: 'relative' }}>
-        {/* Brand mark */}
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+      <div style={{
+        width: '100%',
+        maxWidth: 360,
+        position: 'relative',
+        animation: 'pageFade 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
+      }}>
+        {/* Brand */}
+        <div style={{ textAlign: 'center', marginBottom: '2.25rem' }}>
           <div style={{
-            width: 48, height: 48,
+            width: 52,
+            height: 52,
             background: 'var(--accent)',
-            borderRadius: 13,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            margin: '0 auto 1rem',
-            boxShadow: '0 4px 16px rgba(89,61,248,0.25)',
+            borderRadius: 15,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 1.125rem',
+            boxShadow: '0 6px 24px rgba(89,61,248,0.28), 0 2px 8px rgba(89,61,248,0.15)',
           }}>
-            <i className="bi bi-shield-lock-fill" style={{ fontSize: '1.3rem', color: '#fff' }} />
+            <i className="bi bi-shield-lock-fill" style={{ fontSize: '1.35rem', color: '#fff' }} />
           </div>
           <h1 style={{
             color: 'var(--text)',
-            fontSize: '1.25rem',
-            fontWeight: 600,
-            letterSpacing: '-0.03em',
-            marginBottom: 4,
+            fontSize: '1.3rem',
+            fontWeight: 700,
+            letterSpacing: '-0.035em',
+            marginBottom: 5,
           }}>
             pokyh.studio
           </h1>
-          <p style={{ color: 'var(--text3)', fontSize: '0.8125rem' }}>Admin Dashboard</p>
+          <p style={{ color: 'var(--text3)', fontSize: '0.8rem', fontWeight: 400 }}>
+            Admin Dashboard
+          </p>
         </div>
 
         {/* Card */}
         <div className="card" style={{
-          padding: '1.75rem',
-          background: 'var(--bg2)',
+          padding: '1.875rem',
+          boxShadow: 'var(--shadow-md)',
         }}>
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
             {/* Username */}
@@ -131,7 +143,10 @@ export default function Login({ onLogin }) {
                     background: 'none', border: 'none', padding: '0.2rem',
                     color: 'var(--text3)', cursor: 'pointer',
                     display: 'flex', alignItems: 'center',
+                    transition: 'color var(--transition)',
                   }}
+                  onMouseEnter={e => e.currentTarget.style.color = 'var(--text2)'}
+                  onMouseLeave={e => e.currentTarget.style.color = 'var(--text3)'}
                 >
                   <i className={`bi bi-eye${showPw ? '-slash' : ''}`} style={{ fontSize: '0.85rem' }} />
                 </button>
@@ -149,13 +164,32 @@ export default function Login({ onLogin }) {
               type="submit"
               className="btn-primary w-full"
               disabled={loading}
-              style={{ padding: '0.6rem', justifyContent: 'center', fontSize: '0.875rem', marginTop: 4 }}
+              style={{
+                padding: '0.65rem',
+                justifyContent: 'center',
+                fontSize: '0.875rem',
+                marginTop: 2,
+                borderRadius: 10,
+              }}
             >
-              {loading ? <span className="spinner" /> : <i className="bi bi-arrow-right-circle-fill" />}
+              {loading
+                ? <span className="spinner" />
+                : <i className="bi bi-arrow-right-circle-fill" />
+              }
               {loading ? 'Einloggen…' : 'Einloggen'}
             </button>
           </form>
         </div>
+
+        {/* Footer */}
+        <p style={{
+          textAlign: 'center',
+          marginTop: '1.25rem',
+          color: 'var(--text3)',
+          fontSize: '0.73rem',
+        }}>
+          pokyh.studio © {new Date().getFullYear()}
+        </p>
       </div>
     </div>
   );

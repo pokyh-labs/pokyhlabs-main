@@ -2,7 +2,6 @@
 
 import { useEffect } from "react"
 import Link from "next/link"
-import Header from "@/components/Header"
 
 interface BlogPost {
   id: number
@@ -51,7 +50,7 @@ export default function BlogPostClient({ blog }: { blog: BlogPost }) {
   }, [])
 
   return (
-    <div style={{ backgroundColor: "var(--bg)", minHeight: "100vh" }}>
+    <article style={{ backgroundColor: "var(--bg)", minHeight: "100vh" }}>
       {/* Hero */}
       <div
         style={{
@@ -62,8 +61,6 @@ export default function BlogPostClient({ blog }: { blog: BlogPost }) {
           flexDirection: "column",
         }}
       >
-        <Header />
-
         <div
           style={{
             flex: 1,
@@ -330,6 +327,6 @@ export default function BlogPostClient({ blog }: { blog: BlogPost }) {
         .blog-content strong { color: var(--black); font-weight: 600; }
         .blog-content em { color: rgba(12,12,12,0.75); }
       `}</style>
-    </div>
+    </article>
   )
 }

@@ -3,8 +3,6 @@
 import { useEffect, useRef, useState } from "react"
 import gsap from "gsap"
 import { ScrollTrigger } from "gsap/ScrollTrigger"
-import Header from "@/components/Header"
-
 interface Blog {
   id: number
   title: string
@@ -145,7 +143,6 @@ export default function BlogsPage() {
           zIndex: 1,
         }}
       >
-        <Header />
         <div className="headline-wrapper">
           <div className="headline-content">
             <h1

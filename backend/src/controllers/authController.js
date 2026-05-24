@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { body, validationResult } = require('express-validator');
-const { User, RefreshToken, SuspiciousActivity } = require('../models');
+const { User, RefreshToken, SuspiciousActivity, AuthLog } = require('../models');
 const logger = require('../utils/logger');
 
 const ACCESS_EXPIRES = process.env.JWT_EXPIRES_IN || '15m';
@@ -42,6 +42,7 @@ async function login(req, res) {
       ip_address: ip, event_type: 'failed_login',
       details: `Unknown user: ${username}`, user_agent: ua, url: req.originalUrl,
     });
+    AuthLog.create({ event_type: 'login_failed', ip, user_agent: ua, username, details: 'Unknown user', success: false }).catch(() => {});
     // Generic error to prevent user enumeration
     return res.status(401).json({ error: 'Invalid credentials' });
   }
@@ -62,11 +63,13 @@ async function login(req, res) {
       details: `Failed attempt ${user.failed_login_attempts}`, user_agent: ua, url: req.originalUrl,
       user_id: user.id,
     });
+    AuthLog.create({ event_type: 'login_failed', ip, user_agent: ua, user_id: user.id, username: user.username, details: `Attempt ${user.failed_login_attempts}`, success: false }).catch(() => {});
     return res.status(401).json({ error: 'Invalid credentials' });
   }
 
   await user.resetLoginAttempts(ip);
   logger.info('User logged in', { event: 'login', userId: user.id, ip });
+  AuthLog.create({ event_type: 'login_success', ip, user_agent: ua, user_id: user.id, username: user.username, success: true }).catch(() => {});
 
   const { accessToken, refreshToken } = generateTokens(user);
   const expiresAt = new Date(Date.now() + REFRESH_EXPIRES_DAYS * 86400 * 1000);
@@ -133,6 +136,8 @@ async function logout(req, res) {
     await RefreshToken.update({ is_revoked: true }, { where: { user_id: req.user.id } });
   }
   logger.info('User logged out', { event: 'logout', userId: req.user?.id });
+  const logIp = req.ip || req.socket?.remoteAddress;
+  AuthLog.create({ event_type: 'logout', ip: logIp, user_id: req.user?.id, username: req.user?.username, success: true }).catch(() => {});
   res.json({ message: 'Logged out successfully' });
 }
 

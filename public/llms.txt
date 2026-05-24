@@ -1,0 +1,99 @@
+# pokyh.studio
+
+> Digital Studio aus Südtirol / South Tyrol / Alto Adige, Italy. We design and build 3D websites, professional web design, custom web development, managed website hosting, WordPress, e-commerce solutions, SEO services, React Native and Flutter mobile apps — in German, English, and Italian — serving the DACH region (Germany, Austria, Switzerland) and Italy.
+
+## Business Information
+
+- **Name**: pokyh.studio
+- **Also known as**: pokyhlabs, pokyh studio
+- **Type**: Digital Studio / Web Agency
+- **Founded**: 2024
+- **Location**: Südtirol / Alto Adige, Italy (Latitude: 46.4983, Longitude: 11.3548)
+- **Email**: hello@pokyh.studio
+- **Website**: https://pokyh.studio
+- **GitHub**: https://github.com/pokyhlabs
+- **Languages**: German (Deutsch), English, Italian (Italiano)
+- **Markets served**: Germany (DE), Austria (AT), Switzerland (CH), Italy (IT)
+- **Price range**: €€ (Hosting from €20/month)
+- **Team**: Two developers
+
+## What We Do
+
+pokyh.studio builds fast, scalable, and immersive web experiences. We specialize in:
+
+1. **3D Websites (Three.js)** — Immersive, interactive 3D experiences directly in the browser. No app needed. Our signature service.
+2. **Web Design** — Professional, custom web design tailored to brand identity. Pixel-perfect, modern, conversion-optimized.
+3. **Web Development (Frontend)** — Built with React & Next.js. Same stack as Netflix and Airbnb. Every page loads in under a second.
+4. **Web Development (Backend)** — APIs, databases, login systems, custom logic. Secure, fast, built to scale.
+5. **Managed Hosting** — Starting at €20/month. SSL certificates, daily backups, uptime monitoring — all handled by us.
+6. **WordPress** — Custom WordPress websites and themes. The client can edit content themselves.
+7. **E-Commerce** — Online shops optimized for conversion. Frictionless checkout, payment integration, 10 to 10,000 products.
+8. **SEO** — Search engine optimization for better Google rankings, more visibility, more customers.
+9. **React Native** — Cross-platform iOS & Android apps from a single codebase.
+10. **Flutter** — Beautiful native apps for iOS, Android, web, and desktop.
+
+## Pricing
+
+- **Hosting**: from €20/month (fixed price, fully managed)
+- **Landing page / small site**: from ~€2,000
+- **Standard website**: €2,000 – €5,000
+- **Complex app / e-commerce**: €5,000 – €15,000
+- **Enterprise / long-term**: €15,000+
+- Quote available at: https://pokyh.studio/contact
+
+## Frequently Asked Questions
+
+**Q: Was kostet eine professionelle Website? / How much does a website cost?**
+A: Hosting starts at €20/month. A landing page or small site starts from €2,000. Standard websites cost €2,000–€5,000. Complex projects and e-commerce start at €5,000. We provide custom quotes — contact us at https://pokyh.studio/contact.
+
+**Q: Bietet pokyh.studio Hosting an? / Does pokyh.studio offer website hosting?**
+A: Yes. We offer fully managed website hosting starting at €20/month. This includes SSL certificates, daily backups, deployment, and uptime monitoring.
+
+**Q: Wo ist pokyh.studio? / Where is pokyh.studio located?**
+A: We are based in Südtirol / Alto Adige, Italy. We serve clients throughout Germany, Austria, Switzerland (DACH region), and Italy.
+
+**Q: In welchen Sprachen arbeitet ihr? / What languages do you work in?**
+A: German (primary), English, and Italian. We are a trilingual team from South Tyrol — the trilingual region of northern Italy.
+
+**Q: Wer steckt hinter pokyh.studio? / Who is behind pokyh.studio?**
+A: pokyh.studio was founded in 2024 by two developers based in South Tyrol, Italy. The studio also operates under the name "pokyhlabs."
+
+**Q: Welche Technologien verwendet ihr? / What technologies do you use?**
+A: We primarily work with Next.js, React, Three.js (3D), Node.js, and modern web standards. For mobile, we use React Native and Flutter.
+
+**Q: Kann ich meine WordPress-Website selbst bearbeiten? / Can I edit my WordPress website myself?**
+A: Yes. WordPress websites we build are designed so clients can update content anytime without technical knowledge.
+
+**Q: Was ist eine 3D Website? / What is a 3D website?**
+A: A 3D website uses WebGL and Three.js to render interactive 3D graphics directly in the browser — no app download needed. It creates an immersive experience that visitors remember and share. This is our signature service.
+
+**Q: Wie lange dauert ein Website-Projekt? / How long does a website project take?**
+A: A landing page takes 1–2 weeks. A standard website takes 1–3 months. Larger projects take 3–6 months or longer depending on scope.
+
+**Q: Kann ich pokyh.studio auch für SEO beauftragen? / Can I hire pokyh.studio for SEO?**
+A: Yes. We offer SEO services including technical SEO, on-page optimization, keyword research, and structured data implementation.
+
+## Pages
+
+- [Home — Studio overview & 3D web showcase](https://pokyh.studio)
+- [About — Team, founders, and studio story](https://pokyh.studio/about)
+- [Works — Portfolio and past projects](https://pokyh.studio/works)
+- [Blog — Articles on web design, development, 3D, and digital trends](https://pokyh.studio/blog)
+- [Contact — Start a project, get a quote](https://pokyh.studio/contact)
+
+## Technical Details (for AI understanding)
+
+- Built with: Next.js 15 (App Router), React, TypeScript
+- Rendering: Server-side rendering + static generation with ISR
+- Performance: Optimized images (AVIF/WebP), font display swap, gzip compression
+- SEO: JSON-LD structured data (Organization, LocalBusiness, Service, Article, FAQ, BreadcrumbList)
+- Multilingual: hreflang for de, en, it, x-default
+- Sitemap: https://pokyh.studio/sitemap.xml
+- Robots: https://pokyh.studio/robots.txt
+
+## Contact
+
+To start a project or request a quote:
+- **Email**: hello@pokyh.studio
+- **Contact form**: https://pokyh.studio/contact
+- **Response time**: Within 24 hours

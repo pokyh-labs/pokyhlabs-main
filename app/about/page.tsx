@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { siteConfig } from "@/lib/seo.config"
+import { siteConfig, breadcrumbSchema } from "@/lib/seo.config"
 import AboutPage from "@/components/AboutPage"
 
 export const metadata: Metadata = {
@@ -51,5 +51,20 @@ export const metadata: Metadata = {
 }
 
 export default function About() {
-  return <AboutPage />
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(
+            breadcrumbSchema([
+              { name: "Home", url: siteConfig.url },
+              { name: "About", url: `${siteConfig.url}/about` },
+            ])
+          ),
+        }}
+      />
+      <AboutPage />
+    </>
+  )
 }

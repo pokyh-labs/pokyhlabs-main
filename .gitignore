@@ -24,6 +24,20 @@
 *.sqlite-wal
 *.db
 
+# data directory (runtime-generated, not source)
+data/backups/
+data/seo-override.json
+
+# uploads & logs
+backend/uploads/
+backend/logs/
+uploads/
+logs/
+
+# admin build output
+backend/admin-dist/
+backend/public/admin/
+
 # misc
 .DS_Store
 Thumbs.db

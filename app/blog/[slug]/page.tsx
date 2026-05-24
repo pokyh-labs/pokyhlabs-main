@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
-import Header from "@/components/Header"
 import BlogPostClient from "@/components/BlogPostClient"
+import { siteConfig, articleSchema, breadcrumbSchema } from "@/lib/seo.config"
 
 const BACKEND = process.env.BACKEND_URL ?? "http://localhost:3001"
 
@@ -42,12 +42,27 @@ export async function generateMetadata({
   return {
     title: blog.title,
     description: blog.excerpt ?? undefined,
+    authors: blog.author ? [{ name: blog.author.username }] : [{ name: "pokyh.studio" }],
+    alternates: {
+      canonical: `${siteConfig.url}/blog/${slug}`,
+      languages: {
+        de: `${siteConfig.url}/blog/${slug}`,
+        en: `${siteConfig.url}/blog/${slug}`,
+        it: `${siteConfig.url}/blog/${slug}`,
+        "x-default": `${siteConfig.url}/blog/${slug}`,
+      },
+    },
     openGraph: {
       title: blog.title,
       description: blog.excerpt ?? undefined,
-      images: blog.image_url ? [{ url: blog.image_url }] : [],
+      images: blog.image_url
+        ? [{ url: blog.image_url, alt: blog.image_alt ?? blog.title }]
+        : [{ url: "/opengraph-image", width: 1200, height: 630, alt: blog.title }],
       type: "article",
       publishedTime: blog.published_at,
+      authors: blog.author ? [blog.author.username] : ["pokyh.studio"],
+      locale: "de_AT",
+      alternateLocale: ["en_US", "it_IT"],
     },
   }
 }
@@ -61,5 +76,29 @@ export default async function BlogPostPage({
   const blog = await getBlog(slug)
   if (!blog) notFound()
 
-  return <BlogPostClient blog={blog} />
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(
+            articleSchema({ ...blog, author: blog.author?.username ?? null })
+          ),
+        }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(
+            breadcrumbSchema([
+              { name: "Home", url: siteConfig.url },
+              { name: "Blog", url: `${siteConfig.url}/blog` },
+              { name: blog.title, url: `${siteConfig.url}/blog/${blog.slug}` },
+            ])
+          ),
+        }}
+      />
+      <BlogPostClient blog={blog} />
+    </>
+  )
 }

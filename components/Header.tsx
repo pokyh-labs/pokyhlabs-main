@@ -1,38 +1,69 @@
 "use client";
 
 import Image from "next/image";
+import { useEffect, useState } from "react";
+
+const SPRING = "cubic-bezier(0.32, 0.72, 0, 1)";
+const DUR = "0.55s";
 
 export default function Header() {
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 40);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   return (
     <header
       style={{
-        position: "absolute",
-        top: 0,
-        left: 0,
-        right: 0,
+        position: "fixed",
+        top: scrolled ? 10 : 0,
+        left: scrolled ? 14 : 0,
+        right: scrolled ? 14 : 0,
+        zIndex: 99999,
         display: "grid",
         gridTemplateColumns: "1fr auto 1fr",
-        alignItems: "start",
-        padding: "22px 28px",
+        alignItems: "center",
+        padding: "12px 22px",
+        background: scrolled
+          ? "rgba(228, 226, 220, 0.92)"
+          : "transparent",
+        backdropFilter: scrolled ? "blur(20px) saturate(1.8)" : "none",
+        WebkitBackdropFilter: scrolled ? "blur(20px) saturate(1.8)" : "none",
+        borderRadius: scrolled ? 999 : 0,
+        boxShadow: scrolled
+          ? "0 1px 0 rgba(0,0,0,0.06), 0 4px 24px rgba(0,0,0,0.08)"
+          : "none",
+        transition: [
+          `top ${DUR} ${SPRING}`,
+          `left ${DUR} ${SPRING}`,
+          `right ${DUR} ${SPRING}`,
+          `border-radius ${DUR} ${SPRING}`,
+          `background 0.4s ease`,
+          `box-shadow 0.4s ease`,
+        ].join(", "),
       }}
     >
       <a
         href="/"
         aria-label="pokyh.studio home"
-        style={{ display: "flex", alignItems: "center", gap: 12, textDecoration: "none" }}
+        style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}
       >
         <Image
           src="/assets/logo.png"
           alt="pokyh.studio logo"
-          width={42}
-          height={42}
+          width={34}
+          height={34}
           style={{ display: "block", objectFit: "contain" }}
         />
         <span
           style={{
             fontWeight: 800,
             fontStyle: "italic",
-            fontSize: 22,
+            fontSize: 20,
             letterSpacing: "-0.02em",
             color: "var(--ink)",
             lineHeight: 1,
@@ -61,7 +92,7 @@ export default function Header() {
 
       <nav
         aria-label="Primary"
-        style={{ justifySelf: "end", display: "flex", alignItems: "center", gap: 22 }}
+        style={{ justifySelf: "end", display: "flex", alignItems: "center", gap: 16 }}
       >
         <NavLinks />
         <a
@@ -70,8 +101,8 @@ export default function Header() {
             background: "#0c0c0c",
             color: "#fff",
             borderRadius: 999,
-            padding: "9px 18px 10px",
-            fontSize: 14,
+            padding: "8px 16px 9px",
+            fontSize: 13,
             fontWeight: 500,
             textDecoration: "none",
             lineHeight: 1,
@@ -105,10 +136,10 @@ function NavLinks() {
     <div
       style={{
         display: "flex",
-        gap: 22,
+        gap: 18,
         alignItems: "center",
         fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
-        fontSize: 15,
+        fontSize: 14,
         fontWeight: 500,
         color: "#0c0c0c",
       }}
@@ -124,7 +155,7 @@ function NavLink({ href, label }: { href: string; label: string }) {
   return (
     <a
       href={href}
-      style={{ color: "#0c0c0c", textDecoration: "none", padding: "6px 2px", position: "relative" }}
+      style={{ color: "#0c0c0c", textDecoration: "none", padding: "5px 2px", position: "relative" }}
       onMouseEnter={(e) => {
         const el = e.currentTarget.querySelector<HTMLSpanElement>(".underline");
         if (el) el.style.transform = "scaleX(1)";
@@ -141,7 +172,7 @@ function NavLink({ href, label }: { href: string; label: string }) {
           position: "absolute",
           left: 2,
           right: 2,
-          bottom: 4,
+          bottom: 3,
           height: 1,
           background: "currentColor",
           transform: "scaleX(0)",
@@ -159,8 +190,8 @@ function CircleButton() {
       href="/contact"
       aria-label="Go to contact"
       style={{
-        width: 38,
-        height: 38,
+        width: 34,
+        height: 34,
         borderRadius: "50%",
         background: "#0c0c0c",
         color: "#fff",
@@ -181,7 +212,7 @@ function CircleButton() {
       <svg
         viewBox="0 0 24 24"
         aria-hidden="true"
-        style={{ width: 16, height: 16, stroke: "currentColor", fill: "none", strokeWidth: 1.8 }}
+        style={{ width: 14, height: 14, stroke: "currentColor", fill: "none", strokeWidth: 1.8 }}
       >
         <path d="M7 17 L17 7 M9 7 H17 V15" />
       </svg>

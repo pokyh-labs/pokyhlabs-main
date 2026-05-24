@@ -23,10 +23,16 @@ const { sequelize } = require('./models');
 const logger = require('./utils/logger');
 const { detectSuspiciousInput, detectSuspiciousUA } = require('./middleware/sanitize');
 const { globalRateLimiter } = require('./middleware/rateLimiter');
-const authRoutes = require('./routes/auth');
-const blogRoutes = require('./routes/blogs');
-const tunnelRoutes = require('./routes/tunnel');
-const userRoutes = require('./routes/users');
+const authRoutes       = require('./routes/auth');
+const blogRoutes       = require('./routes/blogs');
+const tunnelRoutes     = require('./routes/tunnel');
+const userRoutes       = require('./routes/users');
+const logsRoutes       = require('./routes/logs');
+const systemRoutes     = require('./routes/system');
+const seoRoutes        = require('./routes/seo');
+const cloudflareRoutes = require('./routes/cloudflare');
+const requestLogger    = require('./middleware/requestLogger');
+const errorLogger      = require('./middleware/errorLogger');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -86,6 +92,9 @@ app.use(morgan(':remote-addr - :method :url :status :response-time ms - :res[con
 app.use(detectSuspiciousUA);
 app.use(detectSuspiciousInput);
 
+// Request logging (access log to DB — must be before routes)
+app.use(requestLogger);
+
 // Global rate limiting
 app.use('/api/', globalRateLimiter);
 
@@ -104,10 +113,14 @@ app.use(express.static(path.join(__dirname, '../public'), {
 }));
 
 // API routes
-app.use('/api/auth', authRoutes);
-app.use('/api/blogs', blogRoutes);
-app.use('/api/tunnel', tunnelRoutes);
-app.use('/api/users', userRoutes);
+app.use('/api/auth',        authRoutes);
+app.use('/api/blogs',       blogRoutes);
+app.use('/api/tunnel',      tunnelRoutes);
+app.use('/api/users',       userRoutes);
+app.use('/api/logs',        logsRoutes);
+app.use('/api/system',      systemRoutes);
+app.use('/api/seo',         seoRoutes);
+app.use('/api/cloudflare',  cloudflareRoutes);
 
 // SPA routing for admin
 app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, '../public/admin/index.html')));
@@ -122,6 +135,9 @@ app.get('/', (req, res) => res.redirect('/admin'));
 
 // 404
 app.use((req, res) => res.status(404).json({ error: 'Not found' }));
+
+// Log 5xx errors to DB before responding
+app.use(errorLogger);
 
 // Global error handler
 app.use((err, req, res, next) => {
