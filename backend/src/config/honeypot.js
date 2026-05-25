@@ -1,6 +1,6 @@
-// ── 🍯 Honeypot config ─────────────────────────────────────────
+// ── Honeypot config ─────────────────────────────────────────
 // Add sentences freely — one per line, nothing else to change.
-// Responses are picked at random on every hit. 🎲
+// Responses are picked at random on every hit.
 
 const responses = [
   // User-defined
