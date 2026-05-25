@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "postinstall": "cd backend && npm install",
+    "postinstall": "npm install --prefix backend",
     "dev": "node server.js",
     "dev:frontend": "next dev",
     "dev:backend": "npm run dev --prefix backend",

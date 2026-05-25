@@ -11,11 +11,15 @@ const cache = new NodeCache({
   useClones: false,
 });
 
+const PROJECT_LIST_TTL = 120; // 2 min
+
 const KEYS = {
   BLOG_LIST: 'blog:list:published',
   BLOG_SLUG: (slug) => `blog:slug:${slug}`,
   BLOG_ALL: 'blog:list:all',
   STATS: 'admin:stats',
+  PROJECT_LIST: 'project:list:public',
+  PROJECT_ALL:  'project:list:all',
 };
 
 function invalidateBlogCache() {
@@ -26,4 +30,9 @@ function invalidateBlogCache() {
   if (keys.length) cache.del(keys);
 }
 
-module.exports = { cache, KEYS, BLOG_LIST_TTL, BLOG_SINGLE_TTL, STATS_TTL, invalidateBlogCache };
+function invalidateProjectCache() {
+  cache.del(KEYS.PROJECT_LIST);
+  cache.del(KEYS.PROJECT_ALL);
+}
+
+module.exports = { cache, KEYS, BLOG_LIST_TTL, BLOG_SINGLE_TTL, STATS_TTL, PROJECT_LIST_TTL, invalidateBlogCache, invalidateProjectCache };

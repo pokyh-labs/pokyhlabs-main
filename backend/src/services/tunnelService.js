@@ -3,8 +3,11 @@ const { promisify } = require('util');
 const execFileAsync = promisify(execFile);
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 const https = require('https');
 const logger = require('../utils/logger');
+
+const IS_WINDOWS = process.platform === 'win32';
 
 function assertSafeToken(token) {
   if (!/^[A-Za-z0-9._\-+=]+$/.test(token)) throw new Error('Invalid token format');
@@ -31,8 +34,10 @@ class TunnelService {
   async getPath() {
     if (this._cfPath) return this._cfPath;
     try {
-      const { stdout } = await execFileAsync('which', ['cloudflared']);
-      this._cfPath = stdout.trim();
+      const finder = IS_WINDOWS ? 'where' : 'which';
+      const { stdout } = await execFileAsync(finder, ['cloudflared']);
+      // `where` on Windows may return multiple lines — take first
+      this._cfPath = stdout.trim().split(/\r?\n/)[0];
       return this._cfPath;
     } catch {
       return null;
@@ -53,12 +58,16 @@ class TunnelService {
   async install() {
     const platform = process.platform;
     if (platform === 'linux') {
+      const tmpDeb = path.join(os.tmpdir(), 'cloudflared.deb');
       await execFileAsync('sh', ['-c',
-        'curl -fsSL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb -o /tmp/cloudflared.deb',
+        `curl -fsSL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb -o ${tmpDeb}`,
       ], { timeout: 60000 });
-      await execFileAsync('sudo', ['dpkg', '-i', '/tmp/cloudflared.deb'], { timeout: 30000 });
+      await execFileAsync('sudo', ['dpkg', '-i', tmpDeb], { timeout: 30000 });
+      try { fs.unlinkSync(tmpDeb); } catch {}
     } else if (platform === 'darwin') {
       await execFileAsync('brew', ['install', 'cloudflared'], { timeout: 120000 });
+    } else if (platform === 'win32') {
+      throw new Error('Auto-install on Windows not supported. Download manually from https://developers.cloudflare.com/cloudflared/ and add to PATH.');
     } else {
       throw new Error(`Auto-install not supported on "${platform}". Install manually: https://developers.cloudflare.com/cloudflared/`);
     }
@@ -167,7 +176,12 @@ class TunnelService {
 
   async stop() {
     if (this.process) {
-      this.process.kill('SIGTERM');
+      // SIGTERM not available on Windows — use taskkill or process.kill
+      if (IS_WINDOWS) {
+        try { execFileAsync('taskkill', ['/PID', String(this.process.pid), '/F']); } catch {}
+      } else {
+        this.process.kill('SIGTERM');
+      }
       this.process = null;
       this.pid = null;
       this.status = 'stopped';
@@ -178,14 +192,23 @@ class TunnelService {
     assertSafeToken(token);
     const p = await this.getPath();
     if (!p) throw new Error('cloudflared not installed');
-    await execFileAsync('sudo', [p, 'service', 'install', token], { timeout: 30000 });
+    if (IS_WINDOWS) {
+      // On Windows, cloudflared service install doesn't need sudo
+      await execFileAsync(p, ['service', 'install', token], { timeout: 30000 });
+    } else {
+      await execFileAsync('sudo', [p, 'service', 'install', token], { timeout: 30000 });
+    }
     logger.info('cloudflared service installed');
   }
 
   async uninstallService() {
     const p = await this.getPath();
     if (!p) throw new Error('cloudflared not installed');
-    await execFileAsync('sudo', [p, 'service', 'uninstall'], { timeout: 15000 });
+    if (IS_WINDOWS) {
+      await execFileAsync(p, ['service', 'uninstall'], { timeout: 15000 });
+    } else {
+      await execFileAsync('sudo', [p, 'service', 'uninstall'], { timeout: 15000 });
+    }
   }
 
   getStatus() {

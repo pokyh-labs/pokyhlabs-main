@@ -1,13 +1,35 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import gsap from "gsap"
 import { ScrollTrigger } from "gsap/ScrollTrigger"
-import { projects, type Project } from "@/lib/projects.config"
 
-export default function WorksPage() {
+interface Project {
+  id: number
+  title: string
+  description: string
+  tags: string[]
+  url?: string | null
+  image_url?: string | null
+  image_alt?: string | null
+  year: number
+  status: "live" | "wip" | "concept"
+}
+
+export default function WorksPage({ initialProjects = [] }: { initialProjects?: Project[] }) {
   const contentRef = useRef<HTMLDivElement>(null)
   const headlineRef = useRef<HTMLHeadingElement>(null)
+  const [projects, setProjects] = useState<Project[]>(initialProjects)
+
+  useEffect(() => {
+    // Only fetch client-side when no SSR data was provided
+    if (initialProjects.length > 0) return
+    const base = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/api$/, "")
+    fetch(`${base}/api/projects`)
+      .then(r => r.ok ? r.json() : { projects: [] })
+      .then(d => setProjects(d.projects || []))
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     gsap.registerPlugin(ScrollTrigger)
@@ -131,15 +153,20 @@ function EmptyState() {
         Projects coming soon.
       </p>
       <p style={{ fontFamily: "var(--font-dm-mono), monospace", fontSize: "13px", letterSpacing: "0.08em", color: "#444" }}>
-        Add entries to <code style={{ color: "#593DF8", fontFamily: "inherit" }}>lib/projects.config.ts</code>
+        Projekte können im Admin-Dashboard verwaltet werden.
       </p>
     </div>
   )
 }
 
+const cardStyle: React.CSSProperties = {
+  display: "block", padding: "3.5rem 0",
+  textDecoration: "none", color: "inherit",
+}
+
 function ProjectCard({ project, index }: { project: Project; index: number }) {
-  return (
-    <article style={{ borderTop: "1px solid #2a2a2a", padding: "3.5rem 0" }}>
+  const inner = (
+    <>
       <div
         data-reveal
         style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "1.5rem" }}
@@ -152,8 +179,8 @@ function ProjectCard({ project, index }: { project: Project; index: number }) {
         </span>
       </div>
 
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "2rem" }}>
-        <div style={{ flex: 1 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "2rem", flexWrap: "wrap" }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <h2
             data-reveal
             style={{ "--rd": "80ms", fontSize: "clamp(1.5rem, 3vw, 2.5rem)", fontWeight: 500, lineHeight: 1.1, letterSpacing: "-0.02em", marginBottom: "1rem", color: "#fff", fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' } as React.CSSProperties}
@@ -181,23 +208,48 @@ function ProjectCard({ project, index }: { project: Project; index: number }) {
           </div>
         </div>
 
-        {project.url && (
-          <a
-            href={project.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={`Open ${project.title}`}
-            data-reveal
-            style={{ "--rd": "200ms", flexShrink: 0, width: "52px", height: "52px", borderRadius: "50%", border: "1px solid #2a2a2a", display: "grid", placeItems: "center", color: "#fff", textDecoration: "none", transition: "background 0.25s, border-color 0.25s, transform 0.25s" } as React.CSSProperties}
-            onMouseEnter={(e) => { const el = e.currentTarget as HTMLAnchorElement; el.style.background = "#593DF8"; el.style.borderColor = "#593DF8"; el.style.transform = "rotate(45deg)" }}
-            onMouseLeave={(e) => { const el = e.currentTarget as HTMLAnchorElement; el.style.background = "transparent"; el.style.borderColor = "#2a2a2a"; el.style.transform = "" }}
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true" style={{ width: 16, height: 16, stroke: "currentColor", fill: "none", strokeWidth: 1.8 }}>
-              <path d="M7 17 L17 7 M9 7 H17 V15" />
-            </svg>
-          </a>
-        )}
+        <div data-reveal style={{ "--rd": "200ms", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "1rem", flexShrink: 0 } as React.CSSProperties}>
+          {project.image_url && (
+            <div style={{ width: "clamp(120px, 18vw, 220px)", aspectRatio: "16/10", borderRadius: "10px", overflow: "hidden", border: "1px solid #2a2a2a" }}>
+              <img
+                src={project.image_url}
+                alt={project.image_alt || project.title}
+                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+              />
+            </div>
+          )}
+          {project.url && (
+            <div style={{ width: "52px", height: "52px", borderRadius: "50%", border: "1px solid #2a2a2a", display: "grid", placeItems: "center", color: "#fff", transition: "background 0.25s, border-color 0.25s, transform 0.25s" }}>
+              <svg viewBox="0 0 24 24" aria-hidden="true" style={{ width: 16, height: 16, stroke: "currentColor", fill: "none", strokeWidth: 1.8 }}>
+                <path d="M7 17 L17 7 M9 7 H17 V15" />
+              </svg>
+            </div>
+          )}
+        </div>
       </div>
+    </>
+  )
+
+  return (
+    <article style={{ borderTop: "1px solid #2a2a2a" }}>
+      {project.url ? (
+        <a
+          href={project.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`Open ${project.title}`}
+          style={{ ...cardStyle, cursor: "pointer" }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.opacity = "0.85" }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.opacity = "1" }}
+        >
+          {inner}
+        </a>
+      ) : (
+        <div style={{ ...cardStyle, cursor: "default" }}>
+          {inner}
+        </div>
+      )}
     </article>
   )
 }
+

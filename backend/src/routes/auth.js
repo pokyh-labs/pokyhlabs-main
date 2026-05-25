@@ -4,7 +4,7 @@ const { authenticate } = require('../middleware/authenticate');
 const { authRateLimiter } = require('../middleware/rateLimiter');
 
 router.post('/login', authRateLimiter, loginValidators, login);
-router.post('/refresh', refresh);
+router.post('/refresh', authRateLimiter, refresh);
 router.post('/logout', authenticate, logout);
 router.get('/me', authenticate, me);
 

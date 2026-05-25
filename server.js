@@ -28,6 +28,9 @@ async function main() {
   const handle = nextApp.getRequestHandler();
   await nextApp.prepare();
 
+  // Honeypot paths that need routing to the backend (non-/api/ ones like /.env, /wp-admin, …)
+  const { paths: honeypotPaths } = require('./backend/src/config/honeypot');
+
   // 3. Route requests: backend paths → Express, everything else → Next.js
   const server = http.createServer((req, res) => {
     const parsedUrl = parse(req.url || '/', true);
@@ -37,7 +40,8 @@ async function main() {
       pathname.startsWith('/api/') ||
       pathname === '/admin' ||
       pathname.startsWith('/admin/') ||
-      pathname.startsWith('/uploads/')
+      pathname.startsWith('/uploads/') ||
+      honeypotPaths.includes(pathname)
     ) {
       backendApp(req, res);
     } else {

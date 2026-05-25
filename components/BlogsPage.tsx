@@ -20,14 +20,16 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
 }
 
-export default function BlogsPage() {
+export default function BlogsPage({ initialBlogs = [] }: { initialBlogs?: Blog[] }) {
   const contentRef = useRef<HTMLDivElement>(null)
   const headlineRef = useRef<HTMLHeadingElement>(null)
-  const [blogs, setBlogs] = useState<Blog[]>([])
-  const [loading, setLoading] = useState(true)
+  const [blogs, setBlogs] = useState<Blog[]>(initialBlogs)
+  const [loading, setLoading] = useState(initialBlogs.length === 0)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    // Only fetch client-side when no SSR data was provided
+    if (initialBlogs.length > 0) return
     fetch("/api/blogs?limit=20")
       .then((r) => { if (!r.ok) throw new Error("API error"); return r.json() })
       .then((data) => { setBlogs(data.blogs ?? []); setLoading(false) })

@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { marked } from 'marked';
 import { useApi, getAccessToken, apiFetch } from '../hooks/useApi';
+import { uploadImage } from '../hooks/useUpload';
 import { toast } from '../hooks/useToast';
 
 marked.setOptions({ breaks: true, gfm: true });
@@ -704,22 +705,29 @@ function BlogEditor({ blog, onSave, onCancel }) {
     }
     setSaving(true); setError('');
     try {
-      const fd = new FormData();
-      fd.append('title', form.title);
-      fd.append('excerpt', form.excerpt);
-      fd.append('status', form.status);
-      fd.append('image_alt', form.image_alt);
-      fd.append('content', combinedHtml);
-      fd.append('content_format', 'blocks');
-      fd.append('content_markdown', JSON.stringify(blocks));
-      if (imageFile) fd.append('image', imageFile);
+      // Step 1: upload image via one-time presign token if a new file was selected
+      let imageUrl = blog?.image_url || undefined;
+      if (imageFile) {
+        imageUrl = await uploadImage(imageFile);
+      }
 
-      const res = await fetch(`/api/blogs${blog ? `/${blog.id}` : ''}`, {
+      // Step 2: send blog data as JSON
+      const payload = {
+        title:            form.title,
+        excerpt:          form.excerpt,
+        status:           form.status,
+        image_alt:        form.image_alt,
+        content:          combinedHtml,
+        content_format:   'blocks',
+        content_markdown: JSON.stringify(blocks),
+        image_url:        imageUrl || null,
+      };
+
+      const res = await apiFetch(`/blogs${blog ? `/${blog.id}` : ''}`, {
         method: blog ? 'PUT' : 'POST',
-        headers: { Authorization: `Bearer ${getAccessToken()}` },
-        body: fd,
+        body: JSON.stringify(payload),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || data.errors?.[0]?.msg || JSON.stringify(data));
       toast(blog ? 'Blog aktualisiert' : 'Blog erstellt');
       onSave();

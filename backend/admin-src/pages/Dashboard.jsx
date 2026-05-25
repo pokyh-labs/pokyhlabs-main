@@ -307,40 +307,42 @@ export default function Dashboard({ onNavigate }) {
             <p style={{ fontSize: '0.75rem' }}>Erstelle deinen ersten Beitrag.</p>
           </div>
         ) : (
-          <table style={{ width: '100%' }}>
-            <thead style={{ background: 'var(--bg3)' }}>
-              <tr>
-                {['Titel', 'Status', 'Datum'].map(h => (
-                  <th key={h}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {recent.map((b, i) => (
-                <tr key={b.id} style={{ animation: `pageFade 0.3s ease ${i * 40}ms both` }}>
-                  <td style={{ color: 'var(--text)', maxWidth: 300 }}>
-                    <div className="truncate" style={{ fontWeight: 500, fontSize: '0.825rem' }}>
-                      {b.title}
-                    </div>
-                    {b.slug && (
-                      <div style={{ color: 'var(--text3)', fontSize: '0.7rem', marginTop: 2 }}>
-                        /{b.slug}
-                      </div>
-                    )}
-                  </td>
-                  <td>
-                    <span className={`badge badge-${b.status}`}>
-                      <i className={`bi bi-${b.status === 'published' ? 'check-circle-fill' : 'file-earmark'}`} />
-                      {b.status === 'published' ? 'Veröffentlicht' : 'Entwurf'}
-                    </span>
-                  </td>
-                  <td style={{ color: 'var(--text3)', fontSize: '0.78rem' }}>
-                    {fmt(b.created_at)}
-                  </td>
+          <div className="table-scroll">
+            <table style={{ width: '100%' }}>
+              <thead style={{ background: 'var(--bg3)' }}>
+                <tr>
+                  {['Titel', 'Status', 'Datum'].map(h => (
+                    <th key={h}>{h}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {recent.map((b, i) => (
+                  <tr key={b.id} style={{ animation: `pageFade 0.3s ease ${i * 40}ms both` }}>
+                    <td style={{ color: 'var(--text)', maxWidth: 280, minWidth: 160 }}>
+                      <div className="truncate" style={{ fontWeight: 500, fontSize: '0.825rem' }}>
+                        {b.title}
+                      </div>
+                      {b.slug && (
+                        <div style={{ color: 'var(--text3)', fontSize: '0.7rem', marginTop: 2 }}>
+                          /{b.slug}
+                        </div>
+                      )}
+                    </td>
+                    <td style={{ whiteSpace: 'nowrap' }}>
+                      <span className={`badge badge-${b.status}`}>
+                        <i className={`bi bi-${b.status === 'published' ? 'check-circle-fill' : 'file-earmark'}`} />
+                        {b.status === 'published' ? 'Veröffentlicht' : 'Entwurf'}
+                      </span>
+                    </td>
+                    <td style={{ color: 'var(--text3)', fontSize: '0.78rem', whiteSpace: 'nowrap' }}>
+                      {fmt(b.created_at)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>

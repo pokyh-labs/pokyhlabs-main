@@ -470,3 +470,79 @@ tbody tr:hover { background: rgba(89,61,248,0.022); }
     padding: 1.5rem 1.25rem !important;
   }
 }
+
+/* ── Card background alias ───────────────────────────────── */
+:root {
+  --card-bg:   var(--bg2);
+  --text-muted: var(--text3);
+}
+
+/* ── Input alias (used in form components) ───────────────── */
+.input {
+  background: var(--bg4);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: var(--radius);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  width: 100%;
+  font-family: inherit;
+  appearance: none;
+  transition: border-color var(--transition), box-shadow var(--transition), background var(--transition);
+  letter-spacing: inherit;
+}
+.input:hover:not(:focus) { border-color: rgba(0,0,0,0.15); }
+.input:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: #fff;
+  box-shadow: 0 0 0 3.5px var(--accent-dim);
+}
+.input::placeholder { color: var(--text3); }
+
+/* ── Ghost button ────────────────────────────────────────── */
+.btn-ghost {
+  background: transparent;
+  color: var(--text2);
+  border: 1px solid var(--border);
+}
+.btn-ghost:hover:not(:disabled) {
+  background: rgba(0,0,0,0.05);
+  color: var(--text);
+  border-color: rgba(0,0,0,0.13);
+}
+.btn-ghost.danger { color: var(--danger); border-color: var(--danger-border); }
+.btn-ghost.danger:hover:not(:disabled) { background: var(--danger-bg); }
+
+/* ── Icon button ─────────────────────────────────────────── */
+.icon-btn {
+  padding: 0.4rem 0.5rem;
+  font-size: 0.8rem;
+  line-height: 1;
+  min-width: 32px;
+  justify-content: center;
+}
+
+/* ── Scrollable table wrapper ────────────────────────────── */
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: var(--radius-lg);
+}
+
+/* ── Mobile: stack 3-col grids ───────────────────────────── */
+@media (max-width: 480px) {
+  .grid-3-form {
+    grid-template-columns: 1fr !important;
+  }
+  .toast-container {
+    bottom: 0.75rem;
+    right: 0.75rem;
+    left: 0.75rem;
+  }
+  .toast {
+    min-width: unset;
+    max-width: unset;
+    width: 100%;
+  }
+}

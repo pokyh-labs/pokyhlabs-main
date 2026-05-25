@@ -32,6 +32,9 @@ const systemRoutes     = require('./routes/system');
 const seoRoutes        = require('./routes/seo');
 const cloudflareRoutes = require('./routes/cloudflare');
 const inquiryRoutes    = require('./routes/inquiries');
+const projectRoutes    = require('./routes/projects');
+const uploadRoutes     = require('./routes/upload');
+const honeypotRoutes   = require('./routes/honeypot');
 const requestLogger    = require('./middleware/requestLogger');
 const errorLogger      = require('./middleware/errorLogger');
 
@@ -68,7 +71,9 @@ app.use((req, res, next) => {
 // CORS
 app.use(cors({
   origin: (origin, cb) => {
-    const allowed = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000').split(',').map(s => s.trim());
+    const port = process.env.PORT || 3000;
+    const fallback = `http://localhost:${port}`;
+    const allowed = (process.env.ALLOWED_ORIGINS || fallback).split(',').map(s => s.trim());
     if (!origin || allowed.includes(origin)) return cb(null, true);
     cb(new Error('Not allowed by CORS'));
   },
@@ -77,8 +82,9 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
-// Body parsing with strict limits
-app.use(express.json({ limit: '10kb' }));
+// Body parsing — blogs/projects carry rich HTML content so they need a larger limit;
+// other endpoints use a strict 10 kb limit to reduce DoS surface
+app.use(express.json({ limit: '4mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 app.use(cookieParser());
 app.use(hpp());
@@ -100,7 +106,9 @@ app.use(requestLogger);
 app.use('/api/', globalRateLimiter);
 
 // Uploads - served as static with cache headers
-app.use('/uploads', express.static(path.join(__dirname, '../uploads'), {
+// Must resolve the same path that multer writes to (UPLOAD_PATH env var or fallback)
+const UPLOAD_SERVE_DIR = path.resolve(process.env.UPLOAD_PATH || path.join(__dirname, '../uploads'));
+app.use('/uploads', express.static(UPLOAD_SERVE_DIR, {
   maxAge: '7d',
   etag: true,
   lastModified: true,
@@ -123,6 +131,8 @@ app.use('/api/system',      systemRoutes);
 app.use('/api/seo',         seoRoutes);
 app.use('/api/cloudflare',  cloudflareRoutes);
 app.use('/api/inquiries',   inquiryRoutes);
+app.use('/api/projects',   projectRoutes);
+app.use('/api/upload',     uploadRoutes);
 
 // SPA routing for admin
 app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, '../public/admin/index.html')));
@@ -134,6 +144,9 @@ app.get('/blog/*', (req, res) => res.sendFile(path.join(__dirname, '../public/bl
 
 // Root redirect
 app.get('/', (req, res) => res.redirect('/admin'));
+
+// Honeypot — must be before 404 so real routes always take priority
+app.use('/', honeypotRoutes);
 
 // 404
 app.use((req, res) => res.status(404).json({ error: 'Not found' }));
@@ -161,6 +174,9 @@ async function initDatabase() {
   await sequelize.query("ALTER TABLE inquiries ADD COLUMN createdAt DATETIME").catch(() => {});
   await sequelize.query("ALTER TABLE inquiries ADD COLUMN updatedAt DATETIME").catch(() => {});
   await sequelize.query("ALTER TABLE inquiries ADD COLUMN deadline DATE").catch(() => {});
+  await sequelize.query("ALTER TABLE projects ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0").catch(() => {});
+  await sequelize.query("ALTER TABLE projects ADD COLUMN image_url TEXT").catch(() => {});
+  await sequelize.query("ALTER TABLE projects ADD COLUMN image_alt TEXT").catch(() => {});
   logger.info('Database synced');
 }
 

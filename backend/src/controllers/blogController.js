@@ -36,10 +36,13 @@ const PDF_MAX_PAGES = 30;
 // Configure marked for safe HTML rendering
 marked.setOptions({ breaks: true, gfm: true });
 
+const SAFE_UPLOAD_URL = /^\/uploads\/[a-zA-Z0-9_-]+\.(jpg|jpeg|png|gif|webp)$/;
+
 const blogValidators = [
   body('title').trim().notEmpty().isLength({ min: 3, max: 255 }),
   body('content').trim().notEmpty().isLength({ min: 10 }),
   body('excerpt').optional().trim().isLength({ max: 500 }),
+  body('image_url').optional({ nullable: true }).custom(v => !v || SAFE_UPLOAD_URL.test(v)).withMessage('Ungültige Bild-URL'),
   body('image_alt').optional().trim().isLength({ max: 255 }),
   body('status').optional().isIn(['draft', 'published']),
   body('content_format').optional().isIn(['html', 'markdown', 'blocks']),
@@ -140,8 +143,7 @@ async function create(req, res) {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
-  const { title, content, excerpt, status, image_alt, content_format, content_markdown } = req.body;
-  const image_url = req.file ? `/uploads/${req.file.filename}` : null;
+  const { title, content, excerpt, status, image_alt, content_format, content_markdown, image_url } = req.body;
 
   const format = ['blocks', 'markdown', 'html'].includes(content_format) ? content_format : 'html';
   const { html: htmlContent, raw } = resolveContent(format, content, content_markdown);
@@ -188,13 +190,13 @@ async function update(req, res) {
   if (status !== undefined) updates.status = status;
   if (image_alt !== undefined) updates.image_alt = sanitizeText(image_alt);
 
-  if (req.file) {
-    // Delete old image
-    if (blog.image_url) {
+  if (req.body.image_url !== undefined) {
+    // New image was uploaded separately via presign token; delete old one if changed
+    if (req.body.image_url && req.body.image_url !== blog.image_url && blog.image_url) {
       const oldPath = path.join(process.env.UPLOAD_PATH || './uploads', path.basename(blog.image_url));
       fs.unlink(oldPath, () => {});
     }
-    updates.image_url = `/uploads/${req.file.filename}`;
+    updates.image_url = req.body.image_url || null;
   }
 
   await blog.update(updates);

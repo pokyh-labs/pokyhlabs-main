@@ -9,11 +9,12 @@ import Tunnel from './pages/Tunnel';
 import Users from './pages/Users';
 import Logs from './pages/Logs';
 import Seo from './pages/Seo';
+import Projects from './pages/Projects';
 import ToastContainer from './components/Toast';
 import { getAccessToken, apiFetch, clearTokens } from './hooks/useApi';
 
-const PAGES = { dashboard: Dashboard, blogs: Blogs, inquiries: Inquiries, tunnel: Tunnel, users: Users, logs: Logs, seo: Seo };
-const ADMIN_ONLY_PAGES = ['dashboard', 'inquiries', 'tunnel', 'users', 'logs', 'seo'];
+const PAGES = { dashboard: Dashboard, blogs: Blogs, projects: Projects, inquiries: Inquiries, tunnel: Tunnel, users: Users, logs: Logs, seo: Seo };
+const ADMIN_ONLY_PAGES = ['dashboard', 'projects', 'inquiries', 'tunnel', 'users', 'logs', 'seo'];
 
 export default function App() {
   const [user, setUser] = useState(null);

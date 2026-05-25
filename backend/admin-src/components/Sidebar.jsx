@@ -3,8 +3,9 @@ import { clearTokens, apiFetch } from '../hooks/useApi';
 import { toast } from '../hooks/useToast';
 
 const NAV = [
-  { id: 'dashboard',  icon: 'bi-squares-fill',     label: 'Dashboard',   roles: ['admin'] },
+  { id: 'dashboard',  icon: 'bi-speedometer2',      label: 'Dashboard',   roles: ['admin'] },
   { id: 'blogs',      icon: 'bi-journal-text',     label: 'Blogs',       roles: ['admin', 'editor'] },
+  { id: 'projects',   icon: 'bi-grid-fill',         label: 'Projekte',    roles: ['admin'] },
   { id: 'inquiries',  icon: 'bi-envelope-fill',    label: 'Inquiries',   roles: ['admin'] },
   { id: 'users',      icon: 'bi-person-fill',      label: 'Benutzer',    roles: ['admin'] },
   { id: 'logs',       icon: 'bi-bar-chart-fill',   label: 'Logs',        roles: ['admin'] },

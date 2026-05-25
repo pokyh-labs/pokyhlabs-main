@@ -226,14 +226,28 @@ function TabBar({ active, onChange }) {
 
 // ── Overview tab ────────────────────────────────────────────────
 
-function Overview({ stats, countries }) {
-  if (!stats) {
+function Overview({ stats, countries, loading, error, onRetry }) {
+  if (loading) {
     return (
       <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text3)' }}>
         <span className="spinner" style={{ width: 20, height: 20 }} />
       </div>
     );
   }
+
+  if (error) {
+    return (
+      <div className="alert alert-error" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <i className="bi bi-exclamation-triangle-fill" />
+        <span style={{ flex: 1 }}>Übersicht konnte nicht geladen werden: {error}</span>
+        <button type="button" className="btn-outline btn-sm" onClick={onRetry}>
+          Erneut versuchen
+        </button>
+      </div>
+    );
+  }
+
+  if (!stats) return null;
   const errorRate = stats.total24h > 0 ? Math.round((stats.errors24h / stats.total24h) * 100) : 0;
   const topCountryMax = countries?.[0]?.count || 1;
 
@@ -641,7 +655,7 @@ function MapTab({ geoData, countries }) {
             <span style={{ fontSize: '0.72rem', color: 'var(--text3)' }}>Zugriffspunkte</span>
           </div>
         </div>
-        {!geoData?.length ? (
+        {!countries?.length ? (
           <div style={{
             height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center',
             background: 'rgba(0,0,0,0.03)', borderRadius: 10, border: '1px solid var(--border)',
@@ -649,11 +663,11 @@ function MapTab({ geoData, countries }) {
             <div style={{ textAlign: 'center', color: 'var(--text3)' }}>
               <i className="bi bi-globe2" style={{ fontSize: '1.5rem', display: 'block', marginBottom: 8, opacity: 0.4 }} />
               <p style={{ fontSize: '0.78rem' }}>Noch keine Geodaten vorhanden</p>
-              <p style={{ fontSize: '0.7rem', marginTop: 4, opacity: 0.7 }}>IPs von öffentlichen Adressen werden automatisch verortet</p>
+              <p style={{ fontSize: '0.7rem', marginTop: 4, opacity: 0.7 }}>Geodaten werden für öffentliche IPs automatisch erfasst</p>
             </div>
           </div>
         ) : (
-          <WorldMap points={geoData} />
+          <WorldMap countries={countries} />
         )}
       </div>
 
@@ -705,6 +719,7 @@ export default function Logs() {
   const [security, setSecurity] = useState(EMPTY_LIST);
   const [errors, setErrors]   = useState(EMPTY_LIST);
 
+  const [overviewError, setOverviewError]   = useState('');
   const [loadingStats, setLoadingStats]     = useState(false);
   const [loadingAccess, setLoadingAccess]   = useState(false);
   const [loadingAuth, setLoadingAuth]       = useState(false);
@@ -719,6 +734,7 @@ export default function Logs() {
   // Load overview stats + countries once
   useEffect(() => {
     setLoadingStats(true);
+    setOverviewError('');
     Promise.all([
       request('/logs/stats'),
       request('/logs/countries?days=30'),
@@ -727,7 +743,7 @@ export default function Logs() {
       setStats(s);
       setCountries(c || []);
       setGeoData(g || []);
-    }).catch(() => {}).finally(() => setLoadingStats(false));
+    }).catch(err => setOverviewError(err.message || 'Verbindungsfehler')).finally(() => setLoadingStats(false));
   }, []);
 
   // Load access logs on page change
@@ -770,8 +786,9 @@ export default function Logs() {
       .finally(() => setLoadingErrors(false));
   }, [tab, errorPage]);
 
-  function handleRefresh() {
+  function loadOverview() {
     setLoadingStats(true);
+    setOverviewError('');
     Promise.all([
       request('/logs/stats'),
       request('/logs/countries?days=30'),
@@ -780,7 +797,11 @@ export default function Logs() {
       setStats(s);
       setCountries(c || []);
       setGeoData(g || []);
-    }).catch(() => {}).finally(() => setLoadingStats(false));
+    }).catch(err => setOverviewError(err.message || 'Verbindungsfehler')).finally(() => setLoadingStats(false));
+  }
+
+  function handleRefresh() {
+    loadOverview();
 
     if (tab === 'access')   { setAccessPage(1); }
     if (tab === 'auth')     { setAuthPage(1); }
@@ -812,7 +833,7 @@ export default function Logs() {
       <TabBar active={tab} onChange={setTab} />
 
       {tab === 'overview' && (
-        <Overview stats={stats} countries={countries} />
+        <Overview stats={stats} countries={countries} loading={loadingStats} error={overviewError} onRetry={loadOverview} />
       )}
       {tab === 'access' && (
         <AccessTab data={access} page={accessPage} setPage={setAccessPage} loading={loadingAccess} />

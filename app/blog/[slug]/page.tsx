@@ -3,7 +3,7 @@ import { notFound } from "next/navigation"
 import BlogPostClient from "@/components/BlogPostClient"
 import { siteConfig, articleSchema, breadcrumbSchema } from "@/lib/seo.config"
 
-const BACKEND = process.env.BACKEND_URL ?? "http://localhost:3001"
+const BACKEND = (process.env.BACKEND_URL ?? `http://localhost:${process.env.PORT ?? 3000}`).replace(/\/$/, '')
 
 interface BlogPost {
   id: number

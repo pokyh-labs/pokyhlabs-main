@@ -27,14 +27,18 @@ function isPrivateIp(ip) {
 }
 
 module.exports = function requestLogger(req, res, next) {
-  // Only log API requests
-  if (!req.originalUrl.startsWith('/api/')) return next();
-
   const start = Date.now();
 
   res.on('finish', () => {
     try {
-      const rawIp = req.ip || req.socket?.remoteAddress || '';
+      // Prefer CF-Connecting-IP (set by Cloudflare with the real client IP),
+      // then X-Real-IP (nginx), then first entry of X-Forwarded-For, then req.ip
+      const rawIp =
+        req.headers['cf-connecting-ip'] ||
+        req.headers['x-real-ip'] ||
+        (req.headers['x-forwarded-for'] || '').split(',')[0].trim() ||
+        req.ip ||
+        req.socket?.remoteAddress || '';
       const ip = normalizeIp(rawIp);
 
       let geo = null;

@@ -59,8 +59,15 @@ const SUSPICIOUS_PATTERNS = [
   /(%2e%2e%2f)/i,
 ];
 
+// Routes where the body contains trusted, already-sanitized rich HTML content —
+// these endpoints run sanitizeBlogContent on the body themselves.
+const CONTENT_ROUTES = /^\/api\/(blogs|projects)(\/|$)/;
+
 function detectSuspiciousInput(req, res, next) {
-  const body = JSON.stringify(req.body || {});
+  // For content routes (POST/PUT), skip body scan — the controller sanitizes it.
+  const skipBody = CONTENT_ROUTES.test(req.originalUrl) &&
+    (req.method === 'POST' || req.method === 'PUT');
+  const body = skipBody ? '{}' : JSON.stringify(req.body || {});
   const query = JSON.stringify(req.query || {});
   const url = req.originalUrl;
   const combined = body + query + url;

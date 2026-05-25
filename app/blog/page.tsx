@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { siteConfig } from "@/lib/seo.config"
+import { fetchBlogs } from "@/lib/server-api"
 import BlogsPage from "@/components/BlogsPage"
 
 export const metadata: Metadata = {
@@ -59,6 +60,7 @@ export const metadata: Metadata = {
   },
 }
 
-export default function Blog() {
-  return <BlogsPage />
+export default async function Blog() {
+  const blogs = await fetchBlogs(20)
+  return <BlogsPage initialBlogs={blogs} />
 }

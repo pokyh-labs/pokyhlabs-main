@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { siteConfig, breadcrumbSchema } from "@/lib/seo.config"
+import { fetchProjects } from "@/lib/server-api"
 import WorksPage from "@/components/WorksPage"
 
 export const metadata: Metadata = {
@@ -55,7 +56,9 @@ export const metadata: Metadata = {
   },
 }
 
-export default function Works() {
+export default async function Works() {
+  const projects = await fetchProjects()
+
   return (
     <>
       <script
@@ -69,7 +72,7 @@ export default function Works() {
           ),
         }}
       />
-      <WorksPage />
+      <WorksPage initialProjects={projects} />
     </>
   )
 }

@@ -1,63 +1,80 @@
-# dependencies
-/node_modules
-/.pnp
+# ── Dependencies ──────────────────────────────────────────────
+node_modules/
+.pnp
 .pnp.js
 .yarn/install-state.gz
 
-# next.js
-/.next/
-/out/
+# ── Next.js ───────────────────────────────────────────────────
+.next/
+out/
 
-# production
-/build
+# ── Build outputs ─────────────────────────────────────────────
+build/
+dist/
+backend/public/admin/
+backend/admin-dist/
 
-# env files
+# ── Environment & secrets ─────────────────────────────────────
 .env
 .env.local
 .env.*.local
 !.env.example
 
-# database
+# ── Database (SQLite) ─────────────────────────────────────────
 *.sqlite
 *.sqlite-journal
 *.sqlite-shm
 *.sqlite-wal
 *.db
+backend/data/*.sqlite
+backend/data/*.db
 
-# data directory (runtime-generated, not source)
-data/backups/
-data/seo-override.json
-
-# uploads & logs
+# ── Runtime-generated data ────────────────────────────────────
 backend/uploads/
 backend/logs/
 uploads/
 logs/
+data/backups/
+data/seo-override.json
 
-# admin build output
-backend/admin-dist/
-backend/public/admin/
-
-# misc
+# ── OS & editor ───────────────────────────────────────────────
 .DS_Store
+.DS_Store?
 Thumbs.db
+Desktop.ini
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# ── Certificates & keys ───────────────────────────────────────
 *.pem
 *.key
 *.cert
+*.p12
+*.pfx
 
-# debug logs
+# ── Debug logs ────────────────────────────────────────────────
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
 *.log
 
-# vercel
-.vercel
-
-# typescript
+# ── TypeScript ────────────────────────────────────────────────
 *.tsbuildinfo
 next-env.d.ts
 
-# claude
+# ── Testing ───────────────────────────────────────────────────
+coverage/
+.nyc_output/
+
+# ── Misc tooling ─────────────────────────────────────────────
+.vercel
+.turbo
+.cache/
+
+# ── Internal tooling ──────────────────────────────────────────
 .claude/
 CLAUDE.md

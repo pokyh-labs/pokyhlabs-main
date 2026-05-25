@@ -208,10 +208,10 @@ async function getStats(req, res) {
     AccessLog.findAll({
       where: { created_at: { [Op.gte]: since24h } },
       attributes: [
-        [fn('CAST', literal('(status / 100) * 100')), 'status_group'],
+        [literal('CAST((status / 100) * 100 AS INTEGER)'), 'status_group'],
         [fn('COUNT', col('id')), 'count'],
       ],
-      group: [fn('CAST', literal('(status / 100) * 100'))],
+      group: [literal('CAST((status / 100) * 100 AS INTEGER)')],
       raw: true,
     }),
 

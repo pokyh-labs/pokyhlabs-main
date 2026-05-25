@@ -5,7 +5,8 @@ const {
 const { authenticate } = require('../middleware/authenticate');
 const { authorize } = require('../middleware/authorize');
 const { apiRateLimiter, adminRateLimiter, uploadRateLimiter } = require('../middleware/rateLimiter');
-const { upload, processUpload, uploadPdf, uploadHtml } = require('../middleware/upload');
+// Note: image uploads go through /api/upload/presign → one-time token, not inline here
+const { uploadPdf, uploadHtml } = require('../middleware/upload');
 
 // Public routes
 router.get('/', apiRateLimiter, getPublished);
@@ -16,14 +17,12 @@ router.get('/admin/all', authenticate, authorize('admin', 'editor'), adminRateLi
 router.get('/admin/stats', authenticate, authorize('admin', 'editor'), adminRateLimiter, stats);
 
 router.post('/',
-  authenticate, authorize('admin', 'editor'), adminRateLimiter, uploadRateLimiter,
-  upload.single('image'), processUpload,
+  authenticate, authorize('admin', 'editor'), adminRateLimiter,
   blogValidators, create
 );
 
 router.put('/:id',
   authenticate, authorize('admin', 'editor'), adminRateLimiter,
-  upload.single('image'), processUpload,
   blogValidators, update
 );
 

@@ -45,22 +45,24 @@ async function createInquiry(req, res) {
 }
 
 async function getInquiries(req, res) {
-  const { status, page = 1, limit = 50 } = req.query;
+  const { status } = req.query;
+  const page  = Math.max(1, parseInt(req.query.page)  || 1);
+  const limit = Math.min(Math.max(1, parseInt(req.query.limit) || 50), 100);
   const where = {};
   if (status && ['new', 'read', 'archived'].includes(status)) where.status = status;
 
-  const offset = (Math.max(1, parseInt(page)) - 1) * parseInt(limit);
+  const offset = (page - 1) * limit;
   const { count, rows } = await Inquiry.findAndCountAll({
     where,
     order: [['createdAt', 'DESC']],
-    limit: Math.min(parseInt(limit), 100),
+    limit,
     offset,
   });
 
   res.json({
     total: count,
-    page: parseInt(page),
-    pages: Math.ceil(count / parseInt(limit)),
+    page,
+    pages: Math.ceil(count / limit),
     inquiries: rows.map(r => ({
       id: r.id,
       services: JSON.parse(r.services),

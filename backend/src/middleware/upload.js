@@ -5,7 +5,7 @@ const crypto = require('crypto');
 const { ALLOWED_IMAGE_MIMES, validateMagicBytes } = require('../config/security');
 
 const UPLOAD_DIR = path.resolve(process.env.UPLOAD_PATH || './uploads');
-const MAX_SIZE = parseInt(process.env.MAX_FILE_SIZE_MB || '5') * 1024 * 1024;
+const MAX_SIZE = parseInt(process.env.MAX_FILE_SIZE_MB || '15') * 1024 * 1024;
 
 if (!fs.existsSync(UPLOAD_DIR)) {
   fs.mkdirSync(UPLOAD_DIR, { recursive: true });
