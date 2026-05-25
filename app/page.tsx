@@ -48,10 +48,20 @@ export default function Home() {
         </div>
       </HomeClientWrapper>
 
-      {/* SEO content block — visible to crawlers, AI, and screen readers; visually hidden below the fold */}
+      {/* SEO content block — indexed by crawlers & screen readers; visually hidden from users */}
       <section
         aria-label="Über pokyh.studio"
-        style={{ padding: "5rem 5vw", background: "var(--bg, #e4e2dc)" }}
+        style={{
+          position: "absolute",
+          width: 1,
+          height: 1,
+          padding: 0,
+          margin: -1,
+          overflow: "hidden",
+          clip: "rect(0,0,0,0)",
+          whiteSpace: "nowrap",
+          border: 0,
+        }}
       >
         <div style={{ maxWidth: 900, margin: "0 auto" }}>
           <h2
