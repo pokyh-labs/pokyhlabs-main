@@ -5,135 +5,175 @@ export const siteConfig = {
   lang: "de",
 
   title: {
-    default: "pokyh.studio – 3D Websites & Webdesign kaufen | Digital Studio Südtirol",
-    en: "pokyh.studio – Buy 3D Websites & Web Design | Digital Studio South Tyrol",
-    it: "pokyh.studio – Acquista Siti Web 3D & Web Design | Studio Digitale Alto Adige",
+    // ≤60 chars — Google truncates beyond that. Primary keyword first, brand last.
+    default: "pokyh.studio – Webdesign, 3D & Hosting | Südtirol",  // 50 chars
+    en:      "pokyh.studio – Web Design, 3D & Hosting | South Tyrol",
+    it:      "pokyh.studio – Web Design, 3D & Hosting | Alto Adige",
     template: "%s | pokyh.studio",
   },
 
-  // Primary description (DE) — used for meta tags
+  // Primary description (DE) — used as global fallback meta description.
+  // Target 150–160 chars; include primary keyword, location, CTA.
   description:
-    "3D Websites & professionelles Webdesign kaufen bei pokyh.studio. Wir entwickeln schnelle, skalierbare und immersive Web-Erlebnisse. Digital Studio aus Südtirol.",
+    "pokyh.studio – Digital Studio aus Südtirol: 3D Websites, Webdesign & Hosting ab €20/mo. React, Next.js, WordPress, Docker. Angebot innerhalb 24 Stunden.",
 
   // Multilingual descriptions — used in structured data & page-level overrides
   descriptions: {
-    de: "3D Websites & professionelles Webdesign kaufen bei pokyh.studio. Wir entwickeln schnelle, skalierbare und immersive Web-Erlebnisse. Digital Studio aus Südtirol.",
-    en: "Buy 3D websites & professional web design at pokyh.studio. We build fast, scalable, and immersive web experiences. Digital studio from South Tyrol.",
-    it: "Acquista siti web 3D e web design professionale su pokyh.studio. Sviluppiamo esperienze web veloci, scalabili e immersive. Studio digitale dall'Alto Adige.",
+    de: "pokyh.studio – Digital Studio aus Südtirol: 3D Websites, Webdesign & Hosting ab €20/mo. React, Next.js, WordPress, Docker. Angebot innerhalb 24 Stunden.",
+    en: "pokyh.studio – Digital studio from South Tyrol: 3D websites, web design & hosting from €20/mo. React, Next.js, WordPress, Docker. Quote within 24 hours.",
+    it: "pokyh.studio – Studio digitale dall'Alto Adige: siti web 3D, web design & hosting da €20/mese. React, Next.js, WordPress, Docker. Preventivo in 24 ore.",
   },
 
   // ─── Keywords (DE + EN + IT) ─────────────────────────────────────────────
+  // Strategy: transactional intent first (kaufen/hire/buy), then local, then service-specific.
+  // Note: Google largely ignores this tag; Bing still indexes it. Keep it clean.
   keywords: [
-    // German — primary DACH market
+    // ── German: commercial intent (DACH market) ──────────────────────────
     "website kaufen",
-    "3d website kaufen",
     "webdesign kaufen",
+    "3d website kaufen",
     "webseite kaufen",
-    "professionelle website",
     "professionelle website erstellen lassen",
+    "website erstellen lassen kosten",
+    "webdesign agentur südtirol",
+    "webdesign studio südtirol",
+    "digital studio südtirol",
+    "webentwicklung südtirol",
+    "webdesign südtirol preise",
     "3d webdesign",
     "3d web experience",
-    "webentwicklung südtirol",
-    "webdesign südtirol",
-    "digital studio südtirol",
-    "webdesign agentur",
-    "webdesign studio",
     "immersive website",
     "moderne website",
-    "website erstellen lassen",
-    "software entwicklung",
-    "interaktive website",
     "nextjs agentur",
-    "react webdesign",
-    "website preis",
+    "react webdesign agentur",
     "website agentur",
+    "website preis",
+    "webdesign kosten",
+    "software entwicklung südtirol",
     "pokyh",
     "pokyh.studio",
+    "pokyhlabs",
 
-    // English — international market
+    // ── German: local long-tail ───────────────────────────────────────────
+    "webdesign bozen",
+    "webdesign meran",
+    "webdesign innsbruck",
+    "webdesign münchen",
+    "webdesign wien",
+    "website agentur bozen",
+    "website agentur tirol",
+    "website agentur deutschland",
+    "website agentur österreich",
+    "website agentur südtirol",
+    "web agentur nord",
+
+    // ── German: hosting ───────────────────────────────────────────────────
+    "website hosting",
+    "webhosting günstig",
+    "hosting südtirol",
+    "managed hosting",
+    "hosting kaufen",
+    "website mieten",
+    "nodejs hosting",
+    "nextjs hosting",
+    "react app hosten",
+    "vue js hosting",
+    "nuxt hosting",
+    "angular hosting",
+    "wordpress hosting managed",
+    "php hosting",
+    "laravel hosting",
+    "python hosting",
+    "django hosting",
+    "go hosting",
+    "docker hosting",
+    "static website hosting",
+    "svelte hosting",
+    "astro hosting",
+    "managed app hosting",
+    "hosting für entwickler",
+    "full stack hosting",
+
+    // ── English: commercial intent ────────────────────────────────────────
     "buy website",
     "buy 3d website",
     "buy web design",
-    "professional website",
     "custom website",
-    "web design studio",
+    "professional website design",
+    "web design studio south tyrol",
     "web development studio",
-    "3d website design",
+    "3d website design studio",
     "immersive web experience",
-    "interactive website",
-    "modern web design",
-    "web developer south tyrol",
-    "digital studio south tyrol",
-    "nextjs development",
-    "react development",
-    "web design agency",
-    "website agency",
-    "3d web design studio",
+    "interactive website design",
+    "nextjs development agency",
+    "react development agency",
+    "web design agency germany",
+    "web design agency italy",
     "high end web design",
     "creative web studio",
+    "web developer south tyrol",
+    "digital studio south tyrol",
+    "affordable web design europe",
 
-    // Italian — South Tyrol & Italian market
+    // ── English: hosting ──────────────────────────────────────────────────
+    "managed web hosting",
+    "nodejs hosting provider",
+    "nextjs hosting",
+    "react app hosting",
+    "vue.js hosting",
+    "nuxt.js hosting",
+    "angular app hosting",
+    "wordpress managed hosting",
+    "php hosting provider",
+    "laravel hosting",
+    "python hosting",
+    "django hosting",
+    "go application hosting",
+    "docker container hosting",
+    "static site hosting",
+    "svelte hosting",
+    "astro hosting",
+    "managed developer hosting",
+    "website hosting south tyrol",
+    "website hosting from 20 euro",
+
+    // ── Italian: commercial intent ────────────────────────────────────────
     "acquistare sito web",
     "sito web professionale",
     "web design alto adige",
     "sviluppo web alto adige",
     "studio digitale alto adige",
-    "agenzia web",
+    "agenzia web bolzano",
+    "agenzia web merano",
+    "agenzia web alto adige",
     "sito web 3d",
     "esperienza web immersiva",
     "web design professionale",
-    "sviluppo web",
-    "sito web moderno",
     "creazione sito web",
     "sviluppatore web alto adige",
-    "web design sudtirolo",
-    "studio web alto adige",
+    "realizzazione sito web alto adige",
+    "sviluppo web sudtirolo",
 
-    // German — Hosting & Website Builder
-    "website hosting",
-    "webhosting günstig",
-    "hosting südtirol",
-    "website mieten",
-    "managed hosting",
-    "hosting kaufen",
-    "server hosting",
-    "wordpress hosting",
-    "e-commerce hosting",
-    "website erstellen",
-    "homepage erstellen lassen",
-    "webseite aufbauen",
-    "website builder",
-    "homepage baukasten",
-
-    // German — Location long-tail
-    "webdesign bozen",
-    "webdesign meran",
-    "webdesign innsbruck",
-    "webdesign münchen",
-    "website agentur deutschland",
-    "website agentur italien",
-
-    // English — Hosting & Builder
-    "website hosting south tyrol",
-    "cheap website hosting",
-    "managed web hosting",
-    "wordpress hosting italy",
-    "buy website hosting",
-    "web design agency germany",
-    "web developer italy",
-    "website builder south tyrol",
-    "affordable web design europe",
-
-    // Italian — Hosting & Location long-tail
+    // ── Italian: hosting ──────────────────────────────────────────────────
     "hosting sito web",
     "hosting alto adige",
     "hosting economico",
-    "hosting wordpress",
+    "hosting wordpress gestito",
+    "hosting nodejs",
+    "hosting nextjs",
+    "hosting react",
+    "hosting vue",
+    "hosting php",
+    "hosting laravel",
+    "hosting python",
+    "hosting docker",
+    "hosting sito statico",
+    "hosting svelte",
+    "hosting astro",
+    "hosting applicazioni web",
+    "hosting gestito professionale",
     "hosting professionale italia",
-    "agenzia web bolzano",
-    "agenzia web merano",
-    "realizzazione sito web alto adige",
-    "sito web economico",
+    "hosting 20 euro mese",
   ],
 
   // ─── Google Search Console & Bing Webmaster ──────────────────────────────
@@ -159,16 +199,16 @@ export const siteConfig = {
 
   // ─── Sitemap pages ───────────────────────────────────────────────────────
   pages: [
-    { path: "/", priority: 1.0, changeFreq: "weekly" as const },
-    { path: "/works", priority: 0.9, changeFreq: "weekly" as const },
-    { path: "/about", priority: 0.8, changeFreq: "monthly" as const },
+    { path: "/",        priority: 1.0, changeFreq: "weekly"  as const },
+    { path: "/works",   priority: 0.9, changeFreq: "weekly"  as const },
+    { path: "/about",   priority: 0.8, changeFreq: "monthly" as const },
     { path: "/contact", priority: 0.9, changeFreq: "monthly" as const },
-    { path: "/blog", priority: 0.8, changeFreq: "daily" as const },
+    { path: "/blog",    priority: 0.8, changeFreq: "daily"   as const },
   ],
 }
 
 // ─── Structured Data (JSON-LD) ────────────────────────────────────────────
-// All 4 schemas are injected into every page via layout.tsx.
+// Injected sitewide via layout.tsx; page-specific schemas added per page.
 
 export const structuredData = {
   organization: {
@@ -195,15 +235,15 @@ export const structuredData = {
     foundingDate: "2024",
     numberOfEmployees: { "@type": "QuantitativeValue", value: 2 },
     areaServed: [
-      { "@type": "Country", name: "Germany", sameAs: "https://www.wikidata.org/wiki/Q183" },
-      { "@type": "Country", name: "Austria", sameAs: "https://www.wikidata.org/wiki/Q40" },
-      { "@type": "Country", name: "Switzerland", sameAs: "https://www.wikidata.org/wiki/Q39" },
-      { "@type": "Country", name: "Italy", sameAs: "https://www.wikidata.org/wiki/Q38" },
+      { "@type": "Country", name: "Germany",     sameAs: "https://www.wikidata.org/wiki/Q183" },
+      { "@type": "Country", name: "Austria",     sameAs: "https://www.wikidata.org/wiki/Q40"  },
+      { "@type": "Country", name: "Switzerland", sameAs: "https://www.wikidata.org/wiki/Q39"  },
+      { "@type": "Country", name: "Italy",       sameAs: "https://www.wikidata.org/wiki/Q38"  },
     ],
     knowsLanguage: [
-      { "@type": "Language", name: "German", alternateName: "Deutsch" },
-      { "@type": "Language", name: "English" },
-      { "@type": "Language", name: "Italian", alternateName: "Italiano" },
+      { "@type": "Language", name: "German",  alternateName: "Deutsch"   },
+      { "@type": "Language", name: "English"                              },
+      { "@type": "Language", name: "Italian", alternateName: "Italiano"  },
     ],
     contactPoint: {
       "@type": "ContactPoint",
@@ -212,7 +252,7 @@ export const structuredData = {
       contactOption: "TollFree",
       areaServed: ["DE", "AT", "CH", "IT"],
       availableLanguage: [
-        { "@type": "Language", name: "German" },
+        { "@type": "Language", name: "German"  },
         { "@type": "Language", name: "English" },
         { "@type": "Language", name: "Italian" },
       ],
@@ -266,14 +306,21 @@ export const structuredData = {
     },
     serviceType: "Web Development",
     knowsLanguage: ["de", "en", "it"],
+    openingHoursSpecification: {
+      "@type": "OpeningHoursSpecification",
+      dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+      opens: "09:00",
+      closes: "18:00",
+    },
     areaServed: [
-      { "@type": "Country", name: "Germany" },
-      { "@type": "Country", name: "Austria" },
+      { "@type": "Country", name: "Germany"     },
+      { "@type": "Country", name: "Austria"     },
       { "@type": "Country", name: "Switzerland" },
-      { "@type": "Country", name: "Italy" },
+      { "@type": "Country", name: "Italy"       },
     ],
   },
 
+  // Service schema with proper Offer types and explicit hosting price
   service: {
     "@context": "https://schema.org",
     "@type": "Service",
@@ -296,49 +343,123 @@ export const structuredData = {
       name: "Web Development Services",
       itemListElement: [
         {
-          "@type": "OfferCatalog",
-          name: "3D Websites / 3D Websites / Siti Web 3D",
-          description:
-            "Immersive 3D Web-Erlebnisse · Immersive 3D web experiences · Esperienze web 3D immersive",
+          "@type": "Offer",
+          itemOffered: {
+            "@type": "Service",
+            name: "3D Websites / 3D Websites / Siti Web 3D",
+            description: "Immersive 3D Web-Erlebnisse mit Three.js & WebGL · Immersive 3D web experiences with Three.js & WebGL · Esperienze web 3D immersive con Three.js e WebGL",
+          },
         },
         {
-          "@type": "OfferCatalog",
-          name: "Webdesign / Web Design / Web Design",
-          description:
-            "Professionelles Webdesign auf Mass · Professional custom web design · Web design professionale su misura",
+          "@type": "Offer",
+          itemOffered: {
+            "@type": "Service",
+            name: "Webdesign / Web Design / Web Design",
+            description: "Professionelles Webdesign auf Maß mit React & Next.js · Professional custom web design with React & Next.js · Web design professionale su misura con React e Next.js",
+          },
         },
         {
-          "@type": "OfferCatalog",
-          name: "Webentwicklung / Web Development / Sviluppo Web",
-          description:
-            "Schnelle und skalierbare Webanwendungen · Fast and scalable web applications · Applicazioni web veloci e scalabili",
+          "@type": "Offer",
+          itemOffered: {
+            "@type": "Service",
+            name: "Webentwicklung / Web Development / Sviluppo Web",
+            description: "Schnelle, skalierbare Webanwendungen · Fast, scalable web applications · Applicazioni web veloci e scalabili",
+          },
         },
         {
-          "@type": "OfferCatalog",
-          name: "Hosting / Hosting / Hosting",
-          description:
-            "Verwaltetes Website-Hosting ab €20/mo · Managed website hosting from €20/mo · Hosting gestito da €20/mese",
+          // Hosting: explicit fixed price so Google can show price snippets
+          "@type": "Offer",
+          name: "Managed Website Hosting ab €20/Monat",
+          price: "20.00",
+          priceCurrency: "EUR",
+          availability: "https://schema.org/InStock",
+          priceSpecification: {
+            "@type": "UnitPriceSpecification",
+            price: 20,
+            priceCurrency: "EUR",
+            unitText: "MONTH",
+          },
+          itemOffered: {
+            "@type": "Service",
+            name: "Managed Hosting / Managed Hosting / Hosting gestito",
+            description: "Verwaltetes Hosting ab €20/mo – Fixpreis. Node.js, Next.js, React, Vue.js, Nuxt, Angular, WordPress, PHP/Laravel, Python, Go, Docker, Svelte, Astro & statische Websites · Managed hosting from €20/mo fixed price. Node.js, Next.js, React, Vue.js, Nuxt, Angular, WordPress, PHP/Laravel, Python, Go, Docker, Svelte, Astro & static sites · Hosting gestito da €20/mese prezzo fisso. Node.js, Next.js, React, Vue.js, Nuxt, Angular, WordPress, PHP/Laravel, Python, Go, Docker, Svelte, Astro e siti statici",
+          },
         },
         {
-          "@type": "OfferCatalog",
-          name: "WordPress / WordPress / WordPress",
-          description:
-            "WordPress-Websites und Themes · WordPress websites and themes · Siti web WordPress e temi",
+          "@type": "Offer",
+          itemOffered: {
+            "@type": "Service",
+            name: "WordPress / WordPress / WordPress",
+            description: "WordPress-Websites und WooCommerce-Shops · WordPress websites and WooCommerce shops · Siti WordPress e negozi WooCommerce",
+          },
         },
         {
-          "@type": "OfferCatalog",
-          name: "E-Commerce / E-Commerce / E-Commerce",
-          description:
-            "Online-Shops und Produktseiten · Online shops and product pages · Negozi online e pagine prodotto",
+          "@type": "Offer",
+          itemOffered: {
+            "@type": "Service",
+            name: "E-Commerce / E-Commerce / E-Commerce",
+            description: "Online-Shops optimiert für Conversions · Conversion-optimised online shops · Negozi online ottimizzati per le conversioni",
+          },
         },
         {
-          "@type": "OfferCatalog",
-          name: "SEO / SEO / SEO",
-          description:
-            "Suchmaschinenoptimierung · Search engine optimization · Ottimizzazione per i motori di ricerca",
+          "@type": "Offer",
+          itemOffered: {
+            "@type": "Service",
+            name: "App-Entwicklung / App Development / Sviluppo App",
+            description: "Cross-platform Apps mit React Native & Flutter für iOS & Android · Cross-platform apps with React Native & Flutter for iOS & Android · App cross-platform con React Native e Flutter per iOS e Android",
+          },
+        },
+        {
+          "@type": "Offer",
+          itemOffered: {
+            "@type": "Service",
+            name: "SEO / SEO / SEO",
+            description: "Technisches SEO & Sichtbarkeit in Google und AI-Suchmaschinen · Technical SEO & visibility in Google and AI search engines · SEO tecnico e visibilità su Google e motori di ricerca AI",
+          },
         },
       ],
     },
+  },
+}
+
+// ─── Standalone Hosting Service Schema ───────────────────────────────────
+// Used on contact & home pages; enables Google price snippets for hosting queries.
+export const hostingSchema = {
+  "@context": "https://schema.org",
+  "@type": "Service",
+  name: "Managed Website Hosting – pokyh.studio",
+  alternateName: [
+    "Verwaltetes Website-Hosting",
+    "Managed Web Hosting Südtirol",
+    "Hosting gestito per siti web",
+    "Managed Website Hosting South Tyrol",
+  ],
+  description:
+    "Vollständig verwaltetes Website-Hosting ab €20/Monat – Fixpreis. Node.js, Next.js, React, Vue.js, WordPress, PHP/Laravel, Python, Go, Docker, Svelte, Astro & statische Websites. Inkl. SSL, Uptime-Monitoring & Setup. Powered by Dokploy.",
+  provider: {
+    "@type": "Organization",
+    name: siteConfig.name,
+    url: siteConfig.url,
+    email: siteConfig.social.email,
+  },
+  areaServed: ["DE", "AT", "CH", "IT"],
+  serviceType: "Web Hosting",
+  url: `${siteConfig.url}/contact`,
+  offers: {
+    "@type": "Offer",
+    name: "Managed Hosting Paket",
+    price: "20.00",
+    priceCurrency: "EUR",
+    availability: "https://schema.org/InStock",
+    priceValidUntil: "2027-12-31",
+    priceSpecification: {
+      "@type": "UnitPriceSpecification",
+      price: 20,
+      priceCurrency: "EUR",
+      unitText: "MONTH",
+      billingDuration: "P1M",
+    },
+    url: `${siteConfig.url}/contact`,
   },
 }
 
@@ -389,17 +510,27 @@ export function articleSchema(post: {
   }
 }
 
-// ─── FAQPage schema (Kontaktseite) ────────────────────────────────────────
+// ─── FAQPage schema ───────────────────────────────────────────────────────
+// Injected on /contact. FAQ rich results appear directly in Google SERPs.
+// Questions target the most common search queries about our services.
 export const faqSchema = {
   "@context": "https://schema.org",
   "@type": "FAQPage",
   mainEntity: [
     {
       "@type": "Question",
-      name: "Was kostet eine professionelle Website? / How much does a professional website cost? / Quanto costa un sito web professionale?",
+      name: "Was kostet eine Website bei pokyh.studio? / How much does a website cost? / Quanto costa un sito web?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Unsere Websites starten ab €20/Monat für Hosting. Der Preis für Entwicklung hängt vom Umfang ab – kontaktiere uns für ein individuelles Angebot. / Our websites start from €20/month for hosting. Development pricing depends on scope — contact us for a custom quote. / I nostri siti web partono da €20/mese per l'hosting. Il prezzo di sviluppo dipende dall'ambito — contattaci per un preventivo personalizzato.",
+        text: "Hosting kostet fix €20/Monat. Die Entwicklungskosten hängen vom Umfang ab — nach deiner Anfrage erhältst du innerhalb 24h ein individuelles Angebot. Buchst du Website + Hosting zusammen, bekommst du 5% Rabatt auf die Entwicklungskosten. / Hosting costs a fixed €20/month. Development pricing depends on scope — you receive a custom quote within 24h. When you book Website + Hosting together, you get 5% off development costs. / L'hosting costa €20/mese fisso. I costi di sviluppo dipendono dall'ambito — ricevi un preventivo personalizzato entro 24h. Con Sito + Hosting insieme hai il 5% di sconto sullo sviluppo.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Wie lange dauert es, eine Website zu erstellen? / How long does it take to build a website? / Quanto tempo ci vuole per creare un sito web?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Eine einfache Website ist in 1–2 Wochen fertig. Ein individuelles Projekt mit 3D, Backend oder E-Commerce dauert 2–6 Wochen. Nach deiner Anfrage bekommst du innerhalb von 24h eine Einschätzung. / A simple website takes 1–2 weeks. A custom project with 3D, backend or e-commerce takes 2–6 weeks. After your inquiry you get an estimate within 24h. / Un sito semplice richiede 1–2 settimane. Un progetto personalizzato con 3D, backend o e-commerce richiede 2–6 settimane. Dopo la tua richiesta ricevi una stima entro 24h.",
       },
     },
     {
@@ -407,7 +538,15 @@ export const faqSchema = {
       name: "Welche Dienstleistungen bietet pokyh.studio an? / What services does pokyh.studio offer? / Quali servizi offre pokyh.studio?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Wir bieten: 3D Websites, professionelles Webdesign, Frontend & Backend Entwicklung, SEO, Website Hosting ab €20/mo, WordPress und E-Commerce Lösungen. / We offer: 3D websites, professional web design, frontend & backend development, SEO, hosting from €20/mo, WordPress and e-commerce solutions. / Offriamo: siti web 3D, web design professionale, sviluppo frontend & backend, SEO, hosting da €20/mese, WordPress ed e-commerce.",
+        text: "Wir bieten: 3D Websites mit Three.js, professionelles Webdesign, Frontend & Backend Entwicklung (React, Next.js, Node.js), SEO, Managed Hosting ab €20/mo, WordPress, WooCommerce, E-Commerce und App-Entwicklung (React Native, Flutter). / We offer: 3D websites with Three.js, professional web design, frontend & backend development (React, Next.js, Node.js), SEO, managed hosting from €20/mo, WordPress, WooCommerce, e-commerce and app development (React Native, Flutter). / Offriamo: siti web 3D con Three.js, web design professionale, sviluppo frontend & backend (React, Next.js, Node.js), SEO, hosting gestito da €20/mese, WordPress, WooCommerce, e-commerce e sviluppo app (React Native, Flutter).",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Welche Technologien verwendet pokyh.studio? / Which technologies does pokyh.studio use? / Quali tecnologie usa pokyh.studio?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Wir entwickeln mit Next.js, React, Three.js, TypeScript, Node.js, Python und Go. Für Content-Management nutzen wir WordPress. Apps entwickeln wir mit React Native und Flutter. Für Hosting setzen wir auf Dokploy – eine moderne Deployment-Plattform. / We develop with Next.js, React, Three.js, TypeScript, Node.js, Python and Go. For content management we use WordPress. We build apps with React Native and Flutter. For hosting we use Dokploy, a modern deployment platform. / Sviluppiamo con Next.js, React, Three.js, TypeScript, Node.js, Python e Go. Per la gestione contenuti usiamo WordPress. App con React Native e Flutter. Per l'hosting usiamo Dokploy.",
       },
     },
     {
@@ -415,7 +554,23 @@ export const faqSchema = {
       name: "Bietet pokyh.studio auch Hosting an? / Does pokyh.studio offer hosting? / pokyh.studio offre anche hosting?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Ja! Wir bieten verwaltetes Website-Hosting ab €20/Monat an. / Yes! We offer managed website hosting from €20/month. / Sì! Offriamo hosting gestito a partire da €20/mese.",
+        text: "Ja — verwaltetes Hosting ab €20/Monat, Fixpreis. Powered by Dokploy. Wir hosten Node.js, Next.js, React, Vue.js, Nuxt, Angular, WordPress, PHP/Laravel, Python/Django, Go, Docker, Svelte, Astro und statische Websites. Inklusive SSL, Uptime-Monitoring, Setup und Custom Domain. / Yes — managed hosting from €20/month, fixed price. Powered by Dokploy. We host Node.js, Next.js, React, Vue.js, Nuxt, Angular, WordPress, PHP/Laravel, Python/Django, Go, Docker, Svelte, Astro and static sites. Includes SSL, uptime monitoring, setup and custom domain. / Sì — hosting gestito da €20/mese, prezzo fisso. Hosted con Dokploy. Ospitiamo Node.js, Next.js, React, Vue.js, Nuxt, Angular, WordPress, PHP/Laravel, Python/Django, Go, Docker, Svelte, Astro e siti statici. Include SSL, monitoraggio uptime, setup e dominio personalizzato.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Kann ich meine WordPress-Website selbst bearbeiten? / Can I edit my WordPress website myself? / Posso modificare il mio sito WordPress da solo?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Ja. WordPress-Websites sind so aufgebaut, dass du Inhalte, Bilder und Texte selbst bearbeiten kannst — ohne Programmierkenntnisse. Wir richten alles ein und geben dir eine Einführung. / Yes. WordPress websites are built so you can edit content, images and text yourself — no coding knowledge needed. We set everything up and give you an introduction. / Sì. I siti WordPress sono costruiti in modo che tu possa modificare contenuti, immagini e testi da solo — senza conoscenze di programmazione. Configuriamo tutto e ti facciamo un'introduzione.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Bietet pokyh.studio auch App-Entwicklung an? / Does pokyh.studio offer app development? / pokyh.studio offre sviluppo di app?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Ja. Wir entwickeln Cross-Platform Apps für iOS und Android mit React Native und Flutter — eine Codebase, beide Plattformen. Schreib uns und beschreib dein Projekt. / Yes. We develop cross-platform apps for iOS and Android with React Native and Flutter — one codebase, both platforms. Write to us and describe your project. / Sì. Sviluppiamo app cross-platform per iOS e Android con React Native e Flutter — una codebase, entrambe le piattaforme. Scrivici e descrivi il tuo progetto.",
       },
     },
     {
@@ -423,7 +578,15 @@ export const faqSchema = {
       name: "In welchen Sprachen arbeitet pokyh.studio? / What languages does pokyh.studio work in? / In quali lingue lavora pokyh.studio?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Wir arbeiten auf Deutsch, Englisch und Italienisch. Wir sind ein Digital Studio aus Südtirol / Alto Adige. / We work in German, English and Italian. We are a digital studio from South Tyrol / Alto Adige. / Lavoriamo in tedesco, inglese e italiano. Siamo uno studio digitale dell'Alto Adige / Südtirol.",
+        text: "Wir arbeiten auf Deutsch, Englisch und Italienisch und sind ein Digital Studio aus Südtirol / Alto Adige. / We work in German, English and Italian and are a digital studio from South Tyrol / Alto Adige. / Lavoriamo in tedesco, inglese e italiano e siamo uno studio digitale dell'Alto Adige / Südtirol.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Wie schnell ist eine Website von pokyh.studio? / How fast is a website by pokyh.studio? / Quanto è veloce un sito web di pokyh.studio?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Wir bauen mit Next.js und React nach Core Web Vitals-Standards. Websites erzielen typischerweise 90+ Punkte auf Google PageSpeed. Bilder werden optimiert, Assets gecacht und Code gesplittet. / We build with Next.js and React to Core Web Vitals standards. Websites typically score 90+ on Google PageSpeed. Images are optimised, assets cached and code split. / Costruiamo con Next.js e React secondo gli standard Core Web Vitals. I siti ottengono tipicamente 90+ punti su Google PageSpeed. Immagini ottimizzate, asset in cache e code splitting.",
       },
     },
     {
@@ -431,7 +594,7 @@ export const faqSchema = {
       name: "Wo ist pokyh.studio ansässig? / Where is pokyh.studio located? / Dove si trova pokyh.studio?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Wir sind in Südtirol / Alto Adige, Italien ansässig und betreuen Kunden in ganz Deutschland, Österreich, der Schweiz und Italien. / We are based in South Tyrol / Alto Adige, Italy and serve clients throughout the DACH region and Italy. / Siamo con sede in Alto Adige / Südtirol, Italia, e serviamo clienti in tutta la regione DACH e in Italia.",
+        text: "Wir sind in Südtirol / Alto Adige, Italien ansässig und betreuen Kunden in ganz Deutschland, Österreich, der Schweiz und Italien. Beratung und Kommunikation auf Deutsch, Englisch und Italienisch. / We are based in South Tyrol / Alto Adige, Italy and serve clients throughout the DACH region and Italy. Consulting in German, English and Italian. / Siamo con sede in Alto Adige / Südtirol, Italia, e serviamo clienti in tutta la regione DACH e in Italia. Consulenza in tedesco, inglese e italiano.",
       },
     },
   ],

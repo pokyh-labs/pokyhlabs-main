@@ -4,9 +4,10 @@ import { fetchBlogs } from "@/lib/server-api"
 import BlogsPage from "@/components/BlogsPage"
 
 export const metadata: Metadata = {
-  title: "Blog – Webdesign, Entwicklung & Südtirol Tipps",
+  // Title with template: "Blog – Webdesign, 3D & Next.js | pokyh.studio" = 46 chars ✓
+  title: "Blog – Webdesign, 3D & Next.js",
   description:
-    "Artikel, Insights und Updates von pokyh.studio – 3D Websites, Webdesign, Webentwicklung und digitale Trends aus Südtirol. / Articles and insights on web design, development and 3D websites from South Tyrol. / Articoli su web design, sviluppo web e tendenze digitali dall'Alto Adige.",
+    "Webdesign-Blog von pokyh.studio: Artikel zu 3D Websites, Next.js, React, SEO & Hosting aus Südtirol. Praxistipps für Entwickler und Unternehmen.",
   keywords: [
     // DE
     "webdesign blog",
@@ -51,9 +52,9 @@ export const metadata: Metadata = {
   },
   openGraph: {
     url: `${siteConfig.url}/blog`,
-    title: "Blog – Webdesign, Entwicklung & Digital Studio Südtirol | pokyh.studio",
+    title: "Blog – Webdesign, 3D & Next.js | pokyh.studio",
     description:
-      "Artikel und Insights zu 3D Websites, Webdesign, Webentwicklung und digitalen Trends von pokyh.studio – Digital Studio Südtirol.",
+      "3D Websites, Next.js, React, SEO & Hosting — Artikel und Praxistipps vom Digital Studio Südtirol.",
     locale: "de_AT",
     alternateLocale: ["en_US", "it_IT"],
     images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "pokyh.studio Blog" }],

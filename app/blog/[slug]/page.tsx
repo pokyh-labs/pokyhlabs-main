@@ -18,17 +18,29 @@ interface BlogPost {
   author: { username: string } | null
 }
 
-async function getBlog(slug: string): Promise<BlogPost | null> {
-  try {
-    const res = await fetch(`${BACKEND}/api/blogs/${encodeURIComponent(slug)}`, {
-      next: { revalidate: 60 },
-    })
-    if (res.status === 404) return null
-    if (!res.ok) return null
-    return res.json()
-  } catch {
-    return null
+async function getBlog(slug: string, retries = 2): Promise<BlogPost | null> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const ctrl = new AbortController()
+    const timer = setTimeout(() => ctrl.abort(), 6000)
+    try {
+      const res = await fetch(`${BACKEND}/api/blogs/${encodeURIComponent(slug)}`, {
+        cache: 'no-store',
+        signal: ctrl.signal,
+      })
+      clearTimeout(timer)
+      if (res.status === 404) return null
+      if (!res.ok) {
+        if (attempt < retries) { await new Promise(r => setTimeout(r, 400 * (attempt + 1))); continue }
+        return null
+      }
+      return res.json()
+    } catch {
+      clearTimeout(timer)
+      if (attempt < retries) { await new Promise(r => setTimeout(r, 400 * (attempt + 1))); continue }
+      return null
+    }
   }
+  return null
 }
 
 export async function generateMetadata({

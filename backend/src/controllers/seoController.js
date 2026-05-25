@@ -16,7 +16,7 @@ const DEFAULT_CONFIG = {
 };
 
 function getDataDir() {
-  if (process.env.SQLITE_PATH) return path.dirname(process.env.SQLITE_PATH);
+  if (process.env.SQLITE_PATH) return path.resolve(path.dirname(process.env.SQLITE_PATH));
   return path.resolve(__dirname, '../../../data');
 }
 

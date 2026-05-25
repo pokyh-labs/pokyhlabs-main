@@ -178,7 +178,7 @@ class TunnelService {
     if (this.process) {
       // SIGTERM not available on Windows — use taskkill or process.kill
       if (IS_WINDOWS) {
-        try { execFileAsync('taskkill', ['/PID', String(this.process.pid), '/F']); } catch {}
+        try { await execFileAsync('taskkill', ['/PID', String(this.process.pid), '/F']); } catch {}
       } else {
         this.process.kill('SIGTERM');
       }

@@ -8,7 +8,6 @@ const STATS_TTL = 120;         // 2 min for dashboard stats
 const cache = new NodeCache({
   stdTTL: BLOG_LIST_TTL,
   checkperiod: 30,
-  useClones: false,
 });
 
 const PROJECT_LIST_TTL = 120; // 2 min

@@ -2,6 +2,11 @@ const rateLimit = require('express-rate-limit');
 const logger = require('../utils/logger');
 const { SuspiciousActivity } = require('../models');
 
+function isLoopback(ip) {
+  if (!ip) return false;
+  return ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1';
+}
+
 function createLimiter(options) {
   return rateLimit({
     windowMs: options.windowMs || 15 * 60 * 1000,
@@ -9,6 +14,8 @@ function createLimiter(options) {
     standardHeaders: true,
     legacyHeaders: false,
     skipSuccessfulRequests: options.skipSuccessful || false,
+    // Loopback requests are SSR fetches from Next.js – never rate-limit them
+    skip: (req) => isLoopback(req.ip || req.socket?.remoteAddress),
     handler: async (req, res) => {
       const ip = req.ip || req.socket.remoteAddress;
       logger.warn('Rate limit exceeded', {

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState, forwardRef } from "react"
+import { useEffect, useRef, useState, useCallback, forwardRef } from "react"
 import gsap from "gsap"
 import { ScrollTrigger } from "gsap/ScrollTrigger"
 
@@ -20,6 +20,12 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
 }
 
+function clientFetchBlogs(): Promise<Blog[]> {
+  return fetch("/api/blogs?limit=20")
+    .then((r) => { if (!r.ok) throw new Error("API error"); return r.json() })
+    .then((data) => data.blogs ?? [])
+}
+
 export default function BlogsPage({ initialBlogs = [] }: { initialBlogs?: Blog[] }) {
   const contentRef = useRef<HTMLDivElement>(null)
   const headlineRef = useRef<HTMLHeadingElement>(null)
@@ -27,13 +33,17 @@ export default function BlogsPage({ initialBlogs = [] }: { initialBlogs?: Blog[]
   const [loading, setLoading] = useState(initialBlogs.length === 0)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    // Only fetch client-side when no SSR data was provided
-    if (initialBlogs.length > 0) return
-    fetch("/api/blogs?limit=20")
-      .then((r) => { if (!r.ok) throw new Error("API error"); return r.json() })
-      .then((data) => { setBlogs(data.blogs ?? []); setLoading(false) })
+  const loadBlogs = useCallback(() => {
+    setLoading(true)
+    setError(null)
+    clientFetchBlogs()
+      .then((list) => { setBlogs(list); setLoading(false) })
       .catch(() => { setError("Could not load blog posts."); setLoading(false) })
+  }, [])
+
+  useEffect(() => {
+    if (initialBlogs.length > 0) return
+    loadBlogs()
   }, [])
 
   useEffect(() => {
@@ -135,7 +145,7 @@ export default function BlogsPage({ initialBlogs = [] }: { initialBlogs?: Blog[]
           {loading ? (
             <LoadingState />
           ) : error ? (
-            <ErrorState message={error} />
+            <ErrorState message={error} onRetry={loadBlogs} />
           ) : blogs.length === 0 ? (
             <EmptyState />
           ) : (
@@ -178,12 +188,34 @@ function EmptyState() {
   )
 }
 
-function ErrorState({ message }: { message: string }) {
+function ErrorState({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
-    <div data-reveal style={{ minHeight: "40vh", display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
+    <div data-reveal style={{ minHeight: "40vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", gap: "1.5rem" }}>
       <p style={{ fontFamily: "var(--font-dm-mono), monospace", fontSize: "13px", letterSpacing: "0.08em", color: "#555" }}>
         {message}
       </p>
+      {onRetry && (
+        <button
+          onClick={onRetry}
+          style={{
+            fontFamily: "var(--font-dm-mono), monospace",
+            fontSize: "11px",
+            letterSpacing: "0.12em",
+            textTransform: "uppercase",
+            background: "none",
+            border: "1px solid #333",
+            color: "#888",
+            padding: "8px 20px",
+            borderRadius: "2px",
+            cursor: "pointer",
+            transition: "border-color 0.2s, color 0.2s",
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#666"; e.currentTarget.style.color = "#ccc" }}
+          onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#333"; e.currentTarget.style.color = "#888" }}
+        >
+          Try again
+        </button>
+      )}
     </div>
   )
 }

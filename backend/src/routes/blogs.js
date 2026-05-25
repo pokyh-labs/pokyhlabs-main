@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const {
-  getPublished, getBySlug, getAll, create, update, deleteBlog, stats, blogValidators, importPdf, importHtml
+  getPublished, getBySlug, getAll, create, update, deleteBlog, stats, patchViews, blogValidators, importPdf, importHtml
 } = require('../controllers/blogController');
 const { authenticate } = require('../middleware/authenticate');
 const { authorize } = require('../middleware/authorize');
@@ -27,6 +27,9 @@ router.put('/:id',
 );
 
 router.delete('/:id', authenticate, authorize('admin', 'editor'), adminRateLimiter, deleteBlog);
+
+// Patch only the views counter
+router.patch('/:id/views', authenticate, authorize('admin', 'editor'), adminRateLimiter, patchViews);
 
 // PDF import
 router.post('/import/pdf',

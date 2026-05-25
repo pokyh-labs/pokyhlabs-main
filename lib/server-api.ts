@@ -28,11 +28,26 @@ export interface BlogSummary {
   author: { username: string } | null
 }
 
+async function fetchSSR(url: string, retries = 2): Promise<Response> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const ctrl = new AbortController()
+    const timer = setTimeout(() => ctrl.abort(), 6000)
+    try {
+      const res = await fetch(url, { cache: 'no-store', signal: ctrl.signal })
+      clearTimeout(timer)
+      return res
+    } catch {
+      clearTimeout(timer)
+      if (attempt === retries) throw new Error(`fetch failed after ${retries + 1} attempts: ${url}`)
+      await new Promise(r => setTimeout(r, 400 * (attempt + 1)))
+    }
+  }
+  throw new Error('unreachable')
+}
+
 export async function fetchProjects(): Promise<Project[]> {
   try {
-    const res = await fetch(`${BACKEND}/api/projects`, {
-      next: { revalidate: 120 },
-    })
+    const res = await fetchSSR(`${BACKEND}/api/projects`)
     if (!res.ok) return []
     const data = await res.json()
     return data.projects ?? []
@@ -43,9 +58,7 @@ export async function fetchProjects(): Promise<Project[]> {
 
 export async function fetchBlogs(limit = 20): Promise<BlogSummary[]> {
   try {
-    const res = await fetch(`${BACKEND}/api/blogs?limit=${limit}`, {
-      next: { revalidate: 60 },
-    })
+    const res = await fetchSSR(`${BACKEND}/api/blogs?limit=${encodeURIComponent(limit)}`)
     if (!res.ok) return []
     const data = await res.json()
     return data.blogs ?? []

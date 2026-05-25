@@ -722,6 +722,7 @@ function BlogEditor({ blog, onSave, onCancel }) {
         content_markdown: JSON.stringify(blocks),
         image_url:        imageUrl || null,
       };
+      if (!blog) payload.views = 0;
 
       const res = await apiFetch(`/blogs${blog ? `/${blog.id}` : ''}`, {
         method: blog ? 'PUT' : 'POST',
@@ -994,9 +995,11 @@ function formatBadge(blog) {
 
 export default function Blogs() {
   const { request, loading } = useApi();
-  const [blogs, setBlogs]   = useState([]);
-  const [view, setView]     = useState('list');
+  const [blogs, setBlogs]       = useState([]);
+  const [view, setView]         = useState('list');
   const [editBlog, setEditBlog] = useState(null);
+  const [viewsEdit, setViewsEdit]   = useState(null); // { id, value }
+  const [viewsSaving, setViewsSaving] = useState(false);
 
   async function load() {
     try { setBlogs(await request('/blogs/admin/all')); } catch {}
@@ -1012,6 +1015,30 @@ export default function Blogs() {
       load();
     } catch (err) { toast(err.message, 'error'); }
   }
+
+  function startViewsEdit(blog) {
+    setViewsEdit({ id: blog.id, value: String(blog.views ?? 0) });
+  }
+
+  async function saveViews(id) {
+    const v = parseInt(viewsEdit.value, 10);
+    if (isNaN(v) || v < 0) { toast('Ungültige Zahl', 'error'); return; }
+    setViewsSaving(true);
+    try {
+      const res = await apiFetch(`/blogs/${id}/views`, { method: 'PATCH', body: JSON.stringify({ views: v }) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || data.message || `HTTP ${res.status}`);
+      toast('Views gespeichert');
+      setBlogs(bs => bs.map(b => b.id === id ? { ...b, views: v } : b));
+      setViewsEdit(null);
+    } catch (e) {
+      toast(e.message, 'error');
+    } finally {
+      setViewsSaving(false);
+    }
+  }
+
+  function cancelViewsEdit() { setViewsEdit(null); }
 
   function openEditor(blog = null) { setEditBlog(blog); setView('editor'); }
   function closeEditor()           { setView('list'); setEditBlog(null); load(); }
@@ -1108,7 +1135,71 @@ export default function Blogs() {
                     </span>
                   </td>
                   <td style={{ color: 'var(--text3)', fontSize: '0.78rem' }}>{fmt(b.created_at)}</td>
-                  <td style={{ color: 'var(--text3)', fontSize: '0.78rem' }}>{b.views ?? 0}</td>
+                  <td style={{ minWidth: 110 }}>
+                    {viewsEdit?.id === b.id ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <input
+                          type="number"
+                          min="0"
+                          value={viewsEdit.value}
+                          onChange={e => setViewsEdit(ve => ({ ...ve, value: e.target.value }))}
+                          onKeyDown={e => { if (e.key === 'Enter') saveViews(b.id); if (e.key === 'Escape') cancelViewsEdit(); }}
+                          autoFocus
+                          style={{
+                            width: 72,
+                            padding: '3px 6px',
+                            fontSize: '0.78rem',
+                            borderRadius: 5,
+                            border: '1px solid var(--accent)',
+                            outline: 'none',
+                            background: 'var(--bg)',
+                            color: 'var(--text)',
+                          }}
+                        />
+                        <button
+                          className="btn-outline btn-sm btn-icon"
+                          title="Speichern"
+                          disabled={viewsSaving}
+                          onClick={() => saveViews(b.id)}
+                          style={{ color: 'var(--success, #16a34a)' }}
+                        >
+                          {viewsSaving ? <span className="spinner" style={{ width: 10, height: 10 }} /> : <i className="bi bi-check-lg" />}
+                        </button>
+                        <button
+                          className="btn-outline btn-sm btn-icon"
+                          title="Abbrechen"
+                          onClick={cancelViewsEdit}
+                        >
+                          <i className="bi bi-x" />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => startViewsEdit(b)}
+                        title="Views bearbeiten"
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 5,
+                          padding: '3px 6px',
+                          borderRadius: 5,
+                          color: 'var(--text3)',
+                          fontSize: '0.78rem',
+                          fontVariantNumeric: 'tabular-nums',
+                          transition: 'background 100ms, color 100ms',
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg3)'; e.currentTarget.style.color = 'var(--text)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'var(--text3)'; }}
+                      >
+                        <i className="bi bi-eye" style={{ fontSize: '0.7rem' }} />
+                        {(b.views ?? 0).toLocaleString('de-DE')}
+                        <i className="bi bi-pencil" style={{ fontSize: '0.6rem', opacity: 0.4 }} />
+                      </button>
+                    )}
+                  </td>
                   <td>
                     <div className="flex gap-1">
                       <button className="btn-outline btn-sm btn-icon" onClick={() => openEditor(b)} title="Bearbeiten">

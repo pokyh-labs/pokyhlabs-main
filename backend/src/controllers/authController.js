@@ -108,7 +108,12 @@ async function refresh(req, res) {
   }
 
   // Rotate: revoke old, issue new
-  await stored.update({ is_revoked: true });
+  try {
+    await stored.update({ is_revoked: true });
+  } catch (e) {
+    logger.error('Failed to revoke refresh token', { userId: stored.user_id, err: e.message });
+    return res.status(500).json({ error: 'Token refresh failed' });
+  }
 
   const user = stored.user;
   const { accessToken, refreshToken: newRefresh } = generateTokens(user);

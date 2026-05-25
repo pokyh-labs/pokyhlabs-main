@@ -5,35 +5,39 @@ import RailLine from "@/components/RailLine"
 import Socials from "@/components/Socials"
 import ScrollIndicator from "@/components/ScrollIndicator"
 import HomeClientWrapper from "@/components/HomeClientWrapper"
-import { siteConfig } from "@/lib/seo.config"
+import { siteConfig, hostingSchema } from "@/lib/seo.config"
 
 export const metadata: Metadata = {
   title: {
-    absolute: siteConfig.title.default,
+    absolute: siteConfig.title.default,  // 50 chars — uses absolute to skip template
   },
-  description: siteConfig.descriptions.de,
+  description: siteConfig.description,
   keywords: siteConfig.keywords,
   alternates: {
     canonical: siteConfig.url,
-    languages: {
-      de: siteConfig.url,
-      en: siteConfig.url,
-      it: siteConfig.url,
-      "x-default": siteConfig.url,
-    },
+    languages: siteConfig.hreflang,
   },
   openGraph: {
     url: siteConfig.url,
     title: siteConfig.title.default,
-    description: siteConfig.descriptions.de,
+    description: siteConfig.description,
     locale: "de_AT",
     alternateLocale: ["en_US", "it_IT"],
+    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "pokyh.studio – Digital Studio Südtirol" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: siteConfig.title.default,
+    description: siteConfig.description,
+    images: ["/opengraph-image"],
   },
 }
 
 export default function Home() {
   return (
     <>
+      {/* Hosting service with explicit €20/mo price — enables price snippets on home page */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(hostingSchema) }} />
       <HomeClientWrapper>
         <ParticleCanvas />
         <div className="ui" style={{ position: "absolute", inset: 0, zIndex: 2, pointerEvents: "none" }}>

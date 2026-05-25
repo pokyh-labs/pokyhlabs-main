@@ -61,6 +61,18 @@ async function setupSimple(req, res) {
 
   const { tunnel_name, hostname, local_service } = req.body;
 
+  // Prevent SSRF: local_service must point to loopback only
+  try {
+    const parsed = new URL(local_service);
+    const safe = ['localhost', '127.0.0.1', '::1'];
+    const port = parseInt(parsed.port, 10);
+    if (!safe.includes(parsed.hostname) || port < 1024 || port > 65535) {
+      return res.status(400).json({ error: 'local_service must be a localhost URL with port 1024–65535' });
+    }
+  } catch {
+    return res.status(400).json({ error: 'local_service is not a valid URL' });
+  }
+
   try {
     logger.info('Setting up tunnel via CLI', { event: 'tunnel_setup_simple', tunnel_name, hostname });
 

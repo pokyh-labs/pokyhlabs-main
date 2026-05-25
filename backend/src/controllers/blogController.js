@@ -47,6 +47,7 @@ const blogValidators = [
   body('status').optional().isIn(['draft', 'published']),
   body('content_format').optional().isIn(['html', 'markdown', 'blocks']),
   body('content_markdown').optional().trim(),
+  body('views').optional().isInt({ min: 0 }).withMessage('Views muss eine nicht-negative Ganzzahl sein'),
 ];
 
 function ok(res) { return (data) => res.json(data); }
@@ -92,9 +93,8 @@ async function getBySlug(req, res) {
   const cached = cache.get(cacheKey);
   if (cached) {
     res.setHeader('X-Cache', 'HIT');
-    // Increment views asynchronously without cache invalidation
     Blog.increment('views', { where: { slug, status: 'published' } }).catch(() => {});
-    return res.json(cached);
+    return res.json({ ...cached, views: (cached.views || 0) + 1 });
   }
 
   const blog = await Blog.findOne({
@@ -104,9 +104,11 @@ async function getBySlug(req, res) {
   if (!blog) return err(res, 404, 'Blog not found');
 
   await blog.increment('views');
-  cache.set(cacheKey, blog, BLOG_SINGLE_TTL);
+  await blog.reload();
+  const plain = blog.toJSON();
+  cache.set(cacheKey, plain, BLOG_SINGLE_TTL);
   res.setHeader('X-Cache', 'MISS');
-  res.json(blog);
+  res.json(plain);
 }
 
 // Admin: get all blogs
@@ -173,7 +175,7 @@ async function update(req, res) {
   const blog = await Blog.findByPk(req.params.id);
   if (!blog) return err(res, 404, 'Blog not found');
 
-  const { title, content, excerpt, status, image_alt, content_format, content_markdown } = req.body;
+  const { title, content, excerpt, status, image_alt, content_format, content_markdown, views } = req.body;
   const updates = {};
 
   if (title !== undefined) updates.title = sanitizeText(title);
@@ -189,6 +191,7 @@ async function update(req, res) {
   if (excerpt !== undefined) updates.excerpt = sanitizeText(excerpt);
   if (status !== undefined) updates.status = status;
   if (image_alt !== undefined) updates.image_alt = sanitizeText(image_alt);
+  if (views !== undefined) updates.views = parseInt(views, 10);
 
   if (req.body.image_url !== undefined) {
     // New image was uploaded separately via presign token; delete old one if changed
@@ -310,7 +313,7 @@ async function importPdf(req, res) {
   } catch (parseErr) {
     cleanup();
     logger.error('PDF parse error', { err: parseErr.message, stack: parseErr.stack?.split('\n').slice(0, 3).join(' | ') });
-    err(res, 500, 'Failed to parse PDF');
+    return err(res, 500, 'Failed to parse PDF');
   }
 }
 
@@ -370,8 +373,22 @@ async function importHtml(req, res) {
   } catch (parseErr) {
     cleanup();
     logger.error('HTML parse error', { err: parseErr.message });
-    err(res, 500, 'Failed to parse HTML');
+    return err(res, 500, 'Failed to parse HTML');
   }
 }
 
-module.exports = { getPublished, getBySlug, getAll, create, update, deleteBlog, stats, blogValidators, importPdf, importHtml };
+// Admin: patch only views count
+async function patchViews(req, res) {
+  const v = parseInt(req.body.views, 10);
+  if (isNaN(v) || v < 0) return err(res, 400, 'views muss eine nicht-negative Ganzzahl sein');
+
+  const blog = await Blog.findByPk(req.params.id);
+  if (!blog) return err(res, 404, 'Blog not found');
+
+  await blog.update({ views: v });
+  invalidateBlogCache();
+  logger.info('Blog views patched', { event: 'blog_views_patch', blogId: blog.id, views: v, userId: req.user.id });
+  res.json({ id: blog.id, views: v });
+}
+
+module.exports = { getPublished, getBySlug, getAll, create, update, deleteBlog, stats, patchViews, blogValidators, importPdf, importHtml };

@@ -4,15 +4,18 @@ const { AccessLog, AuthLog, SuspiciousActivity } = require('../models');
 // ── Access Logs ───────────────────────────────────────────────
 
 async function getAccessLogs(req, res) {
-  const page   = Math.max(1, parseInt(req.query.page)  || 1);
-  const limit  = Math.min(200, parseInt(req.query.limit) || 50);
+  const page   = Math.max(1, parseInt(req.query.page, 10)  || 1);
+  const limit  = Math.min(200, parseInt(req.query.limit, 10) || 50);
   const offset = (page - 1) * limit;
 
   const where = {};
-  if (req.query.status)  where.status = parseInt(req.query.status);
+  if (req.query.status)  where.status = parseInt(req.query.status, 10);
   if (req.query.method)  where.method = req.query.method.toUpperCase();
-  if (req.query.ip)      where.ip     = { [Op.like]: `%${req.query.ip}%` };
-  if (req.query.user_id) where.user_id = parseInt(req.query.user_id);
+  if (req.query.ip) {
+    const safeIp = req.query.ip.replace(/[%_\\]/g, '\\$&');
+    where.ip = { [Op.like]: `%${safeIp}%` };
+  }
+  if (req.query.user_id) where.user_id = parseInt(req.query.user_id, 10);
 
   const { count, rows } = await AccessLog.findAndCountAll({
     where,
@@ -27,13 +30,16 @@ async function getAccessLogs(req, res) {
 // ── Auth Logs ─────────────────────────────────────────────────
 
 async function getAuthLogs(req, res) {
-  const page   = Math.max(1, parseInt(req.query.page)  || 1);
-  const limit  = Math.min(200, parseInt(req.query.limit) || 50);
+  const page   = Math.max(1, parseInt(req.query.page, 10)  || 1);
+  const limit  = Math.min(200, parseInt(req.query.limit, 10) || 50);
   const offset = (page - 1) * limit;
 
   const where = {};
   if (req.query.event_type) where.event_type = req.query.event_type;
-  if (req.query.ip)         where.ip = { [Op.like]: `%${req.query.ip}%` };
+  if (req.query.ip) {
+    const safeIp = req.query.ip.replace(/[%_\\]/g, '\\$&');
+    where.ip = { [Op.like]: `%${safeIp}%` };
+  }
 
   const { count, rows } = await AuthLog.findAndCountAll({
     where,
@@ -48,13 +54,16 @@ async function getAuthLogs(req, res) {
 // ── Security Logs ─────────────────────────────────────────────
 
 async function getSecurityLogs(req, res) {
-  const page   = Math.max(1, parseInt(req.query.page)  || 1);
-  const limit  = Math.min(200, parseInt(req.query.limit) || 50);
+  const page   = Math.max(1, parseInt(req.query.page, 10)  || 1);
+  const limit  = Math.min(200, parseInt(req.query.limit, 10) || 50);
   const offset = (page - 1) * limit;
 
   const where = {};
   if (req.query.event_type) where.event_type = req.query.event_type;
-  if (req.query.ip)         where.ip_address = { [Op.like]: `%${req.query.ip}%` };
+  if (req.query.ip) {
+    const safeIp = req.query.ip.replace(/[%_\\]/g, '\\$&');
+    where.ip_address = { [Op.like]: `%${safeIp}%` };
+  }
 
   const { count, rows } = await SuspiciousActivity.findAndCountAll({
     where,
@@ -69,7 +78,7 @@ async function getSecurityLogs(req, res) {
 // ── Geo data for world map ────────────────────────────────────
 
 async function getGeoData(req, res) {
-  const days = Math.min(90, parseInt(req.query.days) || 30);
+  const days = Math.min(90, parseInt(req.query.days, 10) || 30);
   const since = new Date(Date.now() - days * 86400 * 1000);
 
   const rows = await AccessLog.findAll({
@@ -94,7 +103,7 @@ async function getGeoData(req, res) {
 // ── Top countries ─────────────────────────────────────────────
 
 async function getTopCountries(req, res) {
-  const days  = Math.min(90, parseInt(req.query.days) || 30);
+  const days  = Math.min(90, parseInt(req.query.days, 10) || 30);
   const since = new Date(Date.now() - days * 86400 * 1000);
 
   const rows = await AccessLog.findAll({

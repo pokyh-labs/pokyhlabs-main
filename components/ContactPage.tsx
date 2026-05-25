@@ -5,6 +5,7 @@ import gsap from "gsap"
 import { ScrollTrigger } from "gsap/ScrollTrigger"
 
 type Step = 1 | 2 | 3 | 4 | 5 | 6
+type VisualStep = { n: number; label: string }
 
 const SERVICES = [
   {
@@ -47,12 +48,35 @@ const SERVICES = [
   },
 ]
 
-const STEPS = [
+const STEPS: VisualStep[] = [
   { n: 1, label: "Services" },
   { n: 2, label: "Project" },
   { n: 3, label: "Company" },
   { n: 4, label: "Deadline" },
   { n: 5, label: "Contact" },
+]
+
+const HOSTING_STEPS: VisualStep[] = [
+  { n: 1, label: "Service" },
+  { n: 2, label: "Hosting" },
+  { n: 5, label: "Contact" },
+]
+
+const HOSTING_STACKS = [
+  { id: "nodejs",    label: "Node.js" },
+  { id: "nextjs",    label: "Next.js" },
+  { id: "react",     label: "React" },
+  { id: "vue",       label: "Vue.js" },
+  { id: "nuxt",      label: "Nuxt.js" },
+  { id: "angular",   label: "Angular" },
+  { id: "wordpress", label: "WordPress" },
+  { id: "php",       label: "PHP / Laravel" },
+  { id: "python",    label: "Python" },
+  { id: "go",        label: "Go" },
+  { id: "docker",    label: "Docker" },
+  { id: "static",    label: "Static Site" },
+  { id: "svelte",    label: "Svelte" },
+  { id: "astro",     label: "Astro" },
 ]
 
 export default function ContactPage() {
@@ -64,12 +88,17 @@ export default function ContactPage() {
   const [services, setServices] = useState<string[]>([])
   const [include3d, setInclude3d] = useState(false)
   const [description, setDescription] = useState("")
+  const [repoUrl, setRepoUrl] = useState("")
   const [company, setCompany] = useState("")
   const [deadline, setDeadline] = useState("")
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
+  const [hostingStack, setHostingStack] = useState<string[]>([])
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
+
+  const isHostingOnly = services.length > 0 && services.every(s => s === "hosting")
+  const visibleSteps = isHostingOnly ? HOSTING_STEPS : STEPS
 
   useEffect(() => {
     gsap.registerPlugin(ScrollTrigger)
@@ -158,25 +187,37 @@ export default function ContactPage() {
     setServices(prev => {
       const next = prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
       if (!next.includes("website")) setInclude3d(false)
+      if (!next.includes("hosting")) setHostingStack([])
       return next
     })
     setErrors(e => ({ ...e, services: "" }))
   }, [])
 
+  const toggleHostingStack = useCallback((id: string) => {
+    setHostingStack(prev => prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id])
+  }, [])
+
   const goNext = () => {
     const e: Record<string, string> = {}
     if (step === 1 && services.length === 0) e.services = "Select at least one service."
+    if (step === 2 && isHostingOnly && !repoUrl.trim()) {
+      e.repoUrl = "Please share a link so we know what to host."
+    }
     if (step === 5) {
       if (!name.trim()) e.name = "Name is required."
       if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.email = "Valid email required."
     }
     if (Object.keys(e).length) { setErrors(e); return }
     setErrors({})
+    // Hosting-only: jump from step 2 straight to step 5 (skip company + deadline)
+    if (isHostingOnly && step === 2) { setStep(5); return }
     setStep(s => (s + 1) as Step)
   }
 
   const goBack = () => {
     setErrors({})
+    // Hosting-only: jump from contact back to hosting step
+    if (isHostingOnly && step === 5) { setStep(2); return }
     setStep(s => (s - 1) as Step)
   }
 
@@ -190,6 +231,17 @@ export default function ContactPage() {
       ? [...services, "threejs"]
       : services
 
+    // Build description with all hosting details + optional combo discount note
+    const descParts: string[] = []
+    const hasDiscount = services.includes("website") && services.includes("hosting")
+    if (hasDiscount) descParts.push("Kombipaket: Website + Hosting (5% Rabatt auf Entwicklung, Hosting fix €20/mo)")
+    if (services.includes("hosting") && hostingStack.length > 0) {
+      descParts.push(`Tech Stack: ${hostingStack.join(", ")}`)
+    }
+    if (isHostingOnly && repoUrl.trim()) descParts.push(`Repo / File URL: ${repoUrl.trim()}`)
+    if (description.trim()) descParts.push(description.trim())
+    const finalDescription = descParts.length > 0 ? descParts.join("\n\n") : null
+
     setSubmitting(true)
     try {
       const res = await fetch("/api/inquiries", {
@@ -197,7 +249,7 @@ export default function ContactPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           services: finalServices,
-          description: description.trim() || null,
+          description: finalDescription,
           company: company.trim() || null,
           deadline: deadline || null,
           name: name.trim(),
@@ -313,11 +365,11 @@ export default function ContactPage() {
           {/* Step indicator */}
           {step < 6 && (
             <div ref={stepIndicatorRef} style={{ display: "flex", alignItems: "center", marginBottom: "clamp(44px,8vh,80px)" }}>
-              {STEPS.map(({ n, label }, i) => {
+              {visibleSteps.map(({ n, label }, i) => {
                 const done = step > n
                 const active = step === n
                 return (
-                  <div key={n} style={{ display: "flex", alignItems: "center", flex: i < STEPS.length - 1 ? 1 : undefined }}>
+                  <div key={n} style={{ display: "flex", alignItems: "center", flex: i < visibleSteps.length - 1 ? 1 : undefined }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 9, flexShrink: 0 }}>
                       <div style={{
                         width: 26, height: 26, borderRadius: "50%",
@@ -331,7 +383,7 @@ export default function ContactPage() {
                           </svg>
                         ) : (
                           <span style={{ fontFamily: "var(--font-dm-mono)", fontSize: 9, color: active ? "rgba(255,255,255,0.88)" : "rgba(255,255,255,0.2)" }}>
-                            {String(n).padStart(2, "0")}
+                            {String(i + 1).padStart(2, "0")}
                           </span>
                         )}
                       </div>
@@ -339,7 +391,7 @@ export default function ContactPage() {
                         {label}
                       </span>
                     </div>
-                    {i < STEPS.length - 1 && (
+                    {i < visibleSteps.length - 1 && (
                       <div style={{ flex: 1, height: 1, margin: "0 14px", background: done ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.06)", transition: "background 0.3s" }} />
                     )}
                   </div>
@@ -356,11 +408,20 @@ export default function ContactPage() {
                 include3d={include3d}
                 onToggle={toggleService}
                 onToggle3d={() => setInclude3d(v => !v)}
+                hostingStack={hostingStack}
+                onToggleStack={toggleHostingStack}
                 error={errors.services}
                 onNext={goNext}
               />
             )}
-            {step === 2 && (
+            {step === 2 && isHostingOnly && (
+              <StepHosting
+                repoUrl={repoUrl} onChangeRepo={setRepoUrl}
+                error={errors.repoUrl}
+                onBack={goBack} onNext={goNext}
+              />
+            )}
+            {step === 2 && !isHostingOnly && (
               <StepDescription value={description} onChange={setDescription} onBack={goBack} onNext={goNext} />
             )}
             {step === 3 && (
@@ -389,13 +450,20 @@ export default function ContactPage() {
 }
 
 /* ── Step 1: Services ─────────────────────────────────────────────── */
-function StepServices({ services, include3d, onToggle, onToggle3d, error, onNext }: {
+function StepServices({ services, include3d, onToggle, onToggle3d, hostingStack, onToggleStack, error, onNext }: {
   services: string[]; include3d: boolean
   onToggle: (id: string) => void; onToggle3d: () => void
+  hostingStack: string[]; onToggleStack: (id: string) => void
   error?: string; onNext: () => void
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
+  const stackRef = useRef<HTMLDivElement>(null)
+  const discountRef = useRef<HTMLDivElement>(null)
   const websiteSelected = services.includes("website")
+  const hostingSelected = services.includes("hosting")
+  const showDiscount = websiteSelected && hostingSelected
+  const prevHosting = useRef(hostingSelected)
+  const prevDiscount = useRef(showDiscount)
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -404,8 +472,63 @@ function StepServices({ services, include3d, onToggle, onToggle3d, error, onNext
         .fromTo("[data-a='card']",      { autoAlpha: 0, y: 26 }, { autoAlpha: 1, y: 0, duration: 0.42, stagger: 0.09 }, "-=0.22")
         .fromTo("[data-a='nav']",       { autoAlpha: 0, y: 18 }, { autoAlpha: 1, y: 0, duration: 0.38 }, "-=0.12")
     }, containerRef)
+    // Set initial hidden state for sections not yet active
+    if (stackRef.current && !hostingSelected) {
+      gsap.set(stackRef.current, { autoAlpha: 0, height: 0, overflow: "hidden" })
+    }
+    if (discountRef.current && !showDiscount) {
+      gsap.set(discountRef.current, { autoAlpha: 0, height: 0, overflow: "hidden" })
+    }
     return () => ctx.revert()
   }, [])
+
+  // Animate tech stack section in/out
+  useEffect(() => {
+    const el = stackRef.current
+    if (!el) return
+    if (prevHosting.current === hostingSelected) return
+    prevHosting.current = hostingSelected
+    if (hostingSelected) {
+      gsap.fromTo(el,
+        { height: 0, autoAlpha: 0 },
+        {
+          height: "auto", autoAlpha: 1, duration: 0.42, ease: "power2.out",
+          clearProps: "height,overflow",
+          onComplete: () => {
+            if (!el) return
+            gsap.fromTo(el.querySelectorAll("[data-pill]"),
+              { autoAlpha: 0, y: 8, scale: 0.93 },
+              { autoAlpha: 1, y: 0, scale: 1, duration: 0.3, stagger: 0.03, ease: "power2.out" }
+            )
+          },
+        }
+      )
+    } else {
+      gsap.to(el, {
+        height: 0, autoAlpha: 0, duration: 0.28, ease: "power2.in",
+        onStart: () => { if (el) el.style.overflow = "hidden" },
+      })
+    }
+  }, [hostingSelected])
+
+  // Animate discount badge in/out
+  useEffect(() => {
+    const el = discountRef.current
+    if (!el) return
+    if (prevDiscount.current === showDiscount) return
+    prevDiscount.current = showDiscount
+    if (showDiscount) {
+      gsap.fromTo(el,
+        { height: 0, autoAlpha: 0 },
+        { height: "auto", autoAlpha: 1, duration: 0.38, ease: "back.out(1.4)", clearProps: "height,overflow" }
+      )
+    } else {
+      gsap.to(el, {
+        height: 0, autoAlpha: 0, duration: 0.25, ease: "power2.in",
+        onStart: () => { if (el) el.style.overflow = "hidden" },
+      })
+    }
+  }, [showDiscount])
 
   return (
     <div ref={containerRef}>
@@ -418,7 +541,7 @@ function StepServices({ services, include3d, onToggle, onToggle3d, error, onNext
           display: "grid",
           gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
           gap: 10,
-          marginBottom: websiteSelected ? "1rem" : "2.5rem",
+          marginBottom: "1rem",
         }}
       >
         {SERVICES.map(svc => {
@@ -459,8 +582,9 @@ function StepServices({ services, include3d, onToggle, onToggle3d, error, onNext
         })}
       </div>
 
+      {/* 3D toggle — visible when website is selected */}
       {websiteSelected && (
-        <div style={{ marginBottom: "2.5rem" }}>
+        <div style={{ marginBottom: "1rem" }}>
           <button
             onClick={onToggle3d}
             className="svc-btn"
@@ -500,8 +624,207 @@ function StepServices({ services, include3d, onToggle, onToggle3d, error, onNext
         </div>
       )}
 
+      {/* Tech stack — always in DOM, GSAP-animated in/out when hosting is toggled */}
+      <div ref={stackRef} style={{ overflow: "hidden" }}>
+        <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "1.1rem", marginBottom: "1rem" }}>
+          <p style={{ fontFamily: "var(--font-dm-mono)", fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.28)", marginBottom: "0.45rem" }}>
+            Tech Stack
+          </p>
+          <p style={{ fontFamily: "var(--font-inter)", fontSize: "0.78rem", color: "rgba(255,255,255,0.2)", lineHeight: 1.5, marginBottom: "0.9rem" }}>
+            Was soll gehostet werden? Mehrfachauswahl möglich.
+          </p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {HOSTING_STACKS.map(stack => {
+              const active = hostingStack.includes(stack.id)
+              return (
+                <button
+                  key={stack.id}
+                  data-pill="true"
+                  onClick={() => onToggleStack(stack.id)}
+                  className="svc-btn"
+                  style={{
+                    background: active ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.03)",
+                    border: `1px solid ${active ? "rgba(255,255,255,0.30)" : "rgba(255,255,255,0.08)"}`,
+                    borderRadius: 999,
+                    padding: "6px 16px",
+                    color: active ? "rgba(255,255,255,0.88)" : "rgba(255,255,255,0.35)",
+                    fontFamily: "var(--font-inter)",
+                    fontSize: "0.8rem",
+                    fontWeight: active ? 500 : 400,
+                    letterSpacing: "-0.01em",
+                    cursor: "pointer",
+                  }}
+                >
+                  {stack.label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Combo discount — always in DOM, GSAP-animated in/out when website+hosting toggled */}
+      <div ref={discountRef} style={{ overflow: "hidden" }}>
+        <div style={{
+          background: "rgba(89,61,248,0.07)",
+          border: "1px solid rgba(89,61,248,0.22)",
+          borderRadius: 12,
+          padding: "0.85rem 1.1rem",
+          marginBottom: "1rem",
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+        }}>
+          <div style={{
+            width: 32, height: 32, borderRadius: 8,
+            background: "rgba(89,61,248,0.15)",
+            border: "1px solid rgba(89,61,248,0.28)",
+            display: "grid", placeItems: "center", flexShrink: 0,
+          }}>
+            <svg viewBox="0 0 20 20" fill="none" stroke="rgba(167,139,250,0.8)" strokeWidth={1.4} style={{ width: 16, height: 16 }}>
+              <path d="M9 2l1.5 4.5H15l-3.5 2.5L13 13.5 9 11l-4 2.5 1.5-4.5L3 6.5h4.5z" />
+            </svg>
+          </div>
+          <div>
+            <p style={{ fontFamily: "var(--font-inter)", fontSize: "0.875rem", fontWeight: 600, color: "rgba(167,139,250,0.92)", letterSpacing: "-0.01em" }}>
+              5% Kombirabatt auf die Entwicklung
+            </p>
+            <p style={{ fontFamily: "var(--font-inter)", fontSize: "0.75rem", color: "rgba(255,255,255,0.28)", marginTop: 2, lineHeight: 1.4 }}>
+              Website + Hosting zusammen → 5% Rabatt auf die Entwicklungskosten. Hosting bleibt fix €20/mo.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {error && <ErrorMsg msg={error} style={{ marginBottom: "1.5rem" }} />}
       <div data-a="nav"><NavRow onNext={onNext} nextLabel="Continue" /></div>
+    </div>
+  )
+}
+
+/* ── Step 2 (Hosting-only): Hosting details + repo link ──────────── */
+function StepHosting({ repoUrl, onChangeRepo, error, onBack, onNext }: {
+  repoUrl: string; onChangeRepo: (v: string) => void
+  error?: string; onBack: () => void; onNext: () => void
+}) {
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      const tl = gsap.timeline({ defaults: { ease: "power2.out" } })
+      tl.fromTo("[data-a='heading']",  { autoAlpha: 0, y: 28 }, { autoAlpha: 1, y: 0, duration: 0.5 })
+        .fromTo("[data-a='pricing']",  { autoAlpha: 0, y: 22 }, { autoAlpha: 1, y: 0, duration: 0.45 }, "-=0.25")
+        .fromTo("[data-a='field']",    { autoAlpha: 0, y: 22 }, { autoAlpha: 1, y: 0, duration: 0.45 }, "-=0.15")
+        .fromTo("[data-a='nav']",      { autoAlpha: 0, y: 18 }, { autoAlpha: 1, y: 0, duration: 0.38 }, "-=0.15")
+    }, containerRef)
+    return () => ctx.revert()
+  }, [])
+
+  const features = [
+    "Managed deployment & setup",
+    "SSL certificate (HTTPS)",
+    "24 / 7 uptime monitoring",
+    "Custom domain support",
+  ]
+
+  return (
+    <div ref={containerRef}>
+      <div data-a="heading">
+        <StepHeading label="02" title="Hosting details." sub="We take care of everything — you just share your files." />
+      </div>
+
+      {/* Pricing card */}
+      <div data-a="pricing" style={{
+        background: "rgba(255,255,255,0.03)",
+        border: "1px solid rgba(255,255,255,0.09)",
+        borderRadius: 18,
+        padding: "1.5rem 1.6rem",
+        marginBottom: "2rem",
+      }}>
+        {/* Price row */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "1.25rem" }}>
+          <div>
+            <p style={{ fontFamily: "var(--font-dm-mono)", fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.28)", marginBottom: 6 }}>
+              Hosting-Paket
+            </p>
+            <p style={{ fontFamily: "var(--font-inter)", fontSize: "clamp(1.8rem, 3.5vw, 2.6rem)", fontWeight: 300, letterSpacing: "-0.04em", color: "#fff", lineHeight: 1 }}>
+              €20
+              <span style={{ fontSize: "0.95rem", fontWeight: 400, color: "rgba(255,255,255,0.3)", letterSpacing: "-0.01em", marginLeft: 6 }}>/ Monat</span>
+            </p>
+          </div>
+          <div style={{
+            background: "rgba(255,255,255,0.06)",
+            border: "1px solid rgba(255,255,255,0.1)",
+            borderRadius: 999,
+            padding: "5px 14px",
+            fontFamily: "var(--font-dm-mono)",
+            fontSize: 10,
+            letterSpacing: "0.15em",
+            textTransform: "uppercase",
+            color: "rgba(255,255,255,0.45)",
+          }}>
+            Alles inklusive
+          </div>
+        </div>
+
+        {/* Feature list */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "1.25rem" }}>
+          {features.map(f => (
+            <div key={f} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{
+                width: 18, height: 18, borderRadius: "50%",
+                background: "rgba(255,255,255,0.07)",
+                border: "1px solid rgba(255,255,255,0.12)",
+                display: "grid", placeItems: "center", flexShrink: 0,
+              }}>
+                <svg viewBox="0 0 12 12" fill="none" style={{ width: 7, height: 7 }}>
+                  <polyline points="2,6 5,9 10,3" stroke="rgba(255,255,255,0.6)" strokeWidth={2} strokeLinecap="round" />
+                </svg>
+              </div>
+              <span style={{ fontFamily: "var(--font-inter)", fontSize: "0.85rem", color: "rgba(255,255,255,0.45)", letterSpacing: "-0.01em" }}>
+                {f}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Repo URL input */}
+      <div data-a="field" style={{ marginBottom: error ? "0.5rem" : "3rem" }}>
+        <label style={{ display: "block", fontFamily: "var(--font-dm-mono)", fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.28)", marginBottom: "0.6rem" }}>
+          Your repo or file link
+        </label>
+        <input
+          type="url"
+          value={repoUrl}
+          onChange={e => onChangeRepo(e.target.value)}
+          placeholder="https://github.com/your-username/your-repo"
+          className="c-input"
+          onKeyDown={e => { if (e.key === "Enter") onNext() }}
+          style={{
+            width: "100%",
+            background: "transparent",
+            border: "none",
+            borderBottom: `1px solid ${error ? "rgba(255,80,80,0.55)" : "rgba(255,255,255,0.1)"}`,
+            padding: "0.75rem 0",
+            color: "#fff",
+            fontFamily: "var(--font-inter)",
+            fontSize: "clamp(1.0rem, 1.8vw, 1.3rem)",
+            fontWeight: 300,
+            letterSpacing: "-0.02em",
+            boxSizing: "border-box",
+          }}
+          onFocus={e => { if (!error) e.currentTarget.style.borderBottomColor = "rgba(255,255,255,0.38)" }}
+          onBlur={e => { if (!error) e.currentTarget.style.borderBottomColor = "rgba(255,255,255,0.1)" }}
+        />
+        <p style={{ fontFamily: "var(--font-inter)", fontSize: "0.78rem", color: "rgba(255,255,255,0.2)", marginTop: "0.55rem", lineHeight: 1.5 }}>
+          GitHub-Repo, ZIP-URL oder jeder andere Link zu deinen Projektdateien — wir richten alles ein.
+        </p>
+        {error && <ErrorMsg msg={error} style={{ marginTop: "0.4rem" }} />}
+      </div>
+      {error && <div style={{ marginBottom: "2.5rem" }} />}
+
+      <div data-a="nav"><NavRow onBack={onBack} onNext={onNext} nextLabel="Continue" /></div>
     </div>
   )
 }
