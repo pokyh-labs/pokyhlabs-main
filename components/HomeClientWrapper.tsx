@@ -29,6 +29,7 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
   // Team showcase refs
   const photoFrameRef = useRef<HTMLDivElement>(null);
   const photoParallaxRef = useRef<HTMLDivElement>(null);
+  const photoRevealRef = useRef<HTMLDivElement>(null);
   const photoImageRef = useRef<HTMLDivElement>(null);
   const dimLeftRef = useRef<HTMLDivElement>(null);
   const dimRightRef = useRef<HTMLDivElement>(null);
@@ -239,14 +240,16 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
     }
 
     // --- Team photo reveal + parallax (photo first, THEN text panels) ---
-    if (photoFrameRef.current && photoImageRef.current && photoParallaxRef.current) {
+    if (photoFrameRef.current && photoRevealRef.current && photoParallaxRef.current) {
       // Set the initial hidden state immediately so nothing flashes on mount.
       // CSS already has the frame at visibility:hidden and panels at opacity:0.
       gsap.set(photoFrameRef.current, {
         visibility: "visible",
         clipPath: "inset(50% 48% 50% 48%)",
       });
-      gsap.set(photoImageRef.current, { scale: 1.45 });
+      // Reveal-scale lives on a dedicated wrapper so it doesn't fight the
+      // hover transforms (xPercent / scale) on .team-photo-image.
+      gsap.set(photoRevealRef.current, { scale: 1.45 });
       gsap.set(".team-name-block", { opacity: 0, y: 28 });
 
       const photoTl = gsap.timeline({ paused: true });
@@ -257,7 +260,7 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
         ease: "expo.out",
       });
       photoTl.to(
-        photoImageRef.current,
+        photoRevealRef.current,
         { scale: 1, duration: 2.0, ease: "expo.out" },
         "<"
       );
@@ -762,13 +765,15 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
               <div className="team-photo-outer">
                 <div className="team-photo-frame" ref={photoFrameRef}>
                   <div className="team-photo-parallax" ref={photoParallaxRef}>
-                    <div
-                      className="team-photo-image"
-                      ref={photoImageRef}
-                      style={{ backgroundImage: "url(/assets/wir.png)" }}
-                      role="img"
-                      aria-label="Felix Plattner and Emanuel Pfeifer"
-                    />
+                    <div className="team-photo-reveal" ref={photoRevealRef}>
+                      <div
+                        className="team-photo-image"
+                        ref={photoImageRef}
+                        style={{ backgroundImage: "url(/assets/wir.png)" }}
+                        role="img"
+                        aria-label="Felix Plattner and Emanuel Pfeifer"
+                      />
+                    </div>
                     <div className="team-photo-dim team-photo-dim-left" ref={dimLeftRef} />
                     <div className="team-photo-dim team-photo-dim-right" ref={dimRightRef} />
                     <div className="team-photo-vignette" />

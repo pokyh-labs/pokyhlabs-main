@@ -190,6 +190,15 @@ body {
   will-change: transform;
 }
 
+/* Reveal wrapper around the photo so GSAP can animate scale independently
+   from the hover transforms applied to .team-photo-image. It must fill the
+   frame so the inner absolute image can cover it. */
+.team-photo-reveal {
+  position: absolute;
+  inset: 0;
+  will-change: transform;
+}
+
 .team-photo-image {
   position: absolute;
   inset: 0;
