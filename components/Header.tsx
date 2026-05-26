@@ -1,9 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import gsap from "gsap";
 
+// useLayoutEffect warns during SSR. Fall back to useEffect on the server so
+// Next.js doesn't print the warning, but use the layout variant on the client
+// — header snapping needs to happen before the browser paints to avoid a
+// frame where the burger is the wrong size after a resize.
+const useIsoLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
+
 const COLOR_DUR = "0.35s";
+const MOBILE_BREAKPOINT = 1024;
 
 type Lang = "DE" | "EN" | "IT";
 const LANGS: { code: Lang; label: string }[] = [
@@ -33,11 +40,128 @@ const MENU_LINKS: { href: string; label: string; description: string; meta: stri
 // styling, so there's no global color flip on scroll.
 const LOGO_FILTER_TRANSITION = "filter 0.45s cubic-bezier(.55,.05,.25,1)";
 
+// Smooth-scroll helpers that prefer the page Lenis instance (exposed by
+// HomeClientWrapper) and fall back to native smooth scroll if it isn't ready.
+function smoothScrollToTop() {
+  const lenis = (window as unknown as { __lenis?: { scrollTo: (t: number | HTMLElement, o?: object) => void } }).__lenis;
+  if (lenis) {
+    lenis.scrollTo(0, { duration: 1.2 });
+  } else {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+}
+
+function smoothScrollToHash(hash: string) {
+  const id = hash.replace(/^#/, "");
+  const target = document.getElementById(id);
+  if (!target) return false;
+  const lenis = (window as unknown as { __lenis?: { scrollTo: (t: number | HTMLElement, o?: object) => void } }).__lenis;
+  if (lenis) {
+    lenis.scrollTo(target, { duration: 1.2, offset: 0 });
+  } else {
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+  return true;
+}
+
+type HeaderEls = {
+  logoText: HTMLElement | null;
+  nav: HTMLElement | null;
+  lang: HTMLElement | null;
+  burger: HTMLElement | null;
+  contact: HTMLElement | null;
+};
+
+// Instantly snap every header element to the correct state for the given
+// viewport + scroll combo. Used on mount and on viewport-breakpoint crossings
+// so resizing the window doesn't leave stale inline transforms or widths.
+function snapToState(isMobile: boolean, scrolled: boolean, els: HeaderEls) {
+  if (isMobile) {
+    // Logo text fades on scroll
+    gsap.set(els.logoText, {
+      opacity: scrolled ? 0 : 1,
+      x: scrolled ? -16 : 0,
+      y: 0,
+      scale: scrolled ? 0.9 : 1,
+      pointerEvents: scrolled ? "none" : "auto",
+    });
+    // Everything else: visible, no transform residue. Nav + contact are
+    // additionally hidden by CSS media queries, but we clear their tween
+    // state so coming back to desktop is clean.
+    gsap.set([els.nav, els.lang, els.contact], {
+      opacity: 1,
+      x: 0,
+      y: 0,
+      scale: 1,
+      pointerEvents: "auto",
+    });
+    gsap.set(els.burger, {
+      opacity: 1,
+      x: 0,
+      y: 0,
+      scale: 1,
+      width: 54,
+      pointerEvents: "auto",
+    });
+    return;
+  }
+
+  // Desktop snap
+  if (scrolled) {
+    gsap.set([els.logoText, els.nav, els.lang], {
+      opacity: 0,
+      x: 0,
+      y: -14,
+      scale: 0.88,
+      pointerEvents: "none",
+    });
+    gsap.set(els.burger, {
+      opacity: 1,
+      x: 0,
+      y: 0,
+      scale: 1,
+      width: 54,
+      pointerEvents: "auto",
+    });
+    gsap.set(els.contact, {
+      opacity: 1,
+      x: 0,
+      y: 0,
+      scale: 1,
+      pointerEvents: "auto",
+    });
+  } else {
+    gsap.set([els.logoText, els.nav, els.lang], {
+      opacity: 1,
+      x: 0,
+      y: 0,
+      scale: 1,
+      pointerEvents: "auto",
+    });
+    gsap.set(els.burger, {
+      opacity: 0,
+      x: 70,
+      y: 0,
+      scale: 1,
+      width: 0,
+      pointerEvents: "none",
+    });
+    gsap.set(els.contact, {
+      opacity: 1,
+      x: 0,
+      y: 0,
+      scale: 1,
+      pointerEvents: "auto",
+    });
+  }
+}
+
 export default function Header() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [lang, setLang] = useState<Lang>("DE");
   const [logoBlack, setLogoBlack] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   const logoRef = useRef<HTMLAnchorElement>(null);
   const logoTextRef = useRef<HTMLSpanElement>(null);
@@ -47,6 +171,16 @@ export default function Header() {
   const contactRef = useRef<HTMLAnchorElement>(null);
   const firstScrollRun = useRef(true);
   const scrollTlRef = useRef<gsap.core.Timeline | null>(null);
+  const prevIsMobileRef = useRef<boolean | null>(null);
+
+  // --- viewport tracking: mobile / medium share the compact header layout ---
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`);
+    const apply = () => setIsMobile(mq.matches);
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, []);
 
   // --- scroll detection with directional damper ---
   // Going down: enter the "scrolled" state quickly (snappy).
@@ -129,94 +263,135 @@ export default function Header() {
   }, []);
 
   // --- GSAP transition: scrolled state ---
-  useEffect(() => {
-    // Skip the very first run so the initial mount doesn't trigger an animation
-    if (firstScrollRun.current) {
-      firstScrollRun.current = false;
+  // Two modes feed into this effect:
+  //   1. Scroll position changes → animate between unscrolled/scrolled state
+  //   2. Viewport size crosses the mobile breakpoint → SNAP to the correct
+  //      state for the new viewport (no animation), wiping any leftover
+  //      inline transforms / widths GSAP applied in the other mode.
+  // The snap path is what makes window-resizing work — otherwise the burger
+  // is left at translateX(70px) when going desktop→mobile, etc.
+  // Runs as a layout effect so the snap happens before the browser paints
+  // (otherwise you can see one frame of the previous mode's layout).
+  useIsoLayoutEffect(() => {
+    scrollTlRef.current?.kill();
+
+    const viewportChanged = prevIsMobileRef.current !== isMobile;
+    prevIsMobileRef.current = isMobile;
+
+    const isFirst = firstScrollRun.current;
+    firstScrollRun.current = false;
+
+    // Snap (no animation) when viewport just crossed the breakpoint OR on
+    // the very first paint.
+    const snap = isFirst || viewportChanged;
+
+    if (snap) {
+      snapToState(isMobile, scrolled, {
+        logoText: logoTextRef.current,
+        nav: navLinksRef.current,
+        lang: langBtnRef.current,
+        burger: burgerRef.current,
+        contact: contactRef.current,
+      });
       return;
     }
 
-    // Kill any in-flight scroll transition so the new one starts from the
-    // current rendered state (not from a reverted initial state).
-    scrollTlRef.current?.kill();
+    // Past this point: only the scroll state changed. Animate.
+    if (isMobile) {
+      const tl = gsap.timeline();
+      scrollTlRef.current = tl;
+      if (scrolled) {
+        tl.to(logoTextRef.current, {
+          opacity: 0,
+          x: -16,
+          scale: 0.9,
+          pointerEvents: "none",
+          duration: 0.35,
+          ease: "power3.in",
+        });
+      } else {
+        tl.to(logoTextRef.current, {
+          opacity: 1,
+          x: 0,
+          scale: 1,
+          pointerEvents: "auto",
+          duration: 0.4,
+          ease: "power3.out",
+        });
+      }
+      return;
+    }
 
     if (scrolled) {
       const tl = gsap.timeline();
       scrollTlRef.current = tl;
 
-        // Phase 1: fade out NavLinks / Sprachen-Button and Logo text
-        tl.to([logoTextRef.current, navLinksRef.current, langBtnRef.current], {
-          opacity: 0,
-          y: -14,
-          scale: 0.88,
-          pointerEvents: "none",
-          duration: 0.35,
-          ease: "power3.in",
-          stagger: 0.035,
-        });
+      tl.to([logoTextRef.current, navLinksRef.current, langBtnRef.current], {
+        opacity: 0,
+        y: -14,
+        scale: 0.88,
+        pointerEvents: "none",
+        duration: 0.35,
+        ease: "power3.in",
+        stagger: 0.035,
+      });
 
-        // Phase 2: Burger slides in from the right + width 0→54 pushes Contact left
-        tl.fromTo(
-          burgerRef.current,
-          { opacity: 0, x: 70, width: 0 },
-          {
-            opacity: 1,
-            x: 0,
-            width: 54,
-            pointerEvents: "auto",
-            duration: 0.65,
-            ease: "back.out(1.6)",
-          },
-          "+=0.05"
-        );
+      tl.fromTo(
+        burgerRef.current,
+        { opacity: 0, x: 70, width: 0 },
+        {
+          opacity: 1,
+          x: 0,
+          width: 54,
+          pointerEvents: "auto",
+          duration: 0.65,
+          ease: "back.out(1.6)",
+        },
+        "+=0.05"
+      );
 
-        // Tiny bounce on Contact so the push feels alive
-        tl.fromTo(
-          contactRef.current,
-          { scale: 0.94 },
-          { scale: 1, duration: 0.4, ease: "back.out(2)" },
-          "<0.05"
-        );
+      tl.fromTo(
+        contactRef.current,
+        { scale: 0.94 },
+        { scale: 1, duration: 0.4, ease: "back.out(2)" },
+        "<0.05"
+      );
     } else {
       const tl = gsap.timeline();
       scrollTlRef.current = tl;
 
-        // Phase 1 (mirror of scroll-down Phase 2): Burger slides back out
-        // → Contact pushes the burger to the right, width 54→0 closes the gap
-        tl.to(burgerRef.current, {
-          opacity: 0,
-          x: 70,
-          width: 0,
-          pointerEvents: "none",
-          duration: 0.65,
-          ease: "back.in(1.6)",
-        });
+      tl.to(burgerRef.current, {
+        opacity: 0,
+        x: 70,
+        width: 0,
+        pointerEvents: "none",
+        duration: 0.65,
+        ease: "back.in(1.6)",
+      });
 
-        // Contact bounces back as the burger is pushed out
-        tl.fromTo(
-          contactRef.current,
-          { scale: 1.06 },
-          { scale: 1, duration: 0.4, ease: "back.out(2)" },
-          "<0.05"
-        );
+      tl.fromTo(
+        contactRef.current,
+        { scale: 1.06 },
+        { scale: 1, duration: 0.4, ease: "back.out(2)" },
+        "<0.05"
+      );
 
-        // Phase 2 (mirror of scroll-down Phase 1): NavLinks / Sprachen and Logo text fade in
-        tl.fromTo(
-          [logoTextRef.current, navLinksRef.current, langBtnRef.current],
-          { opacity: 0, y: -14, scale: 0.88 },
-          {
-            opacity: 1,
-            y: 0,
-            scale: 1,
-            pointerEvents: "auto",
-            duration: 0.35,
-            ease: "power3.out",
-            stagger: 0.035,
-          },
-          "+=0.05"
-        );
+      tl.fromTo(
+        [logoTextRef.current, navLinksRef.current, langBtnRef.current],
+        { opacity: 0, y: -14, scale: 0.88 },
+        {
+          opacity: 1,
+          y: 0,
+          scale: 1,
+          pointerEvents: "auto",
+          duration: 0.35,
+          ease: "power3.out",
+          stagger: 0.035,
+        },
+        "+=0.05"
+      );
     }
-  }, [scrolled]);
+  }, [scrolled, isMobile]);
 
   // --- lock body scroll when menu open ---
   useEffect(() => {
@@ -236,9 +411,21 @@ export default function Header() {
     } catch {}
   };
 
+  const onLogoClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (typeof window === "undefined") return;
+    if (window.location.pathname === "/") {
+      e.preventDefault();
+      smoothScrollToTop();
+      if (window.location.hash) {
+        history.replaceState(null, "", "/");
+      }
+    }
+  };
+
   return (
     <>
       <header
+        className="site-header"
         style={{
           position: "fixed",
           top: 0,
@@ -258,6 +445,8 @@ export default function Header() {
           ref={logoRef}
           href="/"
           aria-label="pokyh.studio home"
+          onClick={onLogoClick}
+          className="site-header-logo"
           style={{
             display: "inline-flex",
             alignItems: "center",
@@ -272,6 +461,7 @@ export default function Header() {
             alt="pokyh.studio logo"
             width={46}
             height={46}
+            className="site-header-logo-img"
             style={{
               display: "block",
               objectFit: "contain",
@@ -283,6 +473,7 @@ export default function Header() {
           />
           <span
             ref={logoTextRef}
+            className="site-header-logo-text"
             style={{
               fontWeight: 800,
               fontStyle: "italic",
@@ -314,6 +505,7 @@ export default function Header() {
         <nav
           ref={navLinksRef}
           aria-label="Sections"
+          className="site-header-nav"
           style={{
             display: "flex",
             gap: 64,
@@ -334,6 +526,7 @@ export default function Header() {
 
         <nav
           aria-label="Primary"
+          className="site-header-actions"
           style={{
             justifySelf: "end",
             display: "flex",
@@ -366,9 +559,20 @@ export default function Header() {
 }
 
 function NavLink({ href, label }: { href: string; label: string }) {
+  const onClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (typeof window === "undefined") return;
+    if (href.startsWith("/#") && window.location.pathname === "/") {
+      const hash = href.slice(1); // "#about"
+      if (smoothScrollToHash(hash)) {
+        e.preventDefault();
+        history.replaceState(null, "", href);
+      }
+    }
+  };
   return (
     <a
       href={href}
+      onClick={onClick}
       style={{
         color: "currentColor",
         textDecoration: "none",
@@ -409,6 +613,7 @@ function ContactPill({ contactRef }: { contactRef: React.RefObject<HTMLAnchorEle
     <a
       ref={contactRef}
       href="/contact"
+      className="site-header-contact"
       style={{
         background: "#0c0c0c",
         color: "#fff",
@@ -442,12 +647,18 @@ function BurgerButton({
   burgerRef: React.RefObject<HTMLButtonElement | null>;
   onClick: () => void;
 }) {
+  // Initial inline state matches the *desktop unscrolled* layout (collapsed).
+  // The GSAP snap effect in <Header /> instantly overrides this on first paint
+  // for any other state, and CSS @media rules force the visible state on
+  // tablets/phones regardless of inline values — so resizing the window keeps
+  // the burger in sync without any flicker.
   return (
     <button
       ref={burgerRef}
       type="button"
       aria-label="Open menu"
       onClick={onClick}
+      className="site-header-burger"
       style={{
         width: 0,
         height: 54,
@@ -527,7 +738,11 @@ function LanguageButton({
   };
 
   return (
-    <div ref={wrapRef} style={{ position: "relative", display: "inline-block" }}>
+    <div
+      ref={wrapRef}
+      className="site-header-lang"
+      style={{ position: "relative", display: "inline-block" }}
+    >
       <div ref={innerRef} style={{ position: "relative" }}>
         <button
           type="button"
@@ -579,6 +794,7 @@ function LanguageButton({
 
         <div
           role="menu"
+          className="site-header-lang-menu"
           style={{
             position: "absolute",
             top: "calc(100% + 18px)",
@@ -804,6 +1020,29 @@ function MenuOverlay({
     return () => document.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
+  const onMenuLinkClick = (
+    e: React.MouseEvent<HTMLAnchorElement>,
+    href: string
+  ) => {
+    onClose();
+    if (typeof window === "undefined") return;
+    if (href === "/" && window.location.pathname === "/") {
+      e.preventDefault();
+      setTimeout(() => smoothScrollToTop(), 50);
+      if (window.location.hash) history.replaceState(null, "", "/");
+      return;
+    }
+    if (href.startsWith("/#") && window.location.pathname === "/") {
+      e.preventDefault();
+      const hash = href.slice(1);
+      setTimeout(() => {
+        if (smoothScrollToHash(hash)) {
+          history.replaceState(null, "", href);
+        }
+      }, 50);
+    }
+  };
+
   return (
     <div
       ref={overlayRef}
@@ -832,6 +1071,7 @@ function MenuOverlay({
       {/* Content layer — padding identical to header so the close button
           lines up exactly with the burger position */}
       <div
+        className="menu-overlay-inner"
         style={{
           position: "relative",
           width: "100%",
@@ -945,6 +1185,7 @@ function MenuOverlay({
 
         {/* Middle: two-column area — nav links left, hover preview right */}
         <div
+          className="menu-overlay-grid"
           style={{
             flex: 1,
             display: "grid",
@@ -956,6 +1197,7 @@ function MenuOverlay({
           {/* Big nav links */}
           <div
             ref={linksContainerRef}
+            className="menu-overlay-links"
             style={{
               display: "flex",
               flexDirection: "column",
@@ -968,14 +1210,14 @@ function MenuOverlay({
               <a
                 key={href}
                 href={href}
-                onClick={onClose}
+                onClick={(e) => onMenuLinkClick(e, href)}
                 onMouseEnter={() => setHoveredIdx(i)}
                 className="menu-link"
                 style={{
                   display: "block",
                   color: "#fcfaf6",
                   textDecoration: "none",
-                  fontSize: "clamp(2.6rem, 7.5vw, 6.5rem)",
+                  fontSize: "clamp(2.2rem, 7.5vw, 6.5rem)",
                   fontWeight: 600,
                   letterSpacing: "-0.035em",
                   lineHeight: 1.05,
@@ -1007,6 +1249,7 @@ function MenuOverlay({
           <div
             ref={previewRef}
             aria-hidden="true"
+            className="menu-overlay-preview"
             style={{
               alignSelf: "stretch",
               display: "flex",
