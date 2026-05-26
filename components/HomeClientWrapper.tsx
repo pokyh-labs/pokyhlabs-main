@@ -212,6 +212,7 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
       {/* Dark section */}
       <div
         ref={contentRef}
+        data-theme="dark"
         style={{
           position: "relative",
           zIndex: 2,
@@ -369,14 +370,14 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
         </div>
       </div>
 
-      {/* White About section — thick translucent line draws itself top→bottom */}
+      {/* About section — thick translucent line draws itself top→bottom */}
       <section
         ref={whiteRef}
         id="about"
         style={{
           position: "relative",
           zIndex: 3,
-          backgroundColor: "#fafafa",
+          backgroundColor: "var(--bg)",
           minHeight: "240vh",
           color: "#0c0c0c",
           marginTop: "-1px",
