@@ -493,3 +493,138 @@ body {
     gap: 1.75rem;
   }
 }
+
+/* ── Site header (responsive) ───────────────────────────────────── */
+/* On tablet/mobile the center nav and the contact pill disappear; only the
+   language switch and the hamburger remain on the right. The !important
+   rules here override any inline transforms / widths GSAP may have left
+   behind during a window resize from desktop → mobile, so the burger always
+   ends up visible without a stale translateX. */
+@media (max-width: 1024px) {
+  .site-header {
+    padding: 16px 22px !important;
+    grid-template-columns: 1fr auto !important;
+  }
+  .site-header-nav {
+    display: none !important;
+  }
+  .site-header-contact {
+    display: none !important;
+  }
+  .site-header-logo-text {
+    font-size: 24px !important;
+  }
+  .site-header-burger {
+    width: 54px !important;
+    opacity: 1 !important;
+    transform: none !important;
+    pointer-events: auto !important;
+  }
+  .site-header-lang {
+    opacity: 1 !important;
+    transform: none !important;
+    pointer-events: auto !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .site-header {
+    padding: 14px 18px !important;
+  }
+  .site-header-logo-img {
+    width: 40px !important;
+    height: 40px !important;
+  }
+  .site-header-logo-text {
+    font-size: 20px !important;
+  }
+  .site-header-actions {
+    gap: 10px !important;
+  }
+  .site-header-lang button,
+  .site-header-burger {
+    width: 46px !important;
+    height: 46px !important;
+  }
+  .site-header-lang button svg,
+  .site-header-burger svg {
+    width: 19px !important;
+    height: 19px !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .site-header {
+    padding: 12px 14px !important;
+  }
+  .site-header-logo-img {
+    width: 36px !important;
+    height: 36px !important;
+  }
+  .site-header-logo-text {
+    font-size: 17px !important;
+  }
+}
+
+/* Language pop-out should not run off the right edge on narrow screens */
+@media (max-width: 480px) {
+  .site-header-lang-menu {
+    min-width: 200px !important;
+    transform: translate(-72%, 0) !important;
+  }
+}
+
+/* ── Menu overlay (responsive) ──────────────────────────────────── */
+@media (max-width: 1024px) {
+  .menu-overlay-inner {
+    padding: 16px 22px !important;
+  }
+  .menu-overlay-grid {
+    grid-template-columns: 1fr !important;
+    gap: 24px !important;
+  }
+  .menu-overlay-preview {
+    display: none !important;
+  }
+  .menu-overlay-links {
+    padding-left: 0 !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .menu-overlay-inner {
+    padding: 14px 18px !important;
+  }
+}
+
+/* ── Hero socials (responsive) ──────────────────────────────────── */
+@media (max-width: 768px) {
+  aside[aria-label="Socials"] {
+    left: 18px !important;
+    bottom: 80px !important;
+    gap: 16px !important;
+  }
+  aside[aria-label="Socials"] svg {
+    width: 26px !important;
+    height: 26px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  aside[aria-label="Socials"] {
+    left: 14px !important;
+    bottom: 78px !important;
+    gap: 14px !important;
+  }
+  aside[aria-label="Socials"] svg {
+    width: 24px !important;
+    height: 24px !important;
+  }
+}
+
+/* Headline padding tighter on tiny screens so words don't wrap awkwardly */
+@media (max-width: 480px) {
+  .headline-wrapper {
+    padding: 0 5vw;
+  }
+}

@@ -79,6 +79,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang={siteConfig.lang} className={`${instrumentSerif.variable} ${dmMono.variable} ${inter.variable}`}>
       <head>
+        {/* Run before anything paints:
+            - disable native scroll restoration so reloads always land at top
+            - force a real reload when the page is restored from bfcache or
+              the user hits the back/forward button (otherwise Lenis / GSAP /
+              ScrollTrigger come back in a stale state) */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{if('scrollRestoration' in history){history.scrollRestoration='manual';}var initial=true;window.addEventListener('pageshow',function(e){if(e.persisted){window.location.reload();}});window.addEventListener('popstate',function(){if(initial){return;}window.location.reload();});window.addEventListener('load',function(){window.scrollTo(0,0);initial=false;});}catch(_){}})();`,
+          }}
+        />
         {/* JSON-LD structured data belongs in <head>, not <body>, to avoid React 19 script hoisting issues */}
         <script
           type="application/ld+json"

@@ -1,8 +1,12 @@
 "use client"
 
+
 import { useEffect, useRef, useState, useCallback } from "react"
 import gsap from "gsap"
 import { ScrollTrigger } from "gsap/ScrollTrigger"
+import Lenis from "lenis"
+// Register GSAP plugins globally before any component code runs
+gsap.registerPlugin(ScrollTrigger)
 
 type Step = 1 | 2 | 3 | 4 | 5 | 6
 type VisualStep = { n: number; label: string }
@@ -103,6 +107,23 @@ export default function ContactPage() {
   useEffect(() => {
     gsap.registerPlugin(ScrollTrigger)
 
+    // --- Lenis smooth scroll (matches HomeClientWrapper) ---
+    const lenis = new Lenis({
+      duration: 1.2,
+      easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      smoothWheel: true,
+      wheelMultiplier: 1,
+      touchMultiplier: 1.5,
+    })
+    ;(window as unknown as { __lenis?: unknown }).__lenis = lenis
+    let rafId = 0
+    const raf = (time: number) => {
+      lenis.raf(time)
+      rafId = requestAnimationFrame(raf)
+    }
+    rafId = requestAnimationFrame(raf)
+    lenis.on("scroll", ScrollTrigger.update)
+
     // Cursor glow
     const cursor = document.createElement("div")
     cursor.style.cssText =
@@ -138,48 +159,15 @@ export default function ContactPage() {
       })
     }
 
-    // Curved top on scroll
-    if (formRef.current) {
-      gsap.fromTo(
-        formRef.current,
-        { borderTopLeftRadius: "0%", borderTopRightRadius: "0%" },
-        {
-          borderTopLeftRadius: "50% 150px",
-          borderTopRightRadius: "50% 150px",
-          ease: "none",
-          scrollTrigger: {
-            trigger: formRef.current,
-            start: "top bottom",
-            end: "top top",
-            scrub: true,
-          },
-        }
-      )
-    }
-
-    // Step indicator scroll reveal
-    if (stepIndicatorRef.current) {
-      gsap.fromTo(
-        stepIndicatorRef.current,
-        { opacity: 0, y: 40 },
-        {
-          opacity: 1,
-          y: 0,
-          ease: "none",
-          scrollTrigger: {
-            trigger: stepIndicatorRef.current,
-            start: "top 90%",
-            end: "top 65%",
-            scrub: true,
-          },
-        }
-      )
-    }
+    // No scroll-to-reveal on the section itself — magic happens inside.
 
     return () => {
       window.removeEventListener("mousemove", moveCursor)
       if (document.body.contains(cursor)) document.body.removeChild(cursor)
       ScrollTrigger.getAll().forEach((t) => t.kill())
+      cancelAnimationFrame(rafId)
+      lenis.destroy()
+      delete (window as unknown as { __lenis?: unknown }).__lenis
     }
   }, [])
 
@@ -360,7 +348,7 @@ export default function ContactPage() {
           overflow: "hidden",
         }}
       >
-        <div style={{ maxWidth: 700, margin: "0 auto" }}>
+        <div style={{ maxWidth: 700, margin: "0 auto", position: "relative", zIndex: 2 }}>
 
           {/* Step indicator */}
           {step < 6 && (
@@ -459,47 +447,104 @@ function StepServices({ services, include3d, onToggle, onToggle3d, hostingStack,
   const containerRef = useRef<HTMLDivElement>(null)
   const stackRef = useRef<HTMLDivElement>(null)
   const discountRef = useRef<HTMLDivElement>(null)
+  const threeDRef = useRef<HTMLDivElement>(null)
   const websiteSelected = services.includes("website")
   const hostingSelected = services.includes("hosting")
   const showDiscount = websiteSelected && hostingSelected
   const prevHosting = useRef(hostingSelected)
-  const prevDiscount = useRef(showDiscount)
+  const prevDiscount = useRef(false)
+  const prevWebsite = useRef(websiteSelected)
 
   useEffect(() => {
     const ctx = gsap.context(() => {
-      const tl = gsap.timeline({ defaults: { ease: "power2.out" } })
-      tl.fromTo("[data-a='heading']",   { autoAlpha: 0, y: 28 }, { autoAlpha: 1, y: 0, duration: 0.5 })
-        .fromTo("[data-a='card']",      { autoAlpha: 0, y: 26 }, { autoAlpha: 1, y: 0, duration: 0.42, stagger: 0.09 }, "-=0.22")
-        .fromTo("[data-a='nav']",       { autoAlpha: 0, y: 18 }, { autoAlpha: 1, y: 0, duration: 0.38 }, "-=0.12")
+      // Initial hidden state — visible only when scrolled into view
+      gsap.set("[data-a='heading']", { autoAlpha: 0, y: 24 })
+      gsap.set("[data-a='card']", { autoAlpha: 0, y: 60, scale: 0.92, rotateX: -35, filter: "blur(12px)" })
+      gsap.set("[data-a='nav']", { autoAlpha: 0, y: 18, filter: "blur(8px)" })
+
+      const tl = gsap.timeline({ paused: true, defaults: { ease: "power3.out" } })
+      ScrollTrigger.create({
+        trigger: containerRef.current,
+        start: "top 92%",
+        once: true,
+        onEnter: () => tl.play(),
+      })
+      tl.to("[data-a='heading']", { autoAlpha: 1, y: 0, duration: 0.5 })
+        .to("[data-a='card']", { autoAlpha: 1, y: 0, scale: 1, rotateX: 0, filter: "blur(0px)", duration: 0.85, stagger: 0.08, ease: "expo.out" }, "-=0.2")
+        .to("[data-a='nav']", { autoAlpha: 1, y: 0, filter: "blur(0px)", duration: 0.45 }, "-=0.35")
     }, containerRef)
-    // Set initial hidden state for sections not yet active
+
+    // Initial collapsed state for the three expandable rows
+    if (threeDRef.current && !websiteSelected) {
+      gsap.set(threeDRef.current, { autoAlpha: 0, height: 0, overflow: "hidden" })
+    }
     if (stackRef.current && !hostingSelected) {
       gsap.set(stackRef.current, { autoAlpha: 0, height: 0, overflow: "hidden" })
     }
     if (discountRef.current && !showDiscount) {
       gsap.set(discountRef.current, { autoAlpha: 0, height: 0, overflow: "hidden" })
     }
+
     return () => ctx.revert()
   }, [])
 
-  // Animate tech stack section in/out
+  // Animate 3D toggle in/out when website selection changes
+  useEffect(() => {
+    const el = threeDRef.current
+    if (!el) return
+    if (prevWebsite.current === websiteSelected) return
+    prevWebsite.current = websiteSelected
+    if (websiteSelected) {
+      const inner = el.querySelector<HTMLElement>(".threeD-inner")
+      gsap.fromTo(el,
+        { height: 0, autoAlpha: 0 },
+        {
+          height: "auto", autoAlpha: 1, duration: 0.45, ease: "power3.out",
+          clearProps: "height,overflow",
+          onStart: () => { if (inner) gsap.set(inner, { autoAlpha: 0, y: 18, scale: 0.96, filter: "blur(10px)" }) },
+          onComplete: () => {
+            if (inner) {
+              gsap.to(inner, {
+                autoAlpha: 1, y: 0, scale: 1, filter: "blur(0px)",
+                duration: 0.55, ease: "expo.out",
+              })
+            }
+          },
+        }
+      )
+    } else {
+      gsap.to(el, {
+        height: 0, autoAlpha: 0, duration: 0.28, ease: "power2.in",
+        onStart: () => { if (el) el.style.overflow = "hidden" },
+      })
+    }
+  }, [websiteSelected])
+
+  // Animate tech stack section in/out with staggered children reveal
   useEffect(() => {
     const el = stackRef.current
     if (!el) return
     if (prevHosting.current === hostingSelected) return
     prevHosting.current = hostingSelected
     if (hostingSelected) {
+      const heading = el.querySelector<HTMLElement>("[data-stack='heading']")
+      const desc = el.querySelector<HTMLElement>("[data-stack='desc']")
+      const pills = el.querySelectorAll<HTMLElement>("[data-pill]")
+      gsap.set([heading, desc].filter(Boolean), { autoAlpha: 0, y: 14, filter: "blur(8px)" })
+      gsap.set(pills, { autoAlpha: 0, y: 18, scale: 0.55, filter: "blur(10px)" })
       gsap.fromTo(el,
         { height: 0, autoAlpha: 0 },
         {
-          height: "auto", autoAlpha: 1, duration: 0.42, ease: "power2.out",
+          height: "auto", autoAlpha: 1, duration: 0.45, ease: "power3.out",
           clearProps: "height,overflow",
           onComplete: () => {
-            if (!el) return
-            gsap.fromTo(el.querySelectorAll("[data-pill]"),
-              { autoAlpha: 0, y: 8, scale: 0.93 },
-              { autoAlpha: 1, y: 0, scale: 1, duration: 0.3, stagger: 0.03, ease: "power2.out" }
-            )
+            const tl = gsap.timeline()
+            if (heading) tl.to(heading, { autoAlpha: 1, y: 0, filter: "blur(0px)", duration: 0.5, ease: "power3.out" })
+            if (desc) tl.to(desc, { autoAlpha: 1, y: 0, filter: "blur(0px)", duration: 0.5, ease: "power3.out" }, "-=0.35")
+            tl.to(pills, {
+              autoAlpha: 1, y: 0, scale: 1, filter: "blur(0px)",
+              duration: 0.6, stagger: { each: 0.028, from: "start" }, ease: "expo.out",
+            }, "-=0.3")
           },
         }
       )
@@ -511,16 +556,31 @@ function StepServices({ services, include3d, onToggle, onToggle3d, hostingStack,
     }
   }, [hostingSelected])
 
-  // Animate discount badge in/out
+  // Animate discount badge in/out with springy entry + staggered inner reveal
   useEffect(() => {
     const el = discountRef.current
     if (!el) return
     if (prevDiscount.current === showDiscount) return
     prevDiscount.current = showDiscount
     if (showDiscount) {
+      const icon = el.querySelector<HTMLElement>("[data-discount='icon']")
+      const text = el.querySelectorAll<HTMLElement>("[data-discount='text']")
+      gsap.set(icon, { autoAlpha: 0, scale: 0.4, rotate: -40, filter: "blur(8px)" })
+      gsap.set(text, { autoAlpha: 0, x: -14, filter: "blur(6px)" })
       gsap.fromTo(el,
-        { height: 0, autoAlpha: 0 },
-        { height: "auto", autoAlpha: 1, duration: 0.38, ease: "back.out(1.4)", clearProps: "height,overflow" }
+        { height: 0, autoAlpha: 0, scale: 0.96 },
+        {
+          height: "auto", autoAlpha: 1, scale: 1, duration: 0.5, ease: "back.out(1.6)",
+          clearProps: "height,overflow,scale",
+          onComplete: () => {
+            const tl = gsap.timeline()
+            tl.to(icon, { autoAlpha: 1, scale: 1, rotate: 0, filter: "blur(0px)", duration: 0.6, ease: "back.out(2)" })
+              .to(text, {
+                autoAlpha: 1, x: 0, filter: "blur(0px)",
+                duration: 0.45, stagger: 0.08, ease: "power3.out",
+              }, "-=0.4")
+          },
+        }
       )
     } else {
       gsap.to(el, {
@@ -542,6 +602,7 @@ function StepServices({ services, include3d, onToggle, onToggle3d, hostingStack,
           gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
           gap: 10,
           marginBottom: "1rem",
+          perspective: 1200,
         }}
       >
         {SERVICES.map(svc => {
@@ -582,9 +643,9 @@ function StepServices({ services, include3d, onToggle, onToggle3d, hostingStack,
         })}
       </div>
 
-      {/* 3D toggle — visible when website is selected */}
-      {websiteSelected && (
-        <div style={{ marginBottom: "1rem" }}>
+      {/* 3D toggle — always in DOM, GSAP-animated in/out when website is toggled */}
+      <div ref={threeDRef} style={{ overflow: "hidden" }}>
+        <div className="threeD-inner" style={{ marginBottom: "1rem", willChange: "transform, filter, opacity" }}>
           <button
             onClick={onToggle3d}
             className="svc-btn"
@@ -622,15 +683,15 @@ function StepServices({ services, include3d, onToggle, onToggle3d, hostingStack,
             </div>
           </button>
         </div>
-      )}
+      </div>
 
       {/* Tech stack — always in DOM, GSAP-animated in/out when hosting is toggled */}
       <div ref={stackRef} style={{ overflow: "hidden" }}>
         <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "1.1rem", marginBottom: "1rem" }}>
-          <p style={{ fontFamily: "var(--font-dm-mono)", fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.28)", marginBottom: "0.45rem" }}>
+          <p data-stack="heading" style={{ fontFamily: "var(--font-dm-mono)", fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.28)", marginBottom: "0.45rem", willChange: "transform, filter, opacity" }}>
             Tech Stack
           </p>
-          <p style={{ fontFamily: "var(--font-inter)", fontSize: "0.78rem", color: "rgba(255,255,255,0.2)", lineHeight: 1.5, marginBottom: "0.9rem" }}>
+          <p data-stack="desc" style={{ fontFamily: "var(--font-inter)", fontSize: "0.78rem", color: "rgba(255,255,255,0.2)", lineHeight: 1.5, marginBottom: "0.9rem", willChange: "transform, filter, opacity" }}>
             Was soll gehostet werden? Mehrfachauswahl möglich.
           </p>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
@@ -664,7 +725,7 @@ function StepServices({ services, include3d, onToggle, onToggle3d, hostingStack,
       </div>
 
       {/* Combo discount — always in DOM, GSAP-animated in/out when website+hosting toggled */}
-      <div ref={discountRef} style={{ overflow: "hidden" }}>
+      <div ref={discountRef} style={{ overflow: "hidden", height: 0 }}>
         <div style={{
           background: "rgba(89,61,248,0.07)",
           border: "1px solid rgba(89,61,248,0.22)",
@@ -675,21 +736,22 @@ function StepServices({ services, include3d, onToggle, onToggle3d, hostingStack,
           alignItems: "center",
           gap: 12,
         }}>
-          <div style={{
+          <div data-discount="icon" style={{
             width: 32, height: 32, borderRadius: 8,
             background: "rgba(89,61,248,0.15)",
             border: "1px solid rgba(89,61,248,0.28)",
             display: "grid", placeItems: "center", flexShrink: 0,
+            willChange: "transform, filter, opacity",
           }}>
             <svg viewBox="0 0 20 20" fill="none" stroke="rgba(167,139,250,0.8)" strokeWidth={1.4} style={{ width: 16, height: 16 }}>
               <path d="M9 2l1.5 4.5H15l-3.5 2.5L13 13.5 9 11l-4 2.5 1.5-4.5L3 6.5h4.5z" />
             </svg>
           </div>
           <div>
-            <p style={{ fontFamily: "var(--font-inter)", fontSize: "0.875rem", fontWeight: 600, color: "rgba(167,139,250,0.92)", letterSpacing: "-0.01em" }}>
+            <p data-discount="text" style={{ fontFamily: "var(--font-inter)", fontSize: "0.875rem", fontWeight: 600, color: "rgba(167,139,250,0.92)", letterSpacing: "-0.01em", willChange: "transform, filter, opacity" }}>
               5% Kombirabatt auf die Entwicklung
             </p>
-            <p style={{ fontFamily: "var(--font-inter)", fontSize: "0.75rem", color: "rgba(255,255,255,0.28)", marginTop: 2, lineHeight: 1.4 }}>
+            <p data-discount="text" style={{ fontFamily: "var(--font-inter)", fontSize: "0.75rem", color: "rgba(255,255,255,0.28)", marginTop: 2, lineHeight: 1.4, willChange: "transform, filter, opacity" }}>
               Website + Hosting zusammen → 5% Rabatt auf die Entwicklungskosten. Hosting bleibt fix €20/mo.
             </p>
           </div>
@@ -711,11 +773,22 @@ function StepHosting({ repoUrl, onChangeRepo, error, onBack, onNext }: {
 
   useEffect(() => {
     const ctx = gsap.context(() => {
-      const tl = gsap.timeline({ defaults: { ease: "power2.out" } })
-      tl.fromTo("[data-a='heading']",  { autoAlpha: 0, y: 28 }, { autoAlpha: 1, y: 0, duration: 0.5 })
-        .fromTo("[data-a='pricing']",  { autoAlpha: 0, y: 22 }, { autoAlpha: 1, y: 0, duration: 0.45 }, "-=0.25")
-        .fromTo("[data-a='field']",    { autoAlpha: 0, y: 22 }, { autoAlpha: 1, y: 0, duration: 0.45 }, "-=0.15")
-        .fromTo("[data-a='nav']",      { autoAlpha: 0, y: 18 }, { autoAlpha: 1, y: 0, duration: 0.38 }, "-=0.15")
+      gsap.set("[data-a='heading']", { autoAlpha: 0, y: 28, filter: "blur(10px)" })
+      gsap.set("[data-a='pricing']", { autoAlpha: 0, y: 30, scale: 0.96, filter: "blur(12px)" })
+      gsap.set("[data-a='field']",   { autoAlpha: 0, y: 22, filter: "blur(8px)" })
+      gsap.set("[data-a='nav']",     { autoAlpha: 0, y: 18, filter: "blur(8px)" })
+
+      const tl = gsap.timeline({ paused: true, defaults: { ease: "power3.out" } })
+      ScrollTrigger.create({
+        trigger: containerRef.current,
+        start: "top 92%",
+        once: true,
+        onEnter: () => tl.play(),
+      })
+      tl.to("[data-a='heading']",  { autoAlpha: 1, y: 0, filter: "blur(0px)", duration: 0.55 })
+        .to("[data-a='pricing']",  { autoAlpha: 1, y: 0, scale: 1, filter: "blur(0px)", duration: 0.7, ease: "expo.out" }, "-=0.3")
+        .to("[data-a='field']",    { autoAlpha: 1, y: 0, filter: "blur(0px)", duration: 0.55 }, "-=0.4")
+        .to("[data-a='nav']",      { autoAlpha: 1, y: 0, filter: "blur(0px)", duration: 0.45 }, "-=0.3")
     }, containerRef)
     return () => ctx.revert()
   }, [])
@@ -837,10 +910,20 @@ function StepDescription({ value, onChange, onBack, onNext }: {
 
   useEffect(() => {
     const ctx = gsap.context(() => {
-      const tl = gsap.timeline({ defaults: { ease: "power2.out" } })
-      tl.fromTo("[data-a='heading']",  { autoAlpha: 0, y: 28 }, { autoAlpha: 1, y: 0, duration: 0.5 })
-        .fromTo("[data-a='field']",    { autoAlpha: 0, y: 22 }, { autoAlpha: 1, y: 0, duration: 0.45 }, "-=0.2")
-        .fromTo("[data-a='nav']",      { autoAlpha: 0, y: 18 }, { autoAlpha: 1, y: 0, duration: 0.38 }, "-=0.15")
+      gsap.set("[data-a='heading']", { autoAlpha: 0, y: 28, filter: "blur(10px)" })
+      gsap.set("[data-a='field']",   { autoAlpha: 0, y: 24, filter: "blur(10px)" })
+      gsap.set("[data-a='nav']",     { autoAlpha: 0, y: 18, filter: "blur(8px)" })
+
+      const tl = gsap.timeline({ paused: true, defaults: { ease: "power3.out" } })
+      ScrollTrigger.create({
+        trigger: containerRef.current,
+        start: "top 92%",
+        once: true,
+        onEnter: () => tl.play(),
+      })
+      tl.to("[data-a='heading']", { autoAlpha: 1, y: 0, filter: "blur(0px)", duration: 0.55 })
+        .to("[data-a='field']",   { autoAlpha: 1, y: 0, filter: "blur(0px)", duration: 0.6, ease: "expo.out" }, "-=0.3")
+        .to("[data-a='nav']",     { autoAlpha: 1, y: 0, filter: "blur(0px)", duration: 0.45 }, "-=0.3")
     }, containerRef)
     return () => ctx.revert()
   }, [])
@@ -886,10 +969,20 @@ function StepCompany({ value, onChange, onBack, onNext }: {
 
   useEffect(() => {
     const ctx = gsap.context(() => {
-      const tl = gsap.timeline({ defaults: { ease: "power2.out" } })
-      tl.fromTo("[data-a='heading']", { autoAlpha: 0, y: 28 }, { autoAlpha: 1, y: 0, duration: 0.5 })
-        .fromTo("[data-a='field']",   { autoAlpha: 0, y: 22 }, { autoAlpha: 1, y: 0, duration: 0.45 }, "-=0.2")
-        .fromTo("[data-a='nav']",     { autoAlpha: 0, y: 18 }, { autoAlpha: 1, y: 0, duration: 0.38 }, "-=0.15")
+      gsap.set("[data-a='heading']", { autoAlpha: 0, y: 28, filter: "blur(10px)" })
+      gsap.set("[data-a='field']",   { autoAlpha: 0, y: 24, filter: "blur(10px)" })
+      gsap.set("[data-a='nav']",     { autoAlpha: 0, y: 18, filter: "blur(8px)" })
+
+      const tl = gsap.timeline({ paused: true, defaults: { ease: "power3.out" } })
+      ScrollTrigger.create({
+        trigger: containerRef.current,
+        start: "top 92%",
+        once: true,
+        onEnter: () => tl.play(),
+      })
+      tl.to("[data-a='heading']", { autoAlpha: 1, y: 0, filter: "blur(0px)", duration: 0.55 })
+        .to("[data-a='field']",   { autoAlpha: 1, y: 0, filter: "blur(0px)", duration: 0.6, ease: "expo.out" }, "-=0.3")
+        .to("[data-a='nav']",     { autoAlpha: 1, y: 0, filter: "blur(0px)", duration: 0.45 }, "-=0.3")
     }, containerRef)
     return () => ctx.revert()
   }, [])
@@ -942,10 +1035,20 @@ function StepDeadline({ value, onChange, onBack, onNext }: {
 
   useEffect(() => {
     const ctx = gsap.context(() => {
-      const tl = gsap.timeline({ defaults: { ease: "power2.out" } })
-      tl.fromTo("[data-a='heading']", { autoAlpha: 0, y: 28 }, { autoAlpha: 1, y: 0, duration: 0.5 })
-        .fromTo("[data-a='field']",   { autoAlpha: 0, y: 22 }, { autoAlpha: 1, y: 0, duration: 0.45 }, "-=0.2")
-        .fromTo("[data-a='nav']",     { autoAlpha: 0, y: 18 }, { autoAlpha: 1, y: 0, duration: 0.38 }, "-=0.15")
+      gsap.set("[data-a='heading']", { autoAlpha: 0, y: 28, filter: "blur(10px)" })
+      gsap.set("[data-a='field']",   { autoAlpha: 0, y: 24, filter: "blur(10px)" })
+      gsap.set("[data-a='nav']",     { autoAlpha: 0, y: 18, filter: "blur(8px)" })
+
+      const tl = gsap.timeline({ paused: true, defaults: { ease: "power3.out" } })
+      ScrollTrigger.create({
+        trigger: containerRef.current,
+        start: "top 92%",
+        once: true,
+        onEnter: () => tl.play(),
+      })
+      tl.to("[data-a='heading']", { autoAlpha: 1, y: 0, filter: "blur(0px)", duration: 0.55 })
+        .to("[data-a='field']",   { autoAlpha: 1, y: 0, filter: "blur(0px)", duration: 0.6, ease: "expo.out" }, "-=0.3")
+        .to("[data-a='nav']",     { autoAlpha: 1, y: 0, filter: "blur(0px)", duration: 0.45 }, "-=0.3")
     }, containerRef)
     return () => ctx.revert()
   }, [])
@@ -1000,10 +1103,20 @@ function StepContact({ name, setName, email, setEmail, errors, submitting, submi
 
   useEffect(() => {
     const ctx = gsap.context(() => {
-      const tl = gsap.timeline({ defaults: { ease: "power2.out" } })
-      tl.fromTo("[data-a='heading']", { autoAlpha: 0, y: 28 }, { autoAlpha: 1, y: 0, duration: 0.5 })
-        .fromTo("[data-a='field']",   { autoAlpha: 0, y: 22 }, { autoAlpha: 1, y: 0, duration: 0.42, stagger: 0.1 }, "-=0.2")
-        .fromTo("[data-a='nav']",     { autoAlpha: 0, y: 18 }, { autoAlpha: 1, y: 0, duration: 0.38 }, "-=0.15")
+      gsap.set("[data-a='heading']", { autoAlpha: 0, y: 28, filter: "blur(10px)" })
+      gsap.set("[data-a='field']",   { autoAlpha: 0, y: 24, filter: "blur(10px)" })
+      gsap.set("[data-a='nav']",     { autoAlpha: 0, y: 18, filter: "blur(8px)" })
+
+      const tl = gsap.timeline({ paused: true, defaults: { ease: "power3.out" } })
+      ScrollTrigger.create({
+        trigger: containerRef.current,
+        start: "top 92%",
+        once: true,
+        onEnter: () => tl.play(),
+      })
+      tl.to("[data-a='heading']", { autoAlpha: 1, y: 0, filter: "blur(0px)", duration: 0.55 })
+        .to("[data-a='field']",   { autoAlpha: 1, y: 0, filter: "blur(0px)", duration: 0.55, stagger: 0.1, ease: "expo.out" }, "-=0.3")
+        .to("[data-a='nav']",     { autoAlpha: 1, y: 0, filter: "blur(0px)", duration: 0.45 }, "-=0.3")
     }, containerRef)
     return () => ctx.revert()
   }, [])
@@ -1068,15 +1181,63 @@ function StepSuccess({ name }: { name: string }) {
 
 /* ── Shared ──────────────────────────────────────────────────────── */
 function StepHeading({ label, title, sub }: { label: string; title: string; sub: string }) {
+  const titleRef = useRef<HTMLHeadingElement>(null)
+  const labelRef = useRef<HTMLParagraphElement>(null)
+  const subRef = useRef<HTMLParagraphElement>(null)
+
+  useEffect(() => {
+    const t = titleRef.current
+    if (!t) return
+    // Split title into per-word spans (preserves spaces) with per-char inner spans for blur reveal
+    const words = title.split(" ")
+    t.innerHTML = words
+      .map(
+        w =>
+          `<span class="h-word" style="display:inline-block;white-space:nowrap;margin-right:0.28em;">` +
+          [...w].map(c => `<span class="h-char" style="display:inline-block;">${c === " " ? "&nbsp;" : c}</span>`).join("") +
+          `</span>`
+      )
+      .join("")
+
+    const chars = t.querySelectorAll(".h-char")
+    // Set initial hidden state so nothing is visible before viewport entry
+    gsap.set(chars, { autoAlpha: 0, y: 28, filter: "blur(14px)", rotateX: -40 })
+
+      const tl = gsap.timeline({ paused: true })
+      ScrollTrigger.create({
+        trigger: t,
+        start: "top 92%",
+        once: true,
+        onEnter: () => tl.play(),
+      })
+    if (labelRef.current) {
+      tl.fromTo(labelRef.current,
+        { autoAlpha: 0, y: 12, filter: "blur(8px)" },
+        { autoAlpha: 1, y: 0, filter: "blur(0px)", duration: 0.5, ease: "power2.out" })
+    }
+    tl.to(chars, {
+      autoAlpha: 1, y: 0, filter: "blur(0px)", rotateX: 0,
+      duration: 0.7, ease: "power3.out", stagger: 0.018,
+    }, "-=0.3")
+    if (subRef.current) {
+      tl.fromTo(subRef.current,
+        { autoAlpha: 0, y: 14, filter: "blur(6px)" },
+        { autoAlpha: 1, y: 0, filter: "blur(0px)", duration: 0.5, ease: "power2.out" }, "-=0.4")
+    }
+  }, [title])
+
   return (
-    <div style={{ marginBottom: "clamp(1.75rem, 4vh, 3rem)" }}>
-      <p style={{ fontFamily: "var(--font-dm-mono)", fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(255,255,255,0.2)", marginBottom: "0.85rem" }}>
+    <div style={{ marginBottom: "clamp(1.75rem, 4vh, 3rem)", perspective: 800 }}>
+      <p ref={labelRef} style={{ fontFamily: "var(--font-dm-mono)", fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(255,255,255,0.4)", marginBottom: "0.85rem", opacity: 0 }}>
         {label}
       </p>
-      <h2 style={{ fontSize: "clamp(1.6rem, 3.2vw, 2.8rem)", fontWeight: 400, letterSpacing: "-0.03em", color: "#fff", fontFamily: "var(--font-inter)", marginBottom: "0.55rem" }}>
+      <h2
+        ref={titleRef}
+        style={{ fontSize: "clamp(1.6rem, 3.2vw, 2.8rem)", fontWeight: 400, letterSpacing: "-0.03em", color: "#fff", fontFamily: "var(--font-inter)", marginBottom: "0.55rem", lineHeight: 1.08 }}
+      >
         {title}
       </h2>
-      <p style={{ fontFamily: "var(--font-inter)", fontSize: "0.875rem", color: "rgba(255,255,255,0.28)", lineHeight: 1.5 }}>
+      <p ref={subRef} style={{ fontFamily: "var(--font-inter)", fontSize: "0.875rem", color: "rgba(255,255,255,0.4)", lineHeight: 1.5, opacity: 0 }}>
         {sub}
       </p>
     </div>
@@ -1131,6 +1292,53 @@ function ErrorMsg({ msg, style: s }: { msg: string; style?: React.CSSProperties 
 function NavRow({ onBack, onNext, nextLabel, isFinal, disabled }: {
   onBack?: () => void; onNext: () => void; nextLabel: string; isFinal?: boolean; disabled?: boolean
 }) {
+  const btnRef = useRef<HTMLButtonElement>(null)
+  const labelRef = useRef<HTMLSpanElement>(null)
+
+  // Magnetic effect — button reacts even when cursor is OUTSIDE its bounds
+  // (extended hover zone with smooth falloff)
+  useEffect(() => {
+    const btn = btnRef.current
+    const label = labelRef.current
+    if (!btn || !label || disabled) return
+
+    const xTo  = gsap.quickTo(btn,   "x", { duration: 0.55, ease: "power3.out" })
+    const yTo  = gsap.quickTo(btn,   "y", { duration: 0.55, ease: "power3.out" })
+    const lxTo = gsap.quickTo(label, "x", { duration: 0.45, ease: "power3.out" })
+    const lyTo = gsap.quickTo(label, "y", { duration: 0.45, ease: "power3.out" })
+    const ZONE = 45          // px beyond button edges wo Magnetismus wirkt
+    const PULL = 0.42        // how strongly the button itself follows the cursor
+    const LABEL_PULL = 0.18  // inner-label parallax inside the button
+
+    const handleMove = (e: MouseEvent) => {
+      const rect = btn.getBoundingClientRect()
+      const halfW = rect.width / 2
+      const halfH = rect.height / 2
+      const dx = e.clientX - (rect.left + halfW)
+      const dy = e.clientY - (rect.top + halfH)
+
+      // Distance to nearest edge (0 if cursor is inside the button)
+      const edgeX = Math.max(0, Math.abs(dx) - halfW)
+      const edgeY = Math.max(0, Math.abs(dy) - halfH)
+      const edgeDist = Math.hypot(edgeX, edgeY)
+
+      if (edgeDist < ZONE) {
+        // Smooth quadratic falloff — 1 at edge, 0 at zone boundary
+        const f = 1 - edgeDist / ZONE
+        const falloff = f * f
+        xTo(dx * PULL * falloff)
+        yTo(dy * PULL * falloff)
+        lxTo(dx * LABEL_PULL * falloff)
+        lyTo(dy * LABEL_PULL * falloff)
+      } else {
+        xTo(0); yTo(0); lxTo(0); lyTo(0)
+      }
+    }
+
+    document.addEventListener("mousemove", handleMove)
+    return () => document.removeEventListener("mousemove", handleMove)
+  }, [disabled])
+
   return (
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "1.5rem", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
       {onBack ? (
@@ -1143,9 +1351,10 @@ function NavRow({ onBack, onNext, nextLabel, isFinal, disabled }: {
         </button>
       ) : <div />}
       <button
+        ref={btnRef}
         onClick={onNext}
         disabled={disabled}
-        className="c-btn"
+        className="c-btn-magnetic"
         style={{
           background: "rgba(255,255,255,0.92)",
           color: "#111",
@@ -1158,9 +1367,11 @@ function NavRow({ onBack, onNext, nextLabel, isFinal, disabled }: {
           fontFamily: "var(--font-inter)",
           letterSpacing: "-0.01em",
           opacity: disabled ? 0.5 : 1,
+          willChange: "transform",
+          position: "relative",
         }}
       >
-        {nextLabel}
+        <span ref={labelRef} style={{ display: "inline-block", willChange: "transform" }}>{nextLabel}</span>
       </button>
     </div>
   )
