@@ -70,19 +70,53 @@ app.use((req, res, next) => {
   })(req, res, next);
 });
 
-// CORS
-app.use(cors({
-  origin: (origin, cb) => {
-    const port = process.env.PORT || 3000;
-    const fallback = `http://localhost:${port}`;
-    const allowed = (process.env.ALLOWED_ORIGINS || fallback).split(',').map(s => s.trim());
-    if (!origin || allowed.includes(origin)) return cb(null, true);
-    cb(new Error('Not allowed by CORS'));
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+// ── Static files (served BEFORE CORS) ────────────────────────────────────────
+// Vite production builds emit <script type="module" crossorigin> which causes
+// browsers to include an Origin header on asset requests. Serving assets here
+// short-circuits before the CORS middleware runs — no false CORS rejections.
+const BACKEND_ROOT = path.resolve(__dirname, '..');
+const _rawUploadPath = process.env.UPLOAD_PATH || 'uploads';
+const UPLOAD_SERVE_DIR = path.isAbsolute(_rawUploadPath)
+  ? _rawUploadPath
+  : path.resolve(BACKEND_ROOT, _rawUploadPath);
+
+app.use('/uploads', express.static(UPLOAD_SERVE_DIR, {
+  maxAge: '7d',
+  etag: true,
+  lastModified: true,
 }));
+app.use(express.static(path.join(__dirname, '../public'), {
+  maxAge: '1h',
+  etag: true,
+  redirect: false,
+}));
+
+// ── CORS ──────────────────────────────────────────────────────────────────────
+// Dynamic origin check: allows ALLOWED_ORIGINS env var, localhost, AND whatever
+// host/IP the client actually used to reach this server — so LAN access
+// (e.g. 192.168.x.x), custom domains, and Cloudflare tunnels all work without
+// hardcoding a single address.
+app.use((req, res, next) => {
+  const port = process.env.PORT || 3000;
+  const fallback = `http://localhost:${port}`;
+  const allowed = (process.env.ALLOWED_ORIGINS || fallback).split(',').map(s => s.trim());
+
+  // Include the server's own origin as seen by this request (any IP or hostname)
+  const host = req.headers.host;
+  if (host) {
+    [`http://${host}`, `https://${host}`].forEach(o => { if (!allowed.includes(o)) allowed.push(o); });
+  }
+
+  cors({
+    origin: (origin, cb) => {
+      if (!origin || allowed.includes(origin)) return cb(null, true);
+      cb(new Error('Not allowed by CORS'));
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  })(req, res, next);
+});
 
 // Body parsing — blogs/projects carry rich HTML content so they need a larger limit;
 // other endpoints use a strict 10 kb limit to reduce DoS surface
@@ -106,22 +140,6 @@ app.use(requestLogger);
 
 // Global rate limiting
 app.use('/api/', globalRateLimiter);
-
-// Uploads - served as static with cache headers
-// Must resolve the same path that multer writes to (UPLOAD_PATH env var or fallback)
-const UPLOAD_SERVE_DIR = path.resolve(process.env.UPLOAD_PATH || path.join(__dirname, '../uploads'));
-app.use('/uploads', express.static(UPLOAD_SERVE_DIR, {
-  maxAge: '7d',
-  etag: true,
-  lastModified: true,
-}));
-
-// Admin & public static files
-app.use(express.static(path.join(__dirname, '../public'), {
-  maxAge: '1h',
-  etag: true,
-  redirect: false, // prevent /admin → /admin/ redirect loop with Next.js proxy
-}));
 
 // API routes
 app.use('/api/auth',        authRoutes);

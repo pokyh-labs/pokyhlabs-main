@@ -20,7 +20,7 @@ try {
   Path2D = canvas.Path2D;
   if (typeof global.DOMMatrix === 'undefined' && DOMMatrix) global.DOMMatrix = DOMMatrix;
   if (typeof global.Path2D === 'undefined' && Path2D) global.Path2D = Path2D;
-  pdfjsLib = require('pdfjs-dist');
+  pdfjsLib = require('pdfjs-dist/legacy/build/pdf.js');
   // Disable web worker for Node.js environment
   pdfjsLib.GlobalWorkerOptions.workerSrc = '';
 } catch (e) {
