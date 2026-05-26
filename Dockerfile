@@ -1,27 +1,25 @@
 # ── Build stage ───────────────────────────────────────────────────────────────
-FROM node:20-alpine AS builder
+FROM node:24-alpine AS builder
 WORKDIR /app
 
-# Build tools required for native addons (sqlite3 has no musl pre-built binary
-# and must be compiled from source on Alpine Linux)
+# Build tools required for native addons (sqlite3 needs compilation on Alpine/musl)
 RUN apk add --no-cache python3 make g++
 
 # Root deps (Next.js, gsap, dotenv …)
 COPY package*.json ./
 RUN npm ci --ignore-scripts
 
-# Backend deps — postinstall (vite build) was removed from package.json so plain
-# npm ci is safe here; install scripts for native addons (sqlite3, sharp …) run.
-# .npmrc is copied alongside package.json so loglevel=error takes effect during install.
-COPY backend/package*.json backend/.npmrc ./backend/
-RUN cd backend && npm ci
+# Backend deps — only package.json (no lock file) so npm install picks up the
+# latest compatible versions. .npmrc suppresses noise during install.
+COPY backend/package.json backend/.npmrc ./backend/
+RUN cd backend && npm install
 
 # Copy everything and build (next build + vite admin build)
 COPY . .
 RUN npm run build
 
 # ── Production stage ──────────────────────────────────────────────────────────
-FROM node:20-alpine
+FROM node:24-alpine
 RUN apk add --no-cache dumb-init wget
 WORKDIR /app
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
@@ -40,9 +38,7 @@ COPY --from=builder --chown=appuser:appgroup /app/backend/public         ./backe
 COPY --from=builder --chown=appuser:appgroup /app/backend/scripts        ./backend/scripts
 COPY --from=builder --chown=appuser:appgroup /app/backend/node_modules   ./backend/node_modules
 
-# All COPY commands above already use --chown=appuser:appgroup.
-# Only the newly created directories need ownership set — NOT all of /app
-# (chown -R on node_modules takes ~68 seconds and adds no value).
+# Only chown the newly created directories (not all of /app — saves ~68 seconds)
 RUN mkdir -p data backend/uploads logs \
  && chown appuser:appgroup data backend/uploads logs
 

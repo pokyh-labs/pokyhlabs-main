@@ -14,7 +14,7 @@ services:
       - "${PORT:-3000}:${PORT:-3000}"
     volumes:
       - ./backend/uploads:/app/backend/uploads
-      - ./backend/logs:/app/logs
+      - ./backend/logs:/app/backend/logs
       - sqlite_data:/app/data
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:${PORT:-3000}/api/blogs"]
@@ -24,7 +24,7 @@ services:
 
   # ── Cloudflare Tunnel (optional, aktivieren mit --profile tunnel) ──
   cloudflared:
-    image: cloudflare/cloudflared:2025.1.1
+    image: cloudflare/cloudflared:latest
     restart: unless-stopped
     command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
     depends_on:
