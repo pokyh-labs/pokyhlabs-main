@@ -17,12 +17,19 @@ const LANGS: { code: Lang; label: string }[] = [
 export default function Header() {
   const [scrolled, setScrolled] = useState(false);
   const [dark, setDark] = useState(false);
+  const [atBottom, setAtBottom] = useState(false);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 40);
+    const onScroll = () => {
+      setScrolled(window.scrollY > 40);
+    };
     window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
     onScroll();
-    return () => window.removeEventListener("scroll", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+    };
   }, []);
 
   useEffect(() => {
@@ -32,14 +39,14 @@ export default function Header() {
         'footer, [data-theme="dark"]'
       );
       let isDark = false;
+      let footerNear = false;
       for (const t of targets) {
         const r = t.getBoundingClientRect();
-        if (r.top <= SAMPLE_Y && r.bottom >= SAMPLE_Y) {
-          isDark = true;
-          break;
-        }
+        if (r.top <= SAMPLE_Y && r.bottom >= SAMPLE_Y) isDark = true;
+        if (t.tagName === "FOOTER" && r.top <= 80) footerNear = true;
       }
       setDark(isDark);
+      setAtBottom(footerNear);
     };
     check();
     window.addEventListener("scroll", check, { passive: true });
@@ -76,10 +83,15 @@ export default function Header() {
         backdropFilter: scrolled ? "blur(12px) saturate(1.4)" : "none",
         WebkitBackdropFilter: scrolled ? "blur(12px) saturate(1.4)" : "none",
         color: textColor,
+        transform: atBottom ? "translateY(-130%)" : "translateY(0)",
+        opacity: atBottom ? 0 : 1,
+        pointerEvents: atBottom ? "none" : "auto",
         transition: [
           `background ${COLOR_DUR} ease`,
           `border-color ${COLOR_DUR} ease`,
           `color ${COLOR_DUR} ease`,
+          `transform ${DUR} ${SPRING}`,
+          `opacity ${COLOR_DUR} ease`,
         ].join(", "),
       }}
     >

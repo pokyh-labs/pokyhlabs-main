@@ -1,5 +1,14 @@
 @import "lenis/dist/lenis.css";
 
+/* LOT display font — used only for the giant POKYH footer wordmark */
+@font-face {
+  font-family: "LOT";
+  src: url("/assets/fonts/lot.otf") format("opentype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --bg: #e4e2dc;
   --ink: #593df8;
@@ -15,6 +24,7 @@
 html {
   /* Lenis handles scrolling */
   overflow-x: clip;
+  background: #593df8;
 }
 
 body {
@@ -129,4 +139,81 @@ body {
 [data-reveal].is-visible {
   opacity: 1;
   transform: none;
+}
+
+/* ── Footer ─────────────────────────────────────────────────────── */
+/* Full-screen purple panel: fills the viewport when scrolled to the bottom */
+.ft-root {
+  position: relative;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  padding: 5rem 5vw 0;
+  overflow: clip;
+}
+.ft-top {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) 2.4fr;
+  gap: 3rem;
+  align-items: start;
+}
+.ft-cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 2.5rem;
+}
+.ft-bottom {
+  width: 100%;
+  max-width: 1280px;
+  margin: 3.5rem auto 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1.5rem 2rem;
+}
+
+/* Wordmark wrapper is pushed to the bottom of the full-height footer */
+.ft-wordmark-link {
+  display: block;
+  margin-top: auto;
+  text-decoration: none;
+}
+/* Giant POKYH wordmark — bottom-right corner, H flush with right & bottom edge */
+.ft-wordmark {
+  margin-top: 2rem;
+  margin-bottom: -3.55vw;
+  margin-right: -5vw;
+  color: #fff;
+  font-family: "LOT", "Helvetica Neue", Arial, sans-serif;
+  font-size: 26vw;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 0.78;
+  text-align: right;
+  white-space: nowrap;
+  user-select: none;
+}
+
+@media (max-width: 860px) {
+  .ft-top {
+    grid-template-columns: 1fr;
+    gap: 2.25rem;
+  }
+}
+@media (max-width: 560px) {
+  .ft-root {
+    padding-top: 3.5rem;
+  }
+  .ft-cols {
+    grid-template-columns: 1fr 1fr;
+    gap: 1.75rem;
+  }
+  .ft-bottom {
+    justify-content: flex-start;
+  }
 }
