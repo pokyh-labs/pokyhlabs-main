@@ -33,6 +33,7 @@ export default function Header() {
   const [lang, setLang] = useState<Lang>("DE");
 
   const logoRef = useRef<HTMLAnchorElement>(null);
+  const logoTextRef = useRef<HTMLSpanElement>(null);
   const navLinksRef = useRef<HTMLElement>(null);
   const langBtnRef = useRef<HTMLDivElement>(null);
   const burgerRef = useRef<HTMLButtonElement>(null);
@@ -78,8 +79,8 @@ export default function Header() {
       const tl = gsap.timeline();
       scrollTlRef.current = tl;
 
-        // Phase 1: fade out Logo / NavLinks / Sprachen-Button
-        tl.to([logoRef.current, navLinksRef.current, langBtnRef.current], {
+        // Phase 1: fade out NavLinks / Sprachen-Button and Logo text
+        tl.to([logoTextRef.current, navLinksRef.current, langBtnRef.current], {
           opacity: 0,
           y: -14,
           scale: 0.88,
@@ -134,9 +135,9 @@ export default function Header() {
           "<0.05"
         );
 
-        // Phase 2 (mirror of scroll-down Phase 1): Logo / NavLinks / Sprachen fade in
+        // Phase 2 (mirror of scroll-down Phase 1): NavLinks / Sprachen and Logo text fade in
         tl.fromTo(
-          [logoRef.current, navLinksRef.current, langBtnRef.current],
+          [logoTextRef.current, navLinksRef.current, langBtnRef.current],
           { opacity: 0, y: -14, scale: 0.88 },
           {
             opacity: 1,
@@ -209,6 +210,7 @@ export default function Header() {
             style={{ display: "block", objectFit: "contain", width: 46, height: 46 }}
           />
           <span
+            ref={logoTextRef}
             style={{
               fontWeight: 800,
               fontStyle: "italic",
