@@ -203,8 +203,10 @@ export default function Footer() {
         data-reveal
         style={{ "--rd": "200ms" } as CSSProperties}
       >
-        <div aria-hidden="true" className="ft-wordmark">
-          POKYH
+        <div className="ft-wordmark-container">
+          <div aria-hidden="true" className="ft-wordmark">
+            POKYH
+          </div>
         </div>
       </a>
     </footer>

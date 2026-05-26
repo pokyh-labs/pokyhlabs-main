@@ -403,7 +403,7 @@ body {
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
-  padding: 5rem 5vw 0;
+  padding: 10rem 5vw 0; /* Abstand oben vergrößert (vorher 5rem) */
   overflow: clip;
 }
 .ft-top {
@@ -435,24 +435,32 @@ body {
 
 /* Wordmark wrapper is pushed to the bottom of the full-height footer */
 .ft-wordmark-link {
-  display: block;
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-end;
   margin-top: auto;
+  margin-right: -5vw;
+  margin-left: -5vw; 
   text-decoration: none;
+}
+/* Container that acts as the responsive boundary */
+.ft-wordmark-container {
+  width: 100%;
+  max-width: 100%;
+  text-align: right;
+  display: flex;
+  justify-content: flex-end;
 }
 /* Giant POKYH wordmark — bottom-right corner, H flush with right & bottom edge */
 .ft-wordmark {
   margin-top: 2rem;
-  /* margins in em so they stay proportional when font-size changes */
-  margin-bottom: -0.137em;
-  margin-right: -0.192em;
+  margin-bottom: 0; /* Negativen Margin entfernt, damit es unten nicht abgeschnitten wird */
   color: #fff;
   font-family: "LOT", "Helvetica Neue", Arial, sans-serif;
-  /* scales with viewport width AND with user/system font-size preference */
-  font-size: clamp(16rem, 26vw, 42rem);
+  font-size: 22.5vw; /* Schrift deutlich größer gemacht */
   font-weight: 800;
-  letter-spacing: -0.04em;
-  line-height: 0.78;
-  text-align: right;
+  letter-spacing: normal;
+  line-height: 0.85; /* Line-Height leicht erhöht, um den Zeichen mehr vertikalen Raum im Div zu geben */
   white-space: nowrap;
   user-select: none;
 }
