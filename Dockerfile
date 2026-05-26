@@ -28,6 +28,7 @@ COPY --from=builder --chown=appuser:appgroup /app/package.json     ./package.jso
 COPY --from=builder --chown=appuser:appgroup /app/server.js        ./server.js
 
 # Backend source + built admin + scripts + deps
+COPY --from=builder --chown=appuser:appgroup /app/backend/package.json   ./backend/package.json
 COPY --from=builder --chown=appuser:appgroup /app/backend/src            ./backend/src
 COPY --from=builder --chown=appuser:appgroup /app/backend/public         ./backend/public
 COPY --from=builder --chown=appuser:appgroup /app/backend/scripts        ./backend/scripts
