@@ -4,7 +4,7 @@ WORKDIR /app
 
 # Root deps (Next.js, gsap, dotenv …)
 COPY package*.json ./
-RUN npm ci
+RUN npm ci --ignore-scripts
 
 # Backend deps
 COPY backend/package*.json ./backend/
