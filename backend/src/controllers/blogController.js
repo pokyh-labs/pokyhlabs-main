@@ -20,7 +20,7 @@ try {
   Path2D = canvas.Path2D;
   if (typeof global.DOMMatrix === 'undefined' && DOMMatrix) global.DOMMatrix = DOMMatrix;
   if (typeof global.Path2D === 'undefined' && Path2D) global.Path2D = Path2D;
-  pdfjsLib = require('pdfjs-dist/legacy/build/pdf.js');
+  pdfjsLib = require('pdfjs-dist');
   // Disable web worker for Node.js environment
   pdfjsLib.GlobalWorkerOptions.workerSrc = '';
 } catch (e) {
@@ -29,7 +29,11 @@ try {
 
 const cheerio = require('cheerio');
 
-const UPLOAD_DIR = path.resolve(process.env.UPLOAD_PATH || './uploads');
+const BACKEND_ROOT = path.resolve(__dirname, '../..');
+const _rawUploadPath = process.env.UPLOAD_PATH || 'uploads';
+const UPLOAD_DIR = path.isAbsolute(_rawUploadPath)
+  ? _rawUploadPath
+  : path.resolve(BACKEND_ROOT, _rawUploadPath);
 const PDF_SCALE = 2.0;
 const PDF_MAX_PAGES = 30;
 
@@ -196,7 +200,7 @@ async function update(req, res) {
   if (req.body.image_url !== undefined) {
     // New image was uploaded separately via presign token; delete old one if changed
     if (req.body.image_url && req.body.image_url !== blog.image_url && blog.image_url) {
-      const oldPath = path.join(process.env.UPLOAD_PATH || './uploads', path.basename(blog.image_url));
+      const oldPath = path.join(UPLOAD_DIR, path.basename(blog.image_url));
       fs.unlink(oldPath, () => {});
     }
     updates.image_url = req.body.image_url || null;
@@ -214,7 +218,7 @@ async function deleteBlog(req, res) {
   if (!blog) return err(res, 404, 'Blog not found');
 
   if (blog.image_url) {
-    const imgPath = path.join(process.env.UPLOAD_PATH || './uploads', path.basename(blog.image_url));
+    const imgPath = path.join(UPLOAD_DIR, path.basename(blog.image_url));
     fs.unlink(imgPath, () => {});
   }
 

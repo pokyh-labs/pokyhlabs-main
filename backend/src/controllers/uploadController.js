@@ -5,7 +5,11 @@ const multer = require('multer');
 const { ALLOWED_IMAGE_MIMES, validateMagicBytes } = require('../config/security');
 const logger = require('../utils/logger');
 
-const UPLOAD_DIR = path.resolve(process.env.UPLOAD_PATH || './uploads');
+const BACKEND_ROOT = path.resolve(__dirname, '../..');
+const _rawUploadPath = process.env.UPLOAD_PATH || 'uploads';
+const UPLOAD_DIR = path.isAbsolute(_rawUploadPath)
+  ? _rawUploadPath
+  : path.resolve(BACKEND_ROOT, _rawUploadPath);
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
 const TOKEN_TTL_MS = 10 * 60 * 1000; // 10 minutes

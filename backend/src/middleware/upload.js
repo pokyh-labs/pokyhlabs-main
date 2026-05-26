@@ -5,13 +5,13 @@ const crypto = require('crypto');
 const { ALLOWED_IMAGE_MIMES, validateMagicBytes } = require('../config/security');
 
 // Resolve UPLOAD_PATH to an absolute path.
-// If the env var is set but relative (e.g. ./uploads), resolve it relative to
-// THIS file so it always points to backend/uploads regardless of CWD.
-// docker-compose.yml sets UPLOAD_PATH=/app/backend/uploads explicitly.
-const _rawUploadPath = process.env.UPLOAD_PATH || path.join(__dirname, '../../uploads');
+// Relative paths (e.g. ./uploads or uploads) are resolved relative to the
+// backend root directory so they always point to backend/uploads regardless of CWD.
+const BACKEND_ROOT = path.resolve(__dirname, '../..');
+const _rawUploadPath = process.env.UPLOAD_PATH || 'uploads';
 const UPLOAD_DIR = path.isAbsolute(_rawUploadPath)
   ? _rawUploadPath
-  : path.resolve(__dirname, _rawUploadPath);
+  : path.resolve(BACKEND_ROOT, _rawUploadPath);
 const MAX_SIZE = parseInt(process.env.MAX_FILE_SIZE_MB || '15') * 1024 * 1024;
 
 if (!fs.existsSync(UPLOAD_DIR)) {
