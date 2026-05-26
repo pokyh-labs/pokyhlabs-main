@@ -1,14 +1,35 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useApi } from '../hooks/useApi';
 import { toast } from '../hooks/useToast';
 
-function StatCard({ value, label, icon, color, delay = 0 }) {
-  const [visible, setVisible] = useState(false);
+/* ─── Count-up hook ────────────────────────────────────────── */
+
+function useCountUp(target, duration = 700) {
+  const [count, setCount] = useState(0);
+  const rafRef = useRef();
 
   useEffect(() => {
-    const t = setTimeout(() => setVisible(true), delay);
-    return () => clearTimeout(t);
-  }, [delay]);
+    if (target == null || isNaN(Number(target))) return;
+    const n = Number(target);
+    if (n === 0) { setCount(0); return; }
+
+    const startTime = performance.now();
+    function tick(now) {
+      const t = Math.min((now - startTime) / duration, 1);
+      const ease = 1 - (1 - t) * (1 - t) * (1 - t);
+      setCount(Math.round(ease * n));
+      if (t < 1) rafRef.current = requestAnimationFrame(tick);
+    }
+    rafRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [target, duration]);
+
+  return count;
+}
+
+function StatCard({ value, label, icon, color, delay = 0 }) {
+  const [hovered, setHovered] = useState(false);
+  const displayed = useCountUp(value, 700);
 
   return (
     <div
@@ -16,51 +37,64 @@ function StatCard({ value, label, icon, color, delay = 0 }) {
       style={{
         display: 'flex',
         alignItems: 'center',
-        gap: '1rem',
-        padding: '1.25rem',
-        transition: 'transform 160ms ease, box-shadow 160ms ease',
+        gap: '1.125rem',
+        padding: '1.375rem',
         cursor: 'default',
         animationDelay: `${delay}ms`,
+        transition: 'transform 220ms var(--ease-spring), box-shadow 220ms var(--ease)',
+        transform: hovered ? 'translateY(-3px) scale(1.010)' : 'translateY(0) scale(1)',
+        boxShadow: hovered ? 'var(--s-md)' : 'var(--s)',
+        overflow: 'hidden',
+        position: 'relative',
       }}
-      onMouseEnter={e => {
-        e.currentTarget.style.transform = 'translateY(-2px)';
-        e.currentTarget.style.boxShadow = 'var(--shadow-md)';
-      }}
-      onMouseLeave={e => {
-        e.currentTarget.style.transform = 'translateY(0)';
-        e.currentTarget.style.boxShadow = 'var(--shadow)';
-      }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
     >
+      {/* Subtle gradient accent in corner */}
       <div style={{
-        width: 44, height: 44,
-        borderRadius: 12,
-        background: `${color}12`,
-        border: `1px solid ${color}22`,
+        position: 'absolute', top: 0, right: 0,
+        width: 80, height: 80,
+        background: `radial-gradient(circle at 100% 0%, ${color}0e 0%, transparent 65%)`,
+        pointerEvents: 'none',
+      }} />
+
+      <div style={{
+        width: 48, height: 48,
+        borderRadius: 14,
+        background: `linear-gradient(145deg, ${color}16, ${color}0a)`,
+        border: `1px solid ${color}24`,
         color,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: '1.1rem',
+        fontSize: '1.2rem',
         flexShrink: 0,
-        transition: 'transform var(--spring)',
+        transition: 'transform 220ms var(--ease-spring)',
+        transform: hovered ? 'scale(1.12) rotate(-6deg)' : 'scale(1) rotate(0deg)',
+        boxShadow: `0 4px 14px ${color}20`,
       }}>
         <i className={`bi ${icon}`} />
       </div>
+
       <div>
-        <div style={{
-          fontSize: '1.8rem',
-          fontWeight: 700,
-          color: 'var(--text)',
-          lineHeight: 1,
-          letterSpacing: '-0.05em',
-          fontVariantNumeric: 'tabular-nums',
-        }}>
-          {value ?? '–'}
+        <div
+          className="num-pop"
+          style={{
+            fontSize: '2.05rem',
+            fontWeight: 700,
+            color: 'var(--l1)',
+            lineHeight: 1,
+            letterSpacing: '-0.055em',
+            fontVariantNumeric: 'tabular-nums',
+            animationDelay: `${delay + 100}ms`,
+          }}
+        >
+          {value != null ? displayed : '–'}
         </div>
         <div style={{
-          color: 'var(--text3)',
-          fontSize: '0.75rem',
-          marginTop: 4,
+          color: 'var(--l3)',
+          fontSize: '0.745rem',
+          marginTop: 5,
           fontWeight: 500,
-          letterSpacing: '0.01em',
+          letterSpacing: '0.002em',
         }}>
           {label}
         </div>
@@ -88,16 +122,25 @@ function fmtUptime(s) {
 function MemBar({ used, total }) {
   const pct = total > 0 ? Math.round((used / total) * 100) : 0;
   const color = pct > 85 ? '#e5383b' : pct > 65 ? '#f59500' : 'var(--accent)';
+  const gradColor = pct > 85 ? '#ef4444, #e5383b' : pct > 65 ? '#fb923c, #f59500' : '#7c5af5, #593df8';
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-        <span style={{ fontSize: '0.73rem', color: 'var(--text3)', fontWeight: 500 }}>Heap</span>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+        <span style={{ fontSize: '0.73rem', color: 'var(--text3)', fontWeight: 500 }}>Heap-Speicher</span>
         <span style={{ fontSize: '0.73rem', color: 'var(--text2)', fontVariantNumeric: 'tabular-nums' }}>
-          {fmtBytes(used)} / {fmtBytes(total)} · {pct}%
+          {fmtBytes(used)} / {fmtBytes(total)}
+          <span style={{ color: 'var(--text3)', marginLeft: 5 }}>· {pct}%</span>
         </span>
       </div>
-      <div style={{ height: 5, borderRadius: 99, background: 'var(--bg3)', overflow: 'hidden' }}>
-        <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 99, transition: 'width 0.6s ease' }} />
+      <div style={{ height: 6, borderRadius: 99, background: 'var(--bg3)', overflow: 'hidden', border: '1px solid var(--border2)' }}>
+        <div style={{
+          height: '100%',
+          width: `${pct}%`,
+          background: `linear-gradient(90deg, ${gradColor})`,
+          borderRadius: 99,
+          transition: 'width 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
+          boxShadow: `0 0 8px ${color}55`,
+        }} />
       </div>
     </div>
   );
