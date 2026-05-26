@@ -190,11 +190,13 @@ body {
 /* Giant POKYH wordmark — bottom-right corner, H flush with right & bottom edge */
 .ft-wordmark {
   margin-top: 2rem;
-  margin-bottom: -3.55vw;
-  margin-right: -5vw;
+  /* margins in em so they stay proportional when font-size changes */
+  margin-bottom: -0.137em;
+  margin-right: -0.192em;
   color: #fff;
   font-family: "LOT", "Helvetica Neue", Arial, sans-serif;
-  font-size: 26vw;
+  /* scales with viewport width AND with user/system font-size preference */
+  font-size: clamp(16rem, 26vw, 42rem);
   font-weight: 800;
   letter-spacing: -0.04em;
   line-height: 0.78;
