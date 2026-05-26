@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { useApi } from '../hooks/useApi';
+import { useApi, getAccessToken } from '../hooks/useApi';
 import { toast } from '../hooks/useToast';
 
-// ── Shared helpers ────────────────────────────────────────────
+// ── Shared helpers ─────────────────────────────────────────────────────────────
 
 function StatusBadge({ ok, label }) {
   return (
@@ -54,11 +54,92 @@ function StepHeader({ number, title, subtitle, done, active }) {
   );
 }
 
-// ── Tabs ──────────────────────────────────────────────────────
+// ── Terminal output component ──────────────────────────────────────────────────
+
+function Terminal({ lines, loading }) {
+  const bottomRef = useRef(null);
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [lines]);
+
+  if (!lines.length && !loading) return null;
+
+  return (
+    <div style={{
+      background: '#0d1117', borderRadius: 8, padding: '0.75rem 1rem',
+      fontFamily: 'ui-monospace, "Cascadia Code", Consolas, monospace',
+      fontSize: '0.78rem', lineHeight: 1.6, color: '#c9d1d9',
+      maxHeight: 220, overflowY: 'auto',
+      border: '1px solid rgba(255,255,255,0.06)',
+      marginTop: '0.75rem',
+    }}>
+      {lines.map((l, i) => (
+        <div key={i} style={{
+          color: l.startsWith('✓') ? '#3fb950'
+               : l.startsWith('error') || l.toLowerCase().includes('error') || l.toLowerCase().includes('failed') ? '#f85149'
+               : '#c9d1d9',
+        }}>{l}</div>
+      ))}
+      {loading && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#8b949e', marginTop: 2 }}>
+          <span className="spinner" style={{ width: 10, height: 10, borderWidth: 1.5 }} />
+          <span>Warte auf Ausgabe…</span>
+        </div>
+      )}
+      <div ref={bottomRef} />
+    </div>
+  );
+}
+
+// ── SSE stream hook ────────────────────────────────────────────────────────────
+
+function useStream(url, { onDone, onError, enabled = true } = {}) {
+  const [lines, setLines]   = useState([]);
+  const [active, setActive] = useState(false);
+  const esRef = useRef(null);
+
+  const start = useCallback(() => {
+    if (esRef.current) { esRef.current.close(); esRef.current = null; }
+    setLines([]);
+    setActive(true);
+
+    const fullUrl = `${url}?token=${encodeURIComponent(getAccessToken() || '')}`;
+    const es = new EventSource(fullUrl);
+    esRef.current = es;
+
+    es.onmessage = (e) => {
+      try {
+        const { type, data } = JSON.parse(e.data);
+        if (type === 'log')   setLines(prev => [...prev, data]);
+        if (type === 'url')   { setLines(prev => [...prev, `URL: ${data}`]); onDone?.({ url: data }); }
+        if (type === 'done')  { setActive(false); es.close(); onDone?.({}); }
+        if (type === 'error') { setActive(false); es.close(); onError?.(data); }
+      } catch {}
+    };
+
+    es.onerror = () => {
+      setActive(false);
+      es.close();
+      esRef.current = null;
+      onError?.('Verbindung unterbrochen');
+    };
+  }, [url, onDone, onError]);
+
+  const cancel = useCallback(() => {
+    if (esRef.current) { esRef.current.close(); esRef.current = null; }
+    setActive(false);
+  }, []);
+
+  useEffect(() => () => esRef.current?.close(), []);
+
+  return { lines, active, start, cancel };
+}
+
+// ── Tabs ───────────────────────────────────────────────────────────────────────
 
 const TABS = [
-  { id: 'tunnel',     label: 'Tunnel Setup',     icon: 'bi-diagram-3-fill' },
-  { id: 'cloudflare', label: 'Cloudflare',        icon: 'bi-cloud-fill' },
+  { id: 'tunnel',     label: 'Tunnel Setup', icon: 'bi-diagram-3-fill' },
+  { id: 'cloudflare', label: 'Cloudflare',   icon: 'bi-cloud-fill' },
 ];
 
 function TabBar({ active, onChange }) {
@@ -85,7 +166,7 @@ function TabBar({ active, onChange }) {
   );
 }
 
-// ── Cloudflare tab ────────────────────────────────────────────
+// ── Cloudflare tab ─────────────────────────────────────────────────────────────
 
 function fmtBytes(bytes) {
   if (!bytes) return '0 B';
@@ -105,9 +186,7 @@ function AnalyticCard({ label, value, icon, color }) {
         <i className={`bi bi-${icon}`} style={{ fontSize: '0.95rem' }} />
       </div>
       <div>
-        <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.05em', lineHeight: 1 }}>
-          {value}
-        </div>
+        <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.05em', lineHeight: 1 }}>{value}</div>
         <div style={{ fontSize: '0.73rem', color: 'var(--text3)', marginTop: 3, fontWeight: 500 }}>{label}</div>
       </div>
     </div>
@@ -116,14 +195,14 @@ function AnalyticCard({ label, value, icon, color }) {
 
 function CloudflarePanel() {
   const { request } = useApi();
-  const [cfConfig,    setCfConfig]    = useState(null);
-  const [analytics,   setAnalytics]   = useState(null);
-  const [tunnelData,  setTunnelData]  = useState(null);
-  const [form,        setForm]        = useState({});
+  const [cfConfig,  setCfConfig]  = useState(null);
+  const [analytics, setAnalytics] = useState(null);
+  const [tunnelData, setTunnelData] = useState(null);
+  const [form,      setForm]      = useState({});
   const [showTokens,  setShowTokens]  = useState(false);
-  const [saving,      setSaving]      = useState(false);
-  const [purging,     setPurging]     = useState(false);
-  const [cfError,     setCfError]     = useState('');
+  const [saving,    setSaving]    = useState(false);
+  const [purging,   setPurging]   = useState(false);
+  const [cfError,   setCfError]   = useState('');
   const [showPurgeConfirm, setShowPurgeConfirm] = useState(false);
 
   const loadAll = useCallback(async () => {
@@ -132,71 +211,49 @@ function CloudflarePanel() {
       const cfg = await request('/cloudflare/config');
       setCfConfig(cfg);
       setForm({
-        CLOUDFLARE_ACCOUNT_ID:  cfg.accountId   || '',
-        CLOUDFLARE_API_TOKEN:   cfg.apiToken     || '',
-        CLOUDFLARE_ZONE_ID:     cfg.zoneId       || '',
-        CLOUDFLARE_TUNNEL_TOKEN: cfg.tunnelToken || '',
+        CLOUDFLARE_ACCOUNT_ID:   cfg.accountId   || '',
+        CLOUDFLARE_API_TOKEN:    cfg.apiToken     || '',
+        CLOUDFLARE_ZONE_ID:      cfg.zoneId       || '',
+        CLOUDFLARE_TUNNEL_TOKEN: cfg.tunnelToken  || '',
       });
     } catch (err) { setCfError(err.message); }
-
-    // Analytics + tunnel (best-effort, may fail if not configured)
     request('/cloudflare/analytics').then(setAnalytics).catch(() => {});
     request('/cloudflare/tunnel').then(setTunnelData).catch(() => {});
   }, [request]);
 
   useEffect(() => { loadAll(); }, [loadAll]);
-
-  // Auto-refresh analytics every 60s
   useEffect(() => {
     const id = setInterval(() => {
       request('/cloudflare/analytics').then(setAnalytics).catch(() => {});
       request('/cloudflare/tunnel').then(setTunnelData).catch(() => {});
-    }, 60000);
+    }, 60_000);
     return () => clearInterval(id);
   }, [request]);
 
   async function handleSave(e) {
-    e.preventDefault();
-    setSaving(true); setCfError('');
+    e.preventDefault(); setSaving(true); setCfError('');
     try {
-      await request('/cloudflare/config', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      });
+      await request('/cloudflare/config', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
       toast('Cloudflare-Konfiguration gespeichert');
       await loadAll();
-    } catch (err) {
-      setCfError(err.message);
-      toast(err.message, 'error');
-    } finally { setSaving(false); }
+    } catch (err) { setCfError(err.message); toast(err.message, 'error'); }
+    finally { setSaving(false); }
   }
 
   async function handlePurge() {
-    setShowPurgeConfirm(false);
-    setPurging(true); setCfError('');
-    try {
-      await request('/cloudflare/purge', { method: 'POST' });
-      toast('Cache erfolgreich geleert');
-    } catch (err) {
-      setCfError(err.message);
-      toast(err.message, 'error');
-    } finally { setPurging(false); }
+    setShowPurgeConfirm(false); setPurging(true); setCfError('');
+    try { await request('/cloudflare/purge', { method: 'POST' }); toast('Cache erfolgreich geleert'); }
+    catch (err) { setCfError(err.message); toast(err.message, 'error'); }
+    finally { setPurging(false); }
   }
 
   function setF(k, v) { setForm(f => ({ ...f, [k]: v })); }
-
   const tunnels = tunnelData?.tunnels || [];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
-      {cfError && (
-        <div className="alert alert-error">
-          <i className="bi bi-exclamation-circle" />{cfError}
-        </div>
-      )}
+      {cfError && <div className="alert alert-error"><i className="bi bi-exclamation-circle" />{cfError}</div>}
 
-      {/* Config form */}
       <form onSubmit={handleSave} className="card">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -205,8 +262,7 @@ function CloudflarePanel() {
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
             <button type="button" className="btn-outline btn-sm" onClick={() => setShowTokens(v => !v)}>
-              <i className={`bi bi-eye${showTokens ? '-slash' : ''}`} />
-              {showTokens ? 'Verbergen' : 'Anzeigen'}
+              <i className={`bi bi-eye${showTokens ? '-slash' : ''}`} />{showTokens ? 'Verbergen' : 'Anzeigen'}
             </button>
             <button type="submit" className="btn-primary btn-sm" disabled={saving}>
               {saving ? <span className="spinner" /> : <i className="bi bi-floppy2-fill" />}
@@ -214,64 +270,38 @@ function CloudflarePanel() {
             </button>
           </div>
         </div>
-
         <div className="grid-2" style={{ gap: '0.875rem' }}>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label className="form-label">Account ID</label>
-            <input
-              value={form.CLOUDFLARE_ACCOUNT_ID || ''}
-              onChange={e => setF('CLOUDFLARE_ACCOUNT_ID', e.target.value)}
-              placeholder="Account-ID eingeben"
-              style={{ fontFamily: 'ui-monospace, monospace', fontSize: '0.82rem' }}
-            />
-          </div>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label className="form-label">Zone ID</label>
-            <input
-              value={form.CLOUDFLARE_ZONE_ID || ''}
-              onChange={e => setF('CLOUDFLARE_ZONE_ID', e.target.value)}
-              placeholder="Zone-ID eingeben"
-              style={{ fontFamily: 'ui-monospace, monospace', fontSize: '0.82rem' }}
-            />
-          </div>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label className="form-label">API Token</label>
-            <input
-              type={showTokens ? 'text' : 'password'}
-              value={form.CLOUDFLARE_API_TOKEN || ''}
-              onChange={e => setF('CLOUDFLARE_API_TOKEN', e.target.value)}
-              placeholder="Leer lassen um nicht zu ändern"
-              style={{ fontFamily: 'ui-monospace, monospace', fontSize: '0.82rem' }}
-            />
-          </div>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label className="form-label">Tunnel Token</label>
-            <input
-              type={showTokens ? 'text' : 'password'}
-              value={form.CLOUDFLARE_TUNNEL_TOKEN || ''}
-              onChange={e => setF('CLOUDFLARE_TUNNEL_TOKEN', e.target.value)}
-              placeholder="Leer lassen um nicht zu ändern"
-              style={{ fontFamily: 'ui-monospace, monospace', fontSize: '0.82rem' }}
-            />
-          </div>
+          {[
+            { key: 'CLOUDFLARE_ACCOUNT_ID', label: 'Account ID', ph: 'Account-ID eingeben', pwd: false },
+            { key: 'CLOUDFLARE_ZONE_ID',    label: 'Zone ID',    ph: 'Zone-ID eingeben',    pwd: false },
+            { key: 'CLOUDFLARE_API_TOKEN',  label: 'API Token',  ph: 'Leer lassen um nicht zu ändern', pwd: true },
+            { key: 'CLOUDFLARE_TUNNEL_TOKEN', label: 'Tunnel Token', ph: 'Leer lassen um nicht zu ändern', pwd: true },
+          ].map(({ key, label, ph, pwd }) => (
+            <div key={key} className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">{label}</label>
+              <input
+                type={pwd && !showTokens ? 'password' : 'text'}
+                value={form[key] || ''}
+                onChange={e => setF(key, e.target.value)}
+                placeholder={ph}
+                style={{ fontFamily: 'ui-monospace, monospace', fontSize: '0.82rem' }}
+              />
+            </div>
+          ))}
         </div>
-
         <p style={{ color: 'var(--text3)', fontSize: '0.72rem', marginTop: '0.875rem' }}>
           <i className="bi bi-lock-fill" style={{ marginRight: 4 }} />
           Tokens werden serverseitig gespeichert und nie im Browser angezeigt.
         </p>
       </form>
 
-      {/* Status + purge */}
       <div className="grid-2" style={{ gap: '0.875rem' }}>
         <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
             <i className="bi bi-wifi" style={{ color: 'var(--accent)', fontSize: '0.9rem' }} />
             <h3 style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text)' }}>Status</h3>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <StatusBadge ok={cfConfig?.configured} label={cfConfig?.configured ? 'Konfiguriert' : 'Nicht konfiguriert'} />
-          </div>
+          <StatusBadge ok={cfConfig?.configured} label={cfConfig?.configured ? 'Konfiguriert' : 'Nicht konfiguriert'} />
           {tunnels.length > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4 }}>
               {tunnels.map(t => (
@@ -296,12 +326,9 @@ function CloudflarePanel() {
             <div style={{ display: 'flex', gap: 6 }}>
               <button className="btn-primary btn-sm" onClick={handlePurge} disabled={purging}
                 style={{ background: '#e5383b', border: 'none' }}>
-                {purging ? <span className="spinner" /> : <i className="bi bi-trash3-fill" />}
-                Jetzt leeren
+                {purging ? <span className="spinner" /> : <i className="bi bi-trash3-fill" />}Jetzt leeren
               </button>
-              <button className="btn-outline btn-sm" onClick={() => setShowPurgeConfirm(false)}>
-                Abbrechen
-              </button>
+              <button className="btn-outline btn-sm" onClick={() => setShowPurgeConfirm(false)}>Abbrechen</button>
             </div>
           ) : (
             <button className="btn-outline btn-sm" onClick={() => setShowPurgeConfirm(true)}
@@ -313,7 +340,6 @@ function CloudflarePanel() {
         </div>
       </div>
 
-      {/* Analytics */}
       {analytics && (
         <div>
           <p style={{ fontWeight: 600, fontSize: '0.8rem', color: 'var(--text)', marginBottom: '0.75rem' }}>
@@ -321,9 +347,9 @@ function CloudflarePanel() {
             Analytics (letzte 24h)
           </p>
           <div className="grid-3" style={{ gap: '0.875rem' }}>
-            <AnalyticCard label="Anfragen" value={analytics.requests?.toLocaleString()} icon="arrow-left-right" color="#593df8" />
-            <AnalyticCard label="Bandbreite" value={fmtBytes(analytics.bandwidth)} icon="hdd-network" color="#28a745" />
-            <AnalyticCard label="Bedrohungen" value={analytics.threats?.toLocaleString()} icon="shield-exclamation" color="#e5383b" />
+            <AnalyticCard label="Anfragen"   value={analytics.requests?.toLocaleString()}  icon="arrow-left-right"   color="#593df8" />
+            <AnalyticCard label="Bandbreite" value={fmtBytes(analytics.bandwidth)}          icon="hdd-network"        color="#28a745" />
+            <AnalyticCard label="Bedrohungen" value={analytics.threats?.toLocaleString()}   icon="shield-exclamation" color="#e5383b" />
           </div>
         </div>
       )}
@@ -331,18 +357,16 @@ function CloudflarePanel() {
   );
 }
 
-// ── Tunnel Setup tab ──────────────────────────────────────────
+// ── Tunnel Setup tab ───────────────────────────────────────────────────────────
 
 function TunnelSetup() {
   const { request } = useApi();
 
-  const [status, setStatus]     = useState(null);
-  const [busyStep, setBusyStep] = useState('');
-  const [error, setError]       = useState('');
-  const [loginUrl, setLoginUrl] = useState('');
-  const [loginPolling, setLoginPolling] = useState(false);
-  const loginPollRef = useRef(null);
-  const [form, setForm]         = useState({ tunnel_name: '', hostname: '', local_service: '' });
+  const [status,       setStatus]       = useState(null);
+  const [busyStep,     setBusyStep]     = useState('');
+  const [error,        setError]        = useState('');
+  const [loginUrl,     setLoginUrl]     = useState('');
+  const [form,         setForm]         = useState({ tunnel_name: '', hostname: '', local_service: '' });
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [reconfiguring, setReconfiguring] = useState(false);
 
@@ -350,27 +374,57 @@ function TunnelSetup() {
     try {
       const s = await request('/tunnel/status');
       setStatus(s);
-      if (!form.local_service && s.localService) {
-        setForm(f => ({ ...f, local_service: f.local_service || s.localService }));
-      }
+      setForm(f => ({ ...f, local_service: f.local_service || s.localService || '' }));
     } catch {}
   }, [request]);
 
   useEffect(() => { load(); }, [load]);
 
+  // ── Install stream ──
+  const installStream = useStream('/api/tunnel/install/stream', {
+    onDone:  () => { toast('cloudflared installiert!'); load(); },
+    onError: (msg) => { setError(msg); toast(msg, 'error'); },
+  });
+
+  // ── Login stream ──
+  const [loginPolling, setLoginPolling] = useState(false);
+  const loginPollRef = useRef(null);
+
+  const loginStream = useStream('/api/tunnel/login/stream', {
+    onDone: (ev) => {
+      if (ev.url) {
+        // URL received — open browser, start polling
+        setLoginUrl(ev.url);
+        setLoginPolling(true);
+        window.open(ev.url, '_blank', 'noopener');
+      } else {
+        // Authentication confirmed
+        setLoginPolling(false);
+        setLoginUrl('');
+        toast('Mit Cloudflare verbunden!');
+        load();
+      }
+    },
+    onError: (msg) => { setLoginPolling(false); setError(msg); toast(msg, 'error'); },
+  });
+
+  // Poll auth status while waiting for user to click the Cloudflare link
   useEffect(() => {
     if (!loginPolling) { clearInterval(loginPollRef.current); return; }
     loginPollRef.current = setInterval(async () => {
       try {
         const s = await request('/tunnel/login/status');
         if (s.authenticated) {
-          setLoginPolling(false); setLoginUrl('');
-          toast('Mit Cloudflare verbunden!'); load();
+          setLoginPolling(false);
+          setLoginUrl('');
+          loginStream.cancel();
+          toast('Mit Cloudflare verbunden!');
+          load();
         }
       } catch {}
     }, 2500);
     return () => clearInterval(loginPollRef.current);
-  }, [loginPolling, request, load]);
+  }, [loginPolling, request, load, loginStream]);
 
   async function doAction(step, fn, msg) {
     setBusyStep(step); setError('');
@@ -379,20 +433,14 @@ function TunnelSetup() {
     finally { setBusyStep(''); }
   }
 
-  async function handleLogin() {
-    setBusyStep('login'); setError('');
-    try {
-      const { url } = await request('/tunnel/login', { method: 'POST' });
-      setLoginUrl(url); setLoginPolling(true);
-      window.open(url, '_blank', 'noopener');
-    } catch (err) { setError(err.message); toast(err.message, 'error'); }
-    finally { setBusyStep(''); }
-  }
-
   async function handleSetup(e) {
     e.preventDefault(); setBusyStep('setup'); setError('');
     try {
-      await request('/tunnel/setup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
+      await request('/tunnel/setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
       toast('Tunnel erstellt!'); setReconfiguring(false); await load();
     } catch (err) { setError(err.message); toast(err.message, 'error'); }
     finally { setBusyStep(''); }
@@ -414,67 +462,112 @@ function TunnelSetup() {
     );
   }
 
-  const installed  = status.installed;
-  const authed     = status.authenticated;
-  const hasTunnel  = !!status.config?.tunnel_id && !reconfiguring;
-  const isRunning  = status.status === 'running';
-  const hostname   = status.config?.hostname || '';
+  const installed    = status.installed;
+  const authed       = status.authenticated;
+  const hasTunnel    = !!status.config?.tunnel_id && !reconfiguring;
+  const isRunning    = status.status === 'running';
+  const hostname     = status.config?.hostname || '';
   const svcInstalled = status.config?.service_installed;
-  const publicBase = hostname ? `https://${hostname}` : null;
+  const publicBase   = hostname ? `https://${hostname}` : null;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem', maxWidth: 600 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem', maxWidth: 620 }}>
       {error && (
-        <div className="alert alert-error">
-          <i className="bi bi-exclamation-circle" />{error}
+        <div className="alert alert-error" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <span><i className="bi bi-exclamation-circle" style={{ marginRight: 6 }} />{error}</span>
+          <button onClick={() => setError('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', fontSize: '0.9rem', padding: 0, lineHeight: 1 }}>
+            <i className="bi bi-x-lg" />
+          </button>
         </div>
       )}
 
-      {/* Step 1 */}
+      {/* ── Step 1: Install ── */}
       <div className="card">
-        <StepHeader number="1" title="cloudflared installieren"
-          subtitle={installed ? `Installiert${status.version ? ` · ${status.version}` : ''}` : 'Wird für den Tunnel benötigt'}
-          done={installed} active={!installed} />
+        <StepHeader
+          number="1"
+          title="cloudflared installieren"
+          subtitle={installed
+            ? `Installiert${status.version ? ` · ${status.version}` : ''}`
+            : 'Wird für den Tunnel benötigt'}
+          done={installed}
+          active={!installed}
+        />
         {!installed && (
-          <button className="btn-primary btn-sm" onClick={() => doAction('install', () => request('/tunnel/install', { method: 'POST' }), 'cloudflared installiert!')}
-            disabled={busyStep === 'install'} style={{ marginLeft: 48 }}>
-            {busyStep === 'install' ? <span className="spinner" /> : <i className="bi bi-download" />}
-            {busyStep === 'install' ? 'Installieren…' : 'cloudflared installieren'}
-          </button>
-        )}
-      </div>
-
-      {/* Step 2 */}
-      <div className="card" style={{ opacity: installed ? 1 : 0.45, pointerEvents: installed ? 'auto' : 'none' }}>
-        <StepHeader number="2" title="Mit Cloudflare verbinden"
-          subtitle={authed ? 'Verbunden' : 'Öffnet Browser zur Autorisierung'}
-          done={authed} active={installed && !authed} />
-        {!authed && !loginUrl && (
-          <button className="btn-primary btn-sm" onClick={handleLogin} disabled={busyStep === 'login' || !installed} style={{ marginLeft: 48 }}>
-            {busyStep === 'login' ? <span className="spinner" /> : <i className="bi bi-box-arrow-up-right" />}
-            {busyStep === 'login' ? 'Starte…' : 'Mit Cloudflare verbinden'}
-          </button>
-        )}
-        {loginUrl && (
           <div style={{ marginLeft: 48 }}>
-            <p style={{ color: 'var(--text3)', fontSize: '0.82rem', marginBottom: '0.75rem' }}>
-              <span className="spinner" style={{ marginRight: 6 }} />Warte auf Autorisierung…
-            </p>
-            <div style={{ background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 8, padding: '0.625rem', fontSize: '0.78rem', color: 'var(--text2)', wordBreak: 'break-all', marginBottom: '0.625rem' }}>
-              {loginUrl}
-            </div>
-            <a href={loginUrl} target="_blank" rel="noreferrer" className="btn-outline btn-sm" style={{ display: 'inline-flex' }}>
-              <i className="bi bi-box-arrow-up-right" />Browser öffnen
-            </a>
+            <button
+              className="btn-primary btn-sm"
+              onClick={() => { setError(''); installStream.start(); }}
+              disabled={installStream.active}
+            >
+              {installStream.active ? <span className="spinner" /> : <i className="bi bi-download" />}
+              {installStream.active ? 'Installieren…' : 'cloudflared installieren'}
+            </button>
+            <Terminal lines={installStream.lines} loading={installStream.active} />
           </div>
         )}
       </div>
 
-      {/* Step 3 */}
+      {/* ── Step 2: Login ── */}
+      <div className="card" style={{ opacity: installed ? 1 : 0.45, pointerEvents: installed ? 'auto' : 'none' }}>
+        <StepHeader
+          number="2"
+          title="Mit Cloudflare verbinden"
+          subtitle={authed ? 'Verbunden' : 'Öffnet Browser zur Autorisierung'}
+          done={authed}
+          active={installed && !authed}
+        />
+        {!authed && (
+          <div style={{ marginLeft: 48 }}>
+            {!loginStream.active && !loginUrl && (
+              <button
+                className="btn-primary btn-sm"
+                onClick={() => { setError(''); loginStream.start(); }}
+                disabled={!installed}
+              >
+                <i className="bi bi-box-arrow-up-right" />Mit Cloudflare verbinden
+              </button>
+            )}
+
+            {/* URL card — shown once cloudflared emits the auth URL */}
+            {loginUrl && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+                <p style={{ color: 'var(--text3)', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span className="spinner" style={{ width: 12, height: 12, borderWidth: 1.5 }} />
+                  Warte auf Autorisierung im Browser…
+                </p>
+                <div style={{
+                  background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 8,
+                  padding: '0.625rem 0.875rem', fontSize: '0.78rem', color: 'var(--text2)',
+                  wordBreak: 'break-all', fontFamily: 'monospace',
+                }}>
+                  {loginUrl}
+                </div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <a href={loginUrl} target="_blank" rel="noreferrer" className="btn-outline btn-sm" style={{ display: 'inline-flex' }}>
+                    <i className="bi bi-box-arrow-up-right" />Browser öffnen
+                  </a>
+                  <button className="btn-outline btn-sm" onClick={() => { loginStream.cancel(); setLoginUrl(''); setLoginPolling(false); }}>
+                    Abbrechen
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <Terminal lines={loginStream.lines} loading={loginStream.active && !loginUrl} />
+          </div>
+        )}
+      </div>
+
+      {/* ── Step 3: Configure ── */}
       <div className="card" style={{ opacity: authed ? 1 : 0.45, pointerEvents: authed ? 'auto' : 'none' }}>
-        <StepHeader number="3" title="Tunnel konfigurieren"
+        <StepHeader
+          number="3"
+          title="Tunnel konfigurieren"
           subtitle={hasTunnel ? `Aktiv: ${hostname}` : 'Hostname und Name festlegen'}
-          done={hasTunnel} active={authed && !hasTunnel} />
+          done={hasTunnel}
+          active={authed && !hasTunnel}
+        />
+
         {hasTunnel ? (
           <div style={{ marginLeft: 48 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
@@ -508,20 +601,41 @@ function TunnelSetup() {
           <form onSubmit={handleSetup} style={{ marginLeft: 48, display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label">Tunnel Name</label>
-              <input value={form.tunnel_name} onChange={e => set('tunnel_name', e.target.value)} placeholder="mein-tunnel" pattern="[A-Za-z0-9\-_]+" required />
+              <input
+                value={form.tunnel_name}
+                onChange={e => set('tunnel_name', e.target.value)}
+                placeholder="mein-tunnel"
+                pattern="[A-Za-z0-9\-_]+"
+                required
+              />
             </div>
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label">Hostname (öffentliche Domain)</label>
-              <input value={form.hostname} onChange={e => set('hostname', e.target.value)} placeholder="api.meinedomain.de" required />
+              <input
+                value={form.hostname}
+                onChange={e => set('hostname', e.target.value)}
+                placeholder="api.meinedomain.de"
+                required
+              />
             </div>
             <div>
-              <button type="button" className="btn-outline btn-sm" onClick={() => setShowAdvanced(v => !v)} style={{ color: 'var(--text3)', marginBottom: showAdvanced ? '0.75rem' : 0 }}>
+              <button
+                type="button" className="btn-outline btn-sm"
+                onClick={() => setShowAdvanced(v => !v)}
+                style={{ color: 'var(--text3)', marginBottom: showAdvanced ? '0.75rem' : 0 }}
+              >
                 <i className={`bi bi-chevron-${showAdvanced ? 'up' : 'down'}`} />Lokalen Service ändern
               </button>
               {showAdvanced && (
                 <div className="form-group" style={{ marginBottom: 0, marginTop: '0.5rem' }}>
                   <label className="form-label">Lokaler Service URL</label>
-                  <input type="url" value={form.local_service} onChange={e => set('local_service', e.target.value)} placeholder="http://localhost:3001" required />
+                  <input
+                    type="url"
+                    value={form.local_service}
+                    onChange={e => set('local_service', e.target.value)}
+                    placeholder="http://localhost:3001"
+                    required
+                  />
                 </div>
               )}
             </div>
@@ -533,16 +647,16 @@ function TunnelSetup() {
         )}
       </div>
 
-      {/* Step 4 */}
+      {/* ── Step 4: Info ── */}
       {hasTunnel && publicBase && (
         <div className="card">
           <StepHeader number="4" title="Server Info" done active />
           <div style={{ marginLeft: 48 }}>
-            <InfoRow icon="link-45deg" label="API URL"         value={`${publicBase}/api`}   mono link />
-            <InfoRow icon="grid-1x2"   label="Admin Dashboard" value={`${publicBase}/admin`} mono link />
-            <InfoRow icon="shield-check" label="Rate Limiting" value="Aktiv" />
+            <InfoRow icon="link-45deg"   label="API URL"          value={`${publicBase}/api`}   mono link />
+            <InfoRow icon="grid-1x2"     label="Admin Dashboard"  value={`${publicBase}/admin`} mono link />
+            <InfoRow icon="shield-check" label="Rate Limiting"    value="Aktiv" />
             <div style={{ borderBottom: 'none' }}>
-              <InfoRow icon="lock" label="Security Headers" value="Aktiv (Helmet)" />
+              <InfoRow icon="lock"       label="Security Headers" value="Aktiv (Helmet)" />
             </div>
           </div>
         </div>
@@ -551,14 +665,10 @@ function TunnelSetup() {
   );
 }
 
-// ── Main page ─────────────────────────────────────────────────
+// ── Main page ──────────────────────────────────────────────────────────────────
 
 export default function Tunnel() {
-  const { request } = useApi();
   const [tab, setTab] = useState('tunnel');
-
-  async function handleRefresh() {}
-
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
@@ -571,9 +681,7 @@ export default function Tunnel() {
           </p>
         </div>
       </div>
-
       <TabBar active={tab} onChange={setTab} />
-
       {tab === 'tunnel'     && <TunnelSetup />}
       {tab === 'cloudflare' && <CloudflarePanel />}
     </div>
