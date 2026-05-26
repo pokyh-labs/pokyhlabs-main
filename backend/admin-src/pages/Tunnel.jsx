@@ -494,15 +494,24 @@ function TunnelSetup() {
         />
         {!installed && (
           <div style={{ marginLeft: 48 }}>
-            <button
-              className="btn-primary btn-sm"
-              onClick={() => { setError(''); installStream.start(); }}
-              disabled={installStream.active}
-            >
-              {installStream.active ? <span className="spinner" /> : <i className="bi bi-download" />}
-              {installStream.active ? 'Installieren…' : 'cloudflared installieren'}
-            </button>
-            <Terminal lines={installStream.lines} loading={installStream.active} />
+            {status.isDocker ? (
+              <div style={{ background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 8, padding: '0.75rem 1rem', fontSize: '0.82rem', color: 'var(--text2)', lineHeight: 1.6 }}>
+                <i className="bi bi-box-seam" style={{ color: 'var(--accent)', marginRight: 6 }} />
+                <strong>Docker-Umgebung erkannt.</strong> Setze <code style={{ background: 'var(--bg)', padding: '1px 5px', borderRadius: 4 }}>CLOUDFLARED_PATH</code> in deiner <code style={{ background: 'var(--bg)', padding: '1px 5px', borderRadius: 4 }}>.env</code> oder nutze den <code style={{ background: 'var(--bg)', padding: '1px 5px', borderRadius: 4 }}>cloudflared</code> Docker-Service in docker-compose.
+              </div>
+            ) : (
+              <>
+                <button
+                  className="btn-primary btn-sm"
+                  onClick={() => { setError(''); installStream.start(); }}
+                  disabled={installStream.active}
+                >
+                  {installStream.active ? <span className="spinner" /> : <i className="bi bi-download" />}
+                  {installStream.active ? 'Installieren…' : 'cloudflared installieren'}
+                </button>
+                <Terminal lines={installStream.lines} loading={installStream.active} />
+              </>
+            )}
           </div>
         )}
       </div>

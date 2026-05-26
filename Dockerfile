@@ -21,7 +21,14 @@ RUN npm run build
 # ── Production stage ──────────────────────────────────────────────────────────
 FROM node:24-alpine
 # su-exec: lightweight privilege-drop tool (Alpine standard, replaces gosu)
-RUN apk add --no-cache dumb-init wget su-exec
+# cloudflared: pre-baked so the in-app tunnel setup is instant (no runtime download)
+#   uname -m maps: x86_64→amd64, aarch64→arm64, armv7l→arm
+RUN apk add --no-cache dumb-init wget su-exec \
+ && ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/;s/armv7l/arm/') \
+ && wget -qO /usr/local/bin/cloudflared \
+      "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-${ARCH}" \
+ && chmod +x /usr/local/bin/cloudflared \
+ || echo "cloudflared pre-install skipped – use docker-compose cloudflared service if needed"
 WORKDIR /app
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 

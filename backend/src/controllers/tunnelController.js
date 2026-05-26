@@ -38,10 +38,10 @@ async function getStatus(req, res) {
   const config  = await TunnelConfig.findOne({ order: [['created_at', 'DESC']] });
   res.json({
     ...runtime,
-    installed:    await tunnelService.isInstalled(),
+    installed:     await tunnelService.isInstalled(),
     authenticated: tunnelService.isAuthenticated(),
-    version:      runtime.running ? await tunnelService.getVersion().catch(() => null) : null,
-    localService: `http://${process.env.HOST || '127.0.0.1'}:${process.env.PORT || 3000}`,
+    version:       await tunnelService.getVersion().catch(() => null),
+    localService:  `http://${process.env.HOST || '127.0.0.1'}:${process.env.PORT || 3000}`,
     config: config ? {
       id:                config.id,
       tunnel_name:       config.tunnel_name,
@@ -134,11 +134,15 @@ async function setupSimple(req, res) {
   try {
     logger.info('Setting up tunnel via CLI', { event: 'tunnel_setup_simple', tunnel_name, hostname });
 
-    const tunnelId    = await tunnelService.createTunnelCLI(tunnel_name);
-    await tunnelService.routeDNS(tunnel_name, hostname).catch((e) => {
-      logger.warn('DNS routing skipped', { error: e.message });
-    });
-    const tunnelToken = await tunnelService.getTunnelTokenCLI(tunnel_name);
+    const tunnelId = await tunnelService.createTunnelCLI(tunnel_name);
+
+    // routeDNS and getTunnelToken are independent — run in parallel to halve wait time
+    const [tunnelToken] = await Promise.all([
+      tunnelService.getTunnelTokenCLI(tunnel_name),
+      tunnelService.routeDNS(tunnel_name, hostname).catch(e => {
+        logger.warn('DNS routing skipped', { error: e.message });
+      }),
+    ]);
 
     await TunnelConfig.destroy({ where: {} });
     const config = await TunnelConfig.create({
