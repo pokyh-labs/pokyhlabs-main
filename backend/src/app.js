@@ -137,12 +137,28 @@ app.use('/api/projects',   projectRoutes);
 app.use('/api/upload',     uploadRoutes);
 
 // SPA routing for admin
-app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, '../public/admin/index.html')));
-app.get('/admin/*', (req, res) => res.sendFile(path.join(__dirname, '../public/admin/index.html')));
+// Asset paths (/admin/assets/*) are NOT caught here — if express.static didn't
+// serve them, they fall through to the 404 handler. This prevents the
+// global error handler from returning application/json for missing JS/CSS files.
+const ADMIN_HTML = path.join(__dirname, '../public/admin/index.html');
+const BLOG_HTML  = path.join(__dirname, '../public/blog/index.html');
+
+app.get('/admin', (req, res, next) => {
+  res.sendFile(ADMIN_HTML, (err) => { if (err) next(err); });
+});
+app.get('/admin/*', (req, res, next) => {
+  if (req.path.startsWith('/admin/assets/')) return next();
+  res.sendFile(ADMIN_HTML, (err) => { if (err) next(err); });
+});
 
 // Public blog page
-app.get('/blog', (req, res) => res.sendFile(path.join(__dirname, '../public/blog/index.html')));
-app.get('/blog/*', (req, res) => res.sendFile(path.join(__dirname, '../public/blog/index.html')));
+app.get('/blog', (req, res, next) => {
+  res.sendFile(BLOG_HTML, (err) => { if (err) next(err); });
+});
+app.get('/blog/*', (req, res, next) => {
+  if (req.path.startsWith('/blog/assets/')) return next();
+  res.sendFile(BLOG_HTML, (err) => { if (err) next(err); });
+});
 
 // Root redirect
 app.get('/', (req, res) => res.redirect('/admin'));

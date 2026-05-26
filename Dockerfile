@@ -6,9 +6,10 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --ignore-scripts
 
-# Backend deps
+# Backend deps (--ignore-scripts: skip postinstall/vite build here;
+# admin-src is not yet copied. The explicit RUN npm run build below handles it.)
 COPY backend/package*.json ./backend/
-RUN cd backend && npm ci
+RUN cd backend && npm ci --ignore-scripts
 
 # Copy everything and build
 COPY . .
