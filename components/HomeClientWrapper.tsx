@@ -249,7 +249,7 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
       });
       // Reveal-scale lives on a dedicated wrapper so it doesn't fight the
       // hover transforms (xPercent / scale) on .team-photo-image.
-      gsap.set(photoRevealRef.current, { scale: 1.45 });
+      gsap.set(photoRevealRef.current, { scale: 1, xPercent: 0, yPercent: 4 });
       gsap.set(".team-name-block", { opacity: 0, y: 28 });
 
       const photoTl = gsap.timeline({ paused: true });
@@ -261,7 +261,7 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
       });
       photoTl.to(
         photoRevealRef.current,
-        { scale: 1, duration: 2.0, ease: "expo.out" },
+        { scale: 1, xPercent: 0, yPercent: 4, duration: 2.0, ease: "expo.out" },
         "<"
       );
       // 2) Text panels fade in while the photo is still opening
@@ -309,32 +309,31 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
   }, []);
 
   // --- Cinematic swing pan on hover ---
-  // Animates x + scale instead of transformOrigin so the pan-back is just
-  // as smooth as the pan-in (transformOrigin can interpolate jankily).
+  // Animates x + scale on the shared wrapper so the vignette/dims move with it.
   const focusOn = (side: Side) => {
-    if (!photoImageRef.current) return;
+    if (!photoRevealRef.current) return;
     const dur = 0.9;
     const ease = "power2.inOut";
 
     let targetScale = 1;
     let targetX = 0;
-    let targetY = 0;
+    let targetY = 4;
     let dimLeftOpacity = 0;
     let dimRightOpacity = 0;
 
     if (side === "left") {
       targetScale = 1.14;
       targetX = 8;
-      targetY = 4;
+      targetY = 9;
       dimRightOpacity = 0.55;
     } else if (side === "right") {
       targetScale = 1.14;
       targetX = -8;
-      targetY = 4;
+      targetY = 9;
       dimLeftOpacity = 0.55;
     }
 
-    gsap.to(photoImageRef.current, {
+    gsap.to(photoRevealRef.current, {
       scale: targetScale,
       xPercent: targetX,
       yPercent: targetY,
@@ -773,10 +772,10 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
                         role="img"
                         aria-label="Felix Plattner and Emanuel Pfeifer"
                       />
+                      <div className="team-photo-dim team-photo-dim-left" ref={dimLeftRef} />
+                      <div className="team-photo-dim team-photo-dim-right" ref={dimRightRef} />
+                      <div className="team-photo-vignette" />
                     </div>
-                    <div className="team-photo-dim team-photo-dim-left" ref={dimLeftRef} />
-                    <div className="team-photo-dim team-photo-dim-right" ref={dimRightRef} />
-                    <div className="team-photo-vignette" />
                   </div>
                   <div className="team-photo-frame-border" />
                 </div>

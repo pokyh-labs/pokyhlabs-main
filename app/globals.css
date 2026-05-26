@@ -161,9 +161,9 @@ body {
 
 .team-photo-frame {
   position: relative;
-  width: 100%;
-  max-width: 930px;
-  max-height: 930px;
+  width: min(908px, 100%);
+  max-width: 908px;
+  max-height: 934px;
   aspect-ratio: 908 / 934;
   overflow: hidden;
   border-radius: 18px;
@@ -188,7 +188,7 @@ body {
 
 .team-photo-parallax {
   position: absolute;
-  inset: -8% 0;
+  inset: 0;
   will-change: transform;
 }
 
@@ -198,6 +198,8 @@ body {
 .team-photo-reveal {
   position: absolute;
   inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
   will-change: transform;
 }
 
@@ -205,7 +207,7 @@ body {
   position: absolute;
   inset: 0;
   background-size: cover;
-  background-position: center 22%;
+  background-position: center center;
   background-repeat: no-repeat;
   will-change: transform;
   filter: grayscale(0.15) contrast(1.04);
@@ -236,8 +238,8 @@ body {
   inset: 0;
   z-index: 1;
   background:
-    radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.45) 100%),
-    linear-gradient(to bottom, transparent 60%, rgba(0,0,0,0.5) 100%);
+    radial-gradient(ellipse at center, transparent 46%, rgba(0,0,0,0.5) 100%),
+    linear-gradient(to bottom, transparent 48%, rgba(0,0,0,0.58) 100%);
 }
 
 .team-photo-caption {
@@ -377,9 +379,10 @@ body {
   .team-name-block-left { grid-area: left; }
   .team-name-block-right { grid-area: right; }
   .team-photo-frame {
-    max-width: 440px;
+    width: min(908px, 100%);
+    max-width: 100%;
     aspect-ratio: 908 / 934;
-    max-height: 930px;
+    max-height: 934px;
     margin: 0 auto;
   }
 }
