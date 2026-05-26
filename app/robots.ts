@@ -7,7 +7,7 @@ export default function robots(): MetadataRoute.Robots {
       // ── All legitimate crawlers: full content access, block backend/admin ──
       {
         userAgent: "*",
-        allow: ["/", "/blog/", "/works", "/about", "/contact"],
+        allow: ["/", "/blog/", "/works", "/contact"],
         disallow: [
           "/api/",
           "/_next/",

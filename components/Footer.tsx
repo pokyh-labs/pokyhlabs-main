@@ -17,7 +17,7 @@ const COLUMNS: { title: string; links: { label: string; href: string; external?:
   {
     title: "Studio",
     links: [
-      { label: "About", href: "/about" },
+      { label: "About", href: "/#about" },
       { label: "Works", href: "/works" },
       { label: "Blog", href: "/blog" },
       { label: "Kontakt", href: "/contact" },
@@ -86,6 +86,7 @@ export default function Footer() {
   return (
     <footer
       className="ft-root"
+      data-theme="brand"
       style={{
         background: PURPLE,
         backgroundImage: grain,

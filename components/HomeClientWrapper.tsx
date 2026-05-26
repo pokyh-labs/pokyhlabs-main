@@ -5,6 +5,7 @@ import Link from "next/link";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Lenis from "lenis";
+import { team, type TeamMember } from "@/lib/team.config";
 
 const WordReveal = ({ text }: { text: string }) => (
   <>
@@ -16,12 +17,22 @@ const WordReveal = ({ text }: { text: string }) => (
   </>
 );
 
+type Side = "left" | "right" | null;
+
 export default function HomeClientWrapper({ children }: { children: ReactNode }) {
   const contentRef = useRef<HTMLDivElement>(null);
   const whiteRef = useRef<HTMLDivElement>(null);
   const linePathRef = useRef<SVGPathElement>(null);
   const revealsRef = useRef<(HTMLDivElement | null)[]>([]);
   const aboutRevealsRef = useRef<(HTMLDivElement | null)[]>([]);
+
+  // Team showcase refs
+  const photoFrameRef = useRef<HTMLDivElement>(null);
+  const photoParallaxRef = useRef<HTMLDivElement>(null);
+  const photoImageRef = useRef<HTMLDivElement>(null);
+  const dimLeftRef = useRef<HTMLDivElement>(null);
+  const dimRightRef = useRef<HTMLDivElement>(null);
+  const showcaseHeadingRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
     gsap.registerPlugin(ScrollTrigger);
@@ -78,8 +89,8 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
             stagger: 0.05,
             scrollTrigger: {
               trigger: el,
-              start: "top 88%",
-              end: "top 25%",
+              start: "top 98%",
+              end: "top 40%",
               scrub: 0.5,
             },
           }
@@ -94,8 +105,8 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
             ease: "none",
             scrollTrigger: {
               trigger: el,
-              start: "top 90%",
-              end: "top 65%",
+              start: "top 100%",
+              end: "top 75%",
               scrub: 0.5,
             },
           }
@@ -126,9 +137,6 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
     // --- The line: one solid stroke that paints itself top→bottom as you scroll ---
     if (linePathRef.current && whiteRef.current) {
       const p = linePathRef.current;
-      // Use the real path length in user-units. dasharray == length means a
-      // single dash that covers the entire path = solid line. dashoffset == length
-      // shifts it fully off, so the path starts invisible.
       const len = p.getTotalLength();
       p.setAttribute("stroke-dasharray", String(len));
       p.setAttribute("stroke-dashoffset", String(len));
@@ -160,8 +168,8 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
             stagger: 0.05,
             scrollTrigger: {
               trigger: el,
-              start: "top 88%",
-              end: "top 30%",
+              start: "top 98%",
+              end: "top 45%",
               scrub: 0.5,
             },
           }
@@ -176,14 +184,117 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
             ease: "none",
             scrollTrigger: {
               trigger: el,
-              start: "top 92%",
-              end: "top 65%",
+              start: "top 100%",
+              end: "top 75%",
               scrub: 0.5,
             },
           }
         );
       }
     });
+
+    // --- Team showcase heading: split chars + set initial state immediately ---
+    if (showcaseHeadingRef.current) {
+      const lines = showcaseHeadingRef.current.querySelectorAll<HTMLSpanElement>(".showcase-line");
+      lines.forEach((line) => {
+        const text = (line.getAttribute("data-text") ?? "").trim();
+        line.textContent = "";
+        for (const ch of text) {
+          if (ch === " ") {
+            const sp = document.createElement("span");
+            sp.style.display = "inline-block";
+            sp.style.width = "0.3em";
+            line.appendChild(sp);
+            continue;
+          }
+          const s = document.createElement("span");
+          s.className = "showcase-ch";
+          s.textContent = ch;
+          line.appendChild(s);
+        }
+      });
+
+      // Initial state — hide chars, then unhide the heading container.
+      gsap.set(".showcase-ch", { yPercent: 110, opacity: 0 });
+      gsap.set(showcaseHeadingRef.current, { visibility: "visible" });
+
+      const headingTl = gsap.timeline({ paused: true });
+      headingTl.to(".showcase-ch", {
+        yPercent: 0,
+        opacity: 1,
+        duration: 0.9,
+        stagger: 0.025,
+        ease: "expo.out",
+      });
+
+      // Scrub the timeline to scroll position so the chars un-mask as you
+      // scroll down and re-mask as you scroll back up — always visible.
+      ScrollTrigger.create({
+        trigger: showcaseHeadingRef.current,
+        start: "top 95%",
+        end: "top 45%",
+        scrub: 1,
+        animation: headingTl,
+      });
+    }
+
+    // --- Team photo reveal + parallax (photo first, THEN text panels) ---
+    if (photoFrameRef.current && photoImageRef.current && photoParallaxRef.current) {
+      // Set the initial hidden state immediately so nothing flashes on mount.
+      // CSS already has the frame at visibility:hidden and panels at opacity:0.
+      gsap.set(photoFrameRef.current, {
+        visibility: "visible",
+        clipPath: "inset(50% 48% 50% 48%)",
+      });
+      gsap.set(photoImageRef.current, { scale: 1.45 });
+      gsap.set(".team-name-block", { opacity: 0, y: 28 });
+
+      const photoTl = gsap.timeline({ paused: true });
+      // 1) Photo opens up first
+      photoTl.to(photoFrameRef.current, {
+        clipPath: "inset(0% 0% 0% 0%)",
+        duration: 1.4,
+        ease: "expo.out",
+      });
+      photoTl.to(
+        photoImageRef.current,
+        { scale: 1, duration: 2.0, ease: "expo.out" },
+        "<"
+      );
+      // 2) Text panels fade in while the photo is still opening
+      photoTl.to(
+        ".team-name-block",
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.8,
+          stagger: 0.15,
+          ease: "power3.out",
+        },
+        0.5
+      );
+
+      // Scrub the timeline to scroll position — photo opens as you scroll
+      // down, closes as you scroll back up, all driven by scroll.
+      ScrollTrigger.create({
+        trigger: photoFrameRef.current,
+        start: "top 90%",
+        end: "top 35%",
+        scrub: 1.2,
+        animation: photoTl,
+      });
+
+      gsap.to(photoParallaxRef.current, {
+        yPercent: -8,
+        ease: "none",
+        scrollTrigger: {
+          trigger: photoFrameRef.current,
+          start: "top bottom",
+          end: "bottom top",
+          scrub: 1,
+        },
+      });
+    }
 
     ScrollTrigger.refresh();
 
@@ -193,6 +304,56 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
       ScrollTrigger.getAll().forEach((t) => t.kill());
     };
   }, []);
+
+  // --- Cinematic swing pan on hover ---
+  // Animates x + scale instead of transformOrigin so the pan-back is just
+  // as smooth as the pan-in (transformOrigin can interpolate jankily).
+  const focusOn = (side: Side) => {
+    if (!photoImageRef.current) return;
+    const dur = 0.9;
+    const ease = "power2.inOut";
+
+    let targetScale = 1;
+    let targetX = 0;
+    let targetY = 0;
+    let dimLeftOpacity = 0;
+    let dimRightOpacity = 0;
+
+    if (side === "left") {
+      targetScale = 1.14;
+      targetX = 8;
+      targetY = 4;
+      dimRightOpacity = 0.55;
+    } else if (side === "right") {
+      targetScale = 1.14;
+      targetX = -8;
+      targetY = 4;
+      dimLeftOpacity = 0.55;
+    }
+
+    gsap.to(photoImageRef.current, {
+      scale: targetScale,
+      xPercent: targetX,
+      yPercent: targetY,
+      duration: dur,
+      ease,
+      overwrite: "auto",
+    });
+    gsap.to(dimLeftRef.current, {
+      opacity: dimLeftOpacity,
+      duration: dur,
+      ease,
+      overwrite: "auto",
+    });
+    gsap.to(dimRightRef.current, {
+      opacity: dimRightOpacity,
+      duration: dur,
+      ease,
+      overwrite: "auto",
+    });
+  };
+
+  const sideFor = (id: string): Side => (id === "felix" ? "left" : id === "emanuel" ? "right" : null);
 
   return (
     <div style={{ backgroundColor: "var(--bg)" }}>
@@ -378,7 +539,6 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
           position: "relative",
           zIndex: 3,
           backgroundColor: "var(--bg)",
-          minHeight: "240vh",
           color: "#0c0c0c",
           marginTop: "-1px",
         }}
@@ -416,7 +576,7 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
           style={{
             position: "relative",
             zIndex: 1,
-            maxWidth: "1000px",
+            maxWidth: "1100px",
             margin: "0 auto",
             padding: "0 5vw",
           }}
@@ -529,14 +689,14 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
             </div>
           </div>
 
-          {/* Block 3 — The Team */}
+          {/* Block 3 — The Team showcase */}
           <div
             style={{
               minHeight: "100vh",
               display: "flex",
               flexDirection: "column",
               justifyContent: "center",
-              paddingBottom: "40vh",
+              padding: "10vh 0 14vh",
             }}
           >
             <div
@@ -547,7 +707,7 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
                 letterSpacing: "0.28em",
                 textTransform: "uppercase",
                 color: "#888",
-                marginBottom: "3rem",
+                marginBottom: "1.6rem",
                 display: "flex",
                 alignItems: "center",
                 gap: 14,
@@ -557,103 +717,96 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
               The Team
             </div>
 
-            {[
-              { name: "plattnericus", role: "Software Developer", github: "https://github.com/plattnericus" },
-              { name: "ryhox", role: "Software Developer", github: "https://github.com/ryhox" },
-            ].map((m, i) => (
-              <article
-                key={m.name}
-                ref={(el) => { if (el) aboutRevealsRef.current[6 + i] = el as HTMLDivElement; }}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "1.5rem",
-                  padding: "2.2rem 0",
-                  borderTop: "1px solid rgba(12,12,12,0.12)",
-                  ...(i === 1 ? { borderBottom: "1px solid rgba(12,12,12,0.12)" } : {}),
-                }}
-              >
-                <span
-                  style={{
-                    fontFamily: "var(--font-dm-mono), monospace",
-                    fontSize: 11,
-                    color: "var(--ink)",
-                    letterSpacing: "0.2em",
-                    width: 32,
-                    flexShrink: 0,
-                  }}
-                >
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-                <h4
-                  style={{
-                    fontSize: "clamp(1.6rem, 3vw, 2.8rem)",
-                    fontWeight: 700,
-                    lineHeight: 1,
-                    letterSpacing: "-0.02em",
-                    color: "#0c0c0c",
-                    textTransform: "uppercase",
-                    flexShrink: 0,
-                  }}
-                >
-                  {m.name}
-                </h4>
-                <div style={{ flex: 1, height: 1, background: "rgba(12,12,12,0.12)", minWidth: 20 }} />
-                <span
-                  style={{
-                    fontFamily: "var(--font-dm-mono), monospace",
-                    fontSize: 11,
-                    color: "#666",
-                    letterSpacing: "0.16em",
-                    textTransform: "uppercase",
-                    flexShrink: 0,
-                  }}
-                >
-                  {m.role}
-                </span>
-                <a
-                  href={m.github}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={`${m.name} on GitHub`}
-                  style={{
-                    flexShrink: 0,
-                    width: 44,
-                    height: 44,
-                    borderRadius: "50%",
-                    border: "1px solid rgba(12,12,12,0.18)",
-                    display: "grid",
-                    placeItems: "center",
-                    color: "#0c0c0c",
-                    textDecoration: "none",
-                    transition: "background 0.25s, border-color 0.25s, color 0.25s, transform 0.25s",
-                  }}
-                  onMouseEnter={(e) => {
-                    const el = e.currentTarget as HTMLAnchorElement;
-                    el.style.background = "var(--ink)";
-                    el.style.borderColor = "var(--ink)";
-                    el.style.color = "#fff";
-                    el.style.transform = "rotate(45deg)";
-                  }}
-                  onMouseLeave={(e) => {
-                    const el = e.currentTarget as HTMLAnchorElement;
-                    el.style.background = "transparent";
-                    el.style.borderColor = "rgba(12,12,12,0.18)";
-                    el.style.color = "#0c0c0c";
-                    el.style.transform = "";
-                  }}
-                >
-                  <svg viewBox="0 0 24 24" aria-hidden="true" style={{ width: 14, height: 14, fill: "currentColor" }}>
-                    <path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.604-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.464-1.11-1.464-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0 1 12 6.836a9.59 9.59 0 0 1 2.504.337c1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.741 0 .267.18.579.688.481C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z" />
-                  </svg>
-                </a>
-              </article>
-            ))}
+            <h2
+              ref={showcaseHeadingRef}
+              className="team-showcase-heading"
+              style={{
+                fontSize: "clamp(2.2rem, 5vw, 4.6rem)",
+                fontWeight: 600,
+                letterSpacing: "-0.025em",
+                lineHeight: 1.02,
+                color: "#0c0c0c",
+                fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+                marginBottom: "1.4rem",
+                maxWidth: "880px",
+              }}
+            >
+              <span className="showcase-line" data-text="Two heads." suppressHydrationWarning style={{ display: "block" }}>
+                Two heads.
+              </span>
+              <span className="showcase-line" data-text="One studio." suppressHydrationWarning style={{ display: "block" }}>
+                One studio.
+              </span>
+            </h2>
+
+            <p
+              ref={(el) => { if (el) aboutRevealsRef.current[6] = el; }}
+              style={{
+                fontSize: "clamp(1rem, 1.3vw, 1.15rem)",
+                lineHeight: 1.65,
+                color: "#555",
+                maxWidth: "620px",
+                marginBottom: "4.5rem",
+                fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+              }}
+            >
+              We&apos;re Felix and Emanuel — two friends from Südtirol who build digital products together. No big agency, no overhead. Just two developers who care about the details.
+            </p>
+
+            {/* text-left | photo-middle | text-right */}
+            <div className="team-showcase-grid">
+              {team[0] && (
+                <MemberPanel member={team[0]} side={sideFor(team[0].id)} focusOn={focusOn} />
+              )}
+
+              <div className="team-photo-outer">
+                <div className="team-photo-frame" ref={photoFrameRef}>
+                  <div className="team-photo-parallax" ref={photoParallaxRef}>
+                    <div
+                      className="team-photo-image"
+                      ref={photoImageRef}
+                      style={{ backgroundImage: "url(/assets/wir.png)" }}
+                      role="img"
+                      aria-label="Felix Plattner and Emanuel Pfeifer"
+                    />
+                    <div className="team-photo-dim team-photo-dim-left" ref={dimLeftRef} />
+                    <div className="team-photo-dim team-photo-dim-right" ref={dimRightRef} />
+                    <div className="team-photo-vignette" />
+                  </div>
+                  <div className="team-photo-frame-border" />
+                </div>
+
+              </div>
+
+              {team[1] && (
+                <MemberPanel member={team[1]} side={sideFor(team[1].id)} focusOn={focusOn} />
+              )}
+            </div>
 
             <div
-              ref={(el) => { if (el) aboutRevealsRef.current[8] = el; }}
-              style={{ marginTop: "4rem", display: "flex", justifyContent: "center" }}
+              style={{
+                marginTop: "5rem",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: "1.6rem",
+              }}
             >
+              <h3
+                style={{
+                  fontSize: "clamp(1.4rem, 2.4vw, 2rem)",
+                  fontWeight: 600,
+                  letterSpacing: "-0.02em",
+                  lineHeight: 1.2,
+                  color: "#0c0c0c",
+                  textAlign: "center",
+                  margin: 0,
+                  maxWidth: "640px",
+                  fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+                }}
+              >
+                Got an idea? Let&apos;s build it together.
+              </h3>
               <a
                 href="/contact"
                 style={{
@@ -688,6 +841,45 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
           </div>
         </div>
       </section>
+    </div>
+  );
+}
+
+function MemberPanel({
+  member,
+  side,
+  focusOn,
+}: {
+  member: TeamMember;
+  side: Side;
+  focusOn: (side: Side) => void;
+}) {
+  return (
+    <div
+      className={`team-name-block ${side === "left" ? "team-name-block-left" : "team-name-block-right"}`}
+      onMouseEnter={() => focusOn(side)}
+      onMouseLeave={() => focusOn(null)}
+      onFocus={() => focusOn(side)}
+      onBlur={() => focusOn(null)}
+      tabIndex={0}
+    >
+      <h3 className="team-name-name">{member.name}</h3>
+      <div className="team-name-role">{member.role}</div>
+      <div className="team-name-socials">
+        <a
+          href={member.github}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`${member.name} on GitHub`}
+          className="team-social-pill"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true" style={{ width: 15, height: 15, fill: "currentColor" }}>
+            <path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.604-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.464-1.11-1.464-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0 1 12 6.836a9.59 9.59 0 0 1 2.504.337c1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.741 0 .267.18.579.688.481C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z" />
+          </svg>
+          GitHub
+        </a>
+      </div>
     </div>
   );
 }

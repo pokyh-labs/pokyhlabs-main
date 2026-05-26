@@ -75,8 +75,7 @@ A: Yes. We offer SEO services including technical SEO, on-page optimization, key
 
 ## Pages
 
-- [Home — Studio overview & 3D web showcase](https://pokyh.studio)
-- [About — Team, founders, and studio story](https://pokyh.studio/about)
+- [Home — Studio overview, team & 3D web showcase](https://pokyh.studio)
 - [Works — Portfolio and past projects](https://pokyh.studio/works)
 - [Blog — Articles on web design, development, 3D, and digital trends](https://pokyh.studio/blog)
 - [Contact — Start a project, get a quote](https://pokyh.studio/contact)

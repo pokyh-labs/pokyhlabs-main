@@ -1,6 +1,7 @@
 export interface TeamMember {
   id: string
   name: string
+  handle: string
   github: string
   role: string
   bio: string
@@ -9,17 +10,19 @@ export interface TeamMember {
 // ─── Add or edit team members here ──────────────────────────────────────────
 export const team: TeamMember[] = [
   {
-    id: "plattnericus",
-    name: "plattnericus",
+    id: "felix",
+    name: "Felix Plattner",
+    handle: "plattnericus",
     github: "https://github.com/plattnericus",
-    role: "Software Developer",
-    bio: "Developer from Südtirol with a strong background in computer science. Focused on building fast, scalable web applications and immersive digital experiences that push the boundaries of what the web can do.",
+    role: "Co-Founder · Developer",
+    bio: "Felix is a developer from Südtirol with a strong foundation in computer science. He focuses on building fast, scalable web applications and immersive digital experiences that push the boundaries of what the modern web can do.",
   },
   {
-    id: "ryhox",
-    name: "ryhox",
+    id: "emanuel",
+    name: "Emanuel Pfeifer",
+    handle: "ryhox",
     github: "https://github.com/ryhox",
-    role: "Software Developer",
-    bio: "Developer from Südtirol with deep expertise in computer science and modern web technologies. Passionate about crafting pixel-perfect interfaces and engineering robust systems that perform flawlessly at scale.",
+    role: "Co-Founder · Developer",
+    bio: "Emanuel is a developer from Südtirol with deep expertise in modern web technologies. He has an eye for pixel-perfect interfaces and engineers the systems underneath that keep everything running smoothly at scale.",
   },
 ]

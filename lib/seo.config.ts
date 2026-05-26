@@ -201,7 +201,6 @@ export const siteConfig = {
   pages: [
     { path: "/",        priority: 1.0, changeFreq: "weekly"  as const },
     { path: "/works",   priority: 0.9, changeFreq: "weekly"  as const },
-    { path: "/about",   priority: 0.8, changeFreq: "monthly" as const },
     { path: "/contact", priority: 0.9, changeFreq: "monthly" as const },
     { path: "/blog",    priority: 0.8, changeFreq: "daily"   as const },
   ],

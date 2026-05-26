@@ -27,10 +27,17 @@ const MENU_LINKS: { href: string; label: string; description: string; meta: stri
   { href: "/contact", label: "Contact", description: "Start a project — reply within 24h.", meta: "Get in touch" },
 ];
 
+// Smooth filter swap for the header logo: stays neutral on the page surface,
+// turns to a pure black silhouette once the purple footer is behind it. Only
+// the logo image transitions — every other header element keeps its default
+// styling, so there's no global color flip on scroll.
+const LOGO_FILTER_TRANSITION = "filter 0.45s cubic-bezier(.55,.05,.25,1)";
+
 export default function Header() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [lang, setLang] = useState<Lang>("DE");
+  const [logoBlack, setLogoBlack] = useState(false);
 
   const logoRef = useRef<HTMLAnchorElement>(null);
   const logoTextRef = useRef<HTMLSpanElement>(null);
@@ -41,17 +48,75 @@ export default function Header() {
   const firstScrollRun = useRef(true);
   const scrollTlRef = useRef<gsap.core.Timeline | null>(null);
 
-  // --- scroll detection ---
+  // --- scroll detection with directional damper ---
+  // Going down: enter the "scrolled" state quickly (snappy).
+  // Going up: leave the "scrolled" state well before reaching the top,
+  // so the reverse animation finishes by the time scrollY hits 0.
   useEffect(() => {
+    const ENTER = 64;
+    const EXIT = 480;
+
+    let lastY = window.scrollY;
+    let dir: "up" | "down" | null = null;
+
     const onScroll = () => {
-      setScrolled(window.scrollY > 40);
+      const y = window.scrollY;
+      const delta = y - lastY;
+
+      // Only commit a direction change on meaningful movement — this
+      // keeps micro-jitter inside the buffer zone from flipping the state.
+      if (Math.abs(delta) > 3) {
+        dir = delta > 0 ? "down" : "up";
+        lastY = y;
+      }
+
+      setScrolled((prev) => {
+        if (y <= 0) return false;
+        if (dir === null) return y > ENTER;
+        if (!prev && dir === "down" && y > ENTER) return true;
+        if (prev && dir === "up" && y < EXIT) return false;
+        return prev;
+      });
     };
+
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onScroll);
     onScroll();
     return () => {
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onScroll);
+    };
+  }, []);
+
+  // --- footer detection: turn the logo black once the purple footer is the
+  // surface immediately under the header. rAF-throttled to stay smooth. ---
+  useEffect(() => {
+    const PROBE_Y = 44;
+    let frame: number | null = null;
+
+    const sample = () => {
+      frame = null;
+      const sections = document.querySelectorAll<HTMLElement>('[data-theme="brand"]');
+      let next = false;
+      sections.forEach((sec) => {
+        const r = sec.getBoundingClientRect();
+        if (r.top <= PROBE_Y && r.bottom >= PROBE_Y) next = true;
+      });
+      setLogoBlack((prev) => (prev === next ? prev : next));
+    };
+
+    const schedule = () => {
+      if (frame !== null) return;
+      frame = requestAnimationFrame(sample);
+    };
+
+    window.addEventListener("scroll", schedule, { passive: true });
+    window.addEventListener("resize", schedule);
+    sample();
+    return () => {
+      window.removeEventListener("scroll", schedule);
+      window.removeEventListener("resize", schedule);
+      if (frame !== null) cancelAnimationFrame(frame);
     };
   }, []);
 
@@ -207,7 +272,14 @@ export default function Header() {
             alt="pokyh.studio logo"
             width={46}
             height={46}
-            style={{ display: "block", objectFit: "contain", width: 46, height: 46 }}
+            style={{
+              display: "block",
+              objectFit: "contain",
+              width: 46,
+              height: 46,
+              filter: logoBlack ? "brightness(0)" : "none",
+              transition: LOGO_FILTER_TRANSITION,
+            }}
           />
           <span
             ref={logoTextRef}
@@ -1034,7 +1106,7 @@ function MenuOverlay({
               transform: "translateY(16px)",
             }}
             onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.color = "#fcfaf6";
+              (e.currentTarget as HTMLElement).style.color = "#efebe2";
             }}
             onMouseLeave={(e) => {
               (e.currentTarget as HTMLElement).style.color = "rgba(252,250,246,0.7)";
