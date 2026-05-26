@@ -29,31 +29,45 @@ const MENU_LINKS: { href: string; label: string; description: string; meta: stri
 
 export default function Header() {
   const [scrolled, setScrolled] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [lang, setLang] = useState<Lang>("DE");
+  const [dark, setDark] = useState(false);
 
-  const logoRef = useRef<HTMLAnchorElement>(null);
-  const navLinksRef = useRef<HTMLElement>(null);
-  const langBtnRef = useRef<HTMLDivElement>(null);
-  const burgerRef = useRef<HTMLButtonElement>(null);
-  const contactRef = useRef<HTMLAnchorElement>(null);
-  const firstScrollRun = useRef(true);
-  const scrollTlRef = useRef<gsap.core.Timeline | null>(null);
-
-  // --- scroll detection ---
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 40);
+    const onScroll = () => {
+      setScrolled(window.scrollY > 40);
+    };
     window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
     onScroll();
-    return () => window.removeEventListener("scroll", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+    };
   }, []);
 
   // --- localStorage lang persistence ---
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem("pokyh-lang") as Lang | null;
-      if (saved && LANGS.some((l) => l.code === saved)) setLang(saved);
-    } catch {}
+    const SAMPLE_Y = 36;
+    const check = () => {
+      const targets = document.querySelectorAll<HTMLElement>(
+        'footer, [data-theme="dark"]'
+      );
+      let isDark = false;
+      for (const t of targets) {
+        const r = t.getBoundingClientRect();
+        if (r.top <= SAMPLE_Y && r.bottom >= SAMPLE_Y) {
+          isDark = true;
+          break;
+        }
+      }
+      setDark(isDark);
+    };
+    check();
+    window.addEventListener("scroll", check, { passive: true });
+    window.addEventListener("resize", check);
+    return () => {
+      window.removeEventListener("scroll", check);
+      window.removeEventListener("resize", check);
+    };
   }, []);
 
   // --- GSAP transition: scrolled state ---
@@ -165,71 +179,77 @@ export default function Header() {
   };
 
   return (
-    <>
-      <header
+    <header
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 99999,
+        display: "grid",
+        gridTemplateColumns: "1fr auto 1fr",
+        alignItems: "center",
+        padding: "14px 32px",
+        background: pillBg,
+        border: pillBorder,
+        borderRadius: 0,
+        backdropFilter: scrolled ? "blur(12px) saturate(1.4)" : "none",
+        WebkitBackdropFilter: scrolled ? "blur(12px) saturate(1.4)" : "none",
+        color: textColor,
+        transition: [
+          `background ${COLOR_DUR} ease`,
+          `border-color ${COLOR_DUR} ease`,
+          `color ${COLOR_DUR} ease`,
+        ].join(", "),
+      }}
+    >
+      <a
+        href="/"
+        aria-label="pokyh.studio home"
         style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 99999,
-          display: "grid",
-          gridTemplateColumns: "1fr auto 1fr",
+          display: "inline-flex",
           alignItems: "center",
-          padding: "20px 44px",
-          background: "transparent",
-          color: "#0c0c0c",
-          pointerEvents: "none",
+          gap: 10,
+          textDecoration: "none",
+          justifySelf: "start",
         }}
       >
-        <a
-          ref={logoRef}
-          href="/"
-          aria-label="pokyh.studio home"
+        <img
+          src="/assets/logo.png"
+          alt="pokyh.studio logo"
+          width={36}
+          height={36}
+          style={{ display: "block", objectFit: "contain", width: 36, height: 36 }}
+        />
+        <span
           style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 10,
-            textDecoration: "none",
-            justifySelf: "start",
-            pointerEvents: "auto",
+            fontWeight: 800,
+            fontStyle: "italic",
+            fontSize: 22,
+            letterSpacing: "-0.02em",
+            color: "var(--ink)",
+            lineHeight: 1,
+            fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+            display: "flex",
+            alignItems: "baseline",
           }}
         >
-          <img
-            src="/assets/logo.png"
-            alt="pokyh.studio logo"
-            width={46}
-            height={46}
-            style={{ display: "block", objectFit: "contain", width: 46, height: 46 }}
-          />
+          <span>pokyh</span>
           <span
             style={{
-              fontWeight: 800,
-              fontStyle: "italic",
-              fontSize: 28,
-              letterSpacing: "-0.02em",
-              color: "var(--ink)",
-              lineHeight: 1,
-              fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
-              display: "flex",
-              alignItems: "baseline",
+              display: "inline-block",
+              width: "0.28em",
+              height: "0.28em",
+              background: dark ? "#e4e2dc" : "#0c0c0c",
+              borderRadius: "50%",
+              margin: "0 0.12em 0.08em",
+              transform: "translateY(-0.05em)",
+              transition: `background ${COLOR_DUR} ease`,
             }}
-          >
-            <span>pokyh</span>
-            <span
-              style={{
-                display: "inline-block",
-                width: "0.28em",
-                height: "0.28em",
-                background: "#0c0c0c",
-                borderRadius: "50%",
-                margin: "0 0.12em 0.08em",
-                transform: "translateY(-0.05em)",
-              }}
-            />
-            <span>studio</span>
-          </span>
-        </a>
+          />
+          <span>studio</span>
+        </span>
+      </a>
 
         <nav
           ref={navLinksRef}
