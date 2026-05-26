@@ -2,18 +2,22 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 
+# Build tools required for native addons (sqlite3 has no musl pre-built binary
+# and must be compiled from source on Alpine Linux)
+RUN apk add --no-cache python3 make g++
+
 # Root deps (Next.js, gsap, dotenv …)
 COPY package*.json ./
 RUN npm ci --ignore-scripts
 
-# Backend deps (--ignore-scripts: skip postinstall/vite build here;
-# admin-src is not yet copied. The explicit RUN npm run build below handles it.)
+# Backend deps — postinstall (vite build) was removed from package.json so plain
+# npm ci is safe here; install scripts for native addons (sqlite3, sharp …) run.
 COPY backend/package*.json ./backend/
-RUN cd backend && npm ci --ignore-scripts
+RUN cd backend && npm ci
 
-# Copy everything and build
+# Copy everything and build (next build + vite admin build)
 COPY . .
-RUN npm run build          # next build + vite admin build
+RUN npm run build
 
 # ── Production stage ──────────────────────────────────────────────────────────
 FROM node:20-alpine
@@ -35,7 +39,11 @@ COPY --from=builder --chown=appuser:appgroup /app/backend/public         ./backe
 COPY --from=builder --chown=appuser:appgroup /app/backend/scripts        ./backend/scripts
 COPY --from=builder --chown=appuser:appgroup /app/backend/node_modules   ./backend/node_modules
 
-RUN mkdir -p data backend/uploads logs && chown -R appuser:appgroup /app
+# All COPY commands above already use --chown=appuser:appgroup.
+# Only the newly created directories need ownership set — NOT all of /app
+# (chown -R on node_modules takes ~68 seconds and adds no value).
+RUN mkdir -p data backend/uploads logs \
+ && chown appuser:appgroup data backend/uploads logs
 
 USER appuser
 EXPOSE 3000

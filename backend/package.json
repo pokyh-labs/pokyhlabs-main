@@ -11,7 +11,6 @@
     "start": "node src/app.js",
     "dev": "nodemon src/app.js",
     "build": "vite build",
-    "postinstall": "npm run build",
     "preview": "vite preview",
     "add-admin": "node scripts/setup-admin.js",
     "security-test": "node scripts/security-test.js",
