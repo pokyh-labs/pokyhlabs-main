@@ -60,13 +60,13 @@ app.use((req, res, next) => {
         connectSrc: ["'self'"],
         frameSrc: ["'none'"],
         objectSrc: ["'none'"],
-        // Remove upgradeInsecureRequests to prevent local IP breaks (HTTPS upgrade on HTTP)
+        upgradeInsecureRequests: null,
       },
     },
-    hsts: process.env.NODE_ENV === 'production' ? { maxAge: 31536000, includeSubDomains: true } : false,
+    hsts: false,
     crossOriginEmbedderPolicy: false,
-    crossOriginOpenerPolicy: false, // Fix untrustworthy origin COOP warning on local IP
-    originAgentCluster: false,      // Fix origin-agent-cluster warning on local IP
+    crossOriginOpenerPolicy: false,
+    originAgentCluster: false,
   })(req, res, next);
 });
 
