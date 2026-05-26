@@ -36,7 +36,6 @@ export default function Login({ onLogin }) {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      minHeight: '100vh',
       minHeight: '100dvh',
       padding: '1.5rem',
       background: 'var(--bg)',

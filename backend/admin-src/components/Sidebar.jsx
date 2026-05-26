@@ -36,7 +36,6 @@ function NavItem({ item, active, onClick }) {
       onClick={onClick}
       onMouseDown={() => setPressed(true)}
       onMouseUp={() => setPressed(false)}
-      onMouseLeave={() => setPressed(false)}
       style={{
         width: '100%',
         padding: '8px 12px',

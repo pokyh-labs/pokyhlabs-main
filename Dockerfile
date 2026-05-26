@@ -12,7 +12,8 @@ RUN npm ci --ignore-scripts
 
 # Backend deps — postinstall (vite build) was removed from package.json so plain
 # npm ci is safe here; install scripts for native addons (sqlite3, sharp …) run.
-COPY backend/package*.json ./backend/
+# .npmrc is copied alongside package.json so loglevel=error takes effect during install.
+COPY backend/package*.json backend/.npmrc ./backend/
 RUN cd backend && npm ci
 
 # Copy everything and build (next build + vite admin build)
