@@ -55,16 +55,18 @@ app.use((req, res, next) => {
         defaultSrc: ["'self'"],
         styleSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net', 'https://fonts.googleapis.com'],
         fontSrc: ["'self'", 'https://fonts.gstatic.com', 'https://cdn.jsdelivr.net'],
-        imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
+        imgSrc: ["'self'", 'data:', 'blob:', 'https:', 'http:'],
         scriptSrc: ["'self'", 'https://cdn.jsdelivr.net'],
         connectSrc: ["'self'"],
         frameSrc: ["'none'"],
         objectSrc: ["'none'"],
-        upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null,
+        // Remove upgradeInsecureRequests to prevent local IP breaks (HTTPS upgrade on HTTP)
       },
     },
     hsts: process.env.NODE_ENV === 'production' ? { maxAge: 31536000, includeSubDomains: true } : false,
     crossOriginEmbedderPolicy: false,
+    crossOriginOpenerPolicy: false, // Fix untrustworthy origin COOP warning on local IP
+    originAgentCluster: false,      // Fix origin-agent-cluster warning on local IP
   })(req, res, next);
 });
 
