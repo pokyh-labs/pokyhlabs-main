@@ -20,12 +20,19 @@ function sseAuth(req) {
 }
 
 function sseSetup(res) {
+  // no-transform: prevents compression middleware from buffering chunks
+  // X-Accel-Buffering: no: tells nginx/Dokploy proxy not to buffer the stream
   res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
   res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
   res.flushHeaders();
+
   const send = (type, data) => {
-    if (!res.writableEnded) res.write(`data: ${JSON.stringify({ type, data })}\n\n`);
+    if (res.writableEnded) return;
+    res.write(`data: ${JSON.stringify({ type, data })}\n\n`);
+    // Force through any compression transform stream so the client sees it immediately
+    if (typeof res.flush === 'function') res.flush();
   };
   const end = () => { if (!res.writableEnded) res.end(); };
   return { send, end };
