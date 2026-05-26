@@ -24,6 +24,7 @@
 html {
   /* Lenis handles scrolling */
   overflow-x: clip;
+  overscroll-behavior: none;
   background: #593df8;
 }
 
@@ -33,6 +34,7 @@ body {
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
   cursor: default;
   overflow-x: clip;
+  overscroll-behavior: none;
 }
 
 .ui > * {
@@ -154,26 +156,28 @@ body {
 }
 .ft-top {
   width: 100%;
-  max-width: 1280px;
-  margin: 0 auto;
   display: grid;
-  grid-template-columns: minmax(160px, 1fr) 2.4fr;
+  grid-template-columns: 1fr 1fr;
   gap: 3rem;
   align-items: start;
 }
 .ft-cols {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 2.5rem;
 }
 .ft-bottom {
   width: 100%;
-  max-width: 1280px;
-  margin: 3.5rem auto 0;
+  margin: 3.5rem 0 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3rem;
+  align-items: center;
+}
+.ft-bottom-inner {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: flex-end;
   gap: 1.5rem 2rem;
 }
 
@@ -200,9 +204,16 @@ body {
 }
 
 @media (max-width: 860px) {
-  .ft-top {
+  .ft-top,
+  .ft-bottom {
     grid-template-columns: 1fr;
     gap: 2.25rem;
+  }
+  .ft-bottom > div:first-child {
+    display: none;
+  }
+  .ft-cols {
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 @media (max-width: 560px) {
@@ -212,8 +223,5 @@ body {
   .ft-cols {
     grid-template-columns: 1fr 1fr;
     gap: 1.75rem;
-  }
-  .ft-bottom {
-    justify-content: flex-start;
   }
 }
