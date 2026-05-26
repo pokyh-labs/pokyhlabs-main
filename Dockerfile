@@ -20,7 +20,8 @@ RUN npm run build
 
 # ── Production stage ──────────────────────────────────────────────────────────
 FROM node:24-alpine
-RUN apk add --no-cache dumb-init wget
+# su-exec: lightweight privilege-drop tool (Alpine standard, replaces gosu)
+RUN apk add --no-cache dumb-init wget su-exec
 WORKDIR /app
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
@@ -38,13 +39,13 @@ COPY --from=builder --chown=appuser:appgroup /app/backend/public         ./backe
 COPY --from=builder --chown=appuser:appgroup /app/backend/scripts        ./backend/scripts
 COPY --from=builder --chown=appuser:appgroup /app/backend/node_modules   ./backend/node_modules
 
-# Only chown the newly created directories (not all of /app — saves ~68 seconds)
-RUN mkdir -p data backend/uploads logs \
- && chown appuser:appgroup data backend/uploads logs
+# Entrypoint script: creates runtime dirs + fixes volume ownership at startup,
+# then drops from root to appuser before handing off to node.
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-USER appuser
 EXPOSE 3000
 ENV PORT=3000 HOSTNAME="0.0.0.0" NODE_ENV=production
 
-ENTRYPOINT ["dumb-init", "--"]
+ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["node", "server.js"]
