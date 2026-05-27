@@ -47,12 +47,17 @@ COPY --from=builder --chown=appuser:appgroup /app/backend/scripts        ./backe
 COPY --from=builder --chown=appuser:appgroup /app/backend/node_modules   ./backend/node_modules
 
 # Entrypoint script: creates runtime dirs + fixes volume ownership at startup,
-# then drops from root to appuser before handing off to node.
+# then drops from root to appuser before handing off to dumb-init.
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# Startup script: launches cloudflared tunnel in background (if token is set),
+# then execs node. Runs as appuser inside dumb-init.
+COPY start.sh /usr/local/bin/start.sh
+RUN chmod +x /usr/local/bin/start.sh
 
 EXPOSE 3000
 ENV PORT=3000 HOSTNAME="0.0.0.0" NODE_ENV=production
 
 ENTRYPOINT ["docker-entrypoint.sh"]
-CMD ["node", "server.js"]
+CMD ["/usr/local/bin/start.sh"]
