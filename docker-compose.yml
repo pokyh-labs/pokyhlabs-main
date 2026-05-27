@@ -16,13 +16,28 @@ services:
       - ./backend/uploads:/app/backend/uploads
       - ./backend/logs:/app/backend/logs
       - sqlite_data:/app/data
-      - cloudflared_data:/root/.cloudflared
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:${PORT:-3000}/api/blogs"]
       interval: 15s
       timeout: 5s
       retries: 5
       start_period: 30s
+
+  # ── Cloudflare Tunnel ─────────────────────────────────────────────
+  # Token holen: Zero Trust Dashboard → Networks → Tunnels → Tunnel erstellen
+  # → Connector-Typ "Docker" wählen → Token aus dem angezeigten Befehl kopieren
+  # → in .env eintragen: CLOUDFLARE_TUNNEL_TOKEN=eyJ...
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      app:
+        condition: service_healthy
+    volumes:
+      - cloudflared_data:/home/nonroot/.cloudflared
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
 
 volumes:
   sqlite_data:
