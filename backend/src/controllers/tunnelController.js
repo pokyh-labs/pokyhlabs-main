@@ -5,6 +5,23 @@ const { TunnelConfig } = require('../models');
 const { encryptSecret, decryptSecret } = require('../config/security');
 const logger = require('../utils/logger');
 
+// ── Hostname sanitizer ────────────────────────────────────────────────────────
+// Strips protocol, path, port, trailing slashes — so the user can safely enter
+// "https://pokyh.studio/" or "pokyh.studio" and both produce "pokyh.studio".
+function sanitizeHostname(raw) {
+  if (!raw || typeof raw !== 'string') return '';
+  let h = raw.trim().toLowerCase();
+  // Strip protocol
+  h = h.replace(/^https?:\/\//i, '');
+  // Strip path, query, hash
+  h = h.split('/')[0].split('?')[0].split('#')[0];
+  // Strip port
+  h = h.split(':')[0];
+  // Strip trailing dot
+  h = h.replace(/\.$/, '');
+  return h.trim();
+}
+
 // ── SSE helper ────────────────────────────────────────────────────────────────
 // EventSource cannot send custom headers, so auth token comes as ?token= query param.
 function sseAuth(req) {
@@ -46,6 +63,7 @@ async function getStatus(req, res) {
     authenticated: tunnelService.isAuthenticated(),
     version:       await tunnelService.getVersion().catch(() => null),
     localService:  `http://localhost:${process.env.PORT || 3000}`,
+    fatalError:    runtime.fatalError || null,
     config: config ? {
       id:                config.id,
       tunnel_name:       config.tunnel_name,
@@ -117,8 +135,8 @@ async function setupSSE(req, res) {
   const { send, end } = sseSetup(res);
   req.on('close', () => {});
 
-  const tunnelName  = typeof req.query.tunnel_name  === 'string' ? req.query.tunnel_name.trim()  : '';
-  const hostname    = typeof req.query.hostname     === 'string' ? req.query.hostname.trim()     : '';
+  const tunnelName   = typeof req.query.tunnel_name   === 'string' ? req.query.tunnel_name.trim() : '';
+  const hostname     = sanitizeHostname(req.query.hostname);
   const localService = typeof req.query.local_service === 'string' ? req.query.local_service.trim() : `http://localhost:${process.env.PORT || 3000}`;
 
   try {
@@ -131,6 +149,9 @@ async function setupSSE(req, res) {
       send('error', 'Not authenticated with Cloudflare. Complete the login step first.');
       return end();
     }
+
+    // Clear any previous fatal error so a fresh setup always starts clean
+    tunnelService.clearFatalError();
 
     send('log', `Setting up tunnel '${tunnelName}' → ${hostname}`);
     send('log', `Local service: ${localService}`);
@@ -145,20 +166,27 @@ async function setupSSE(req, res) {
     tunnelService.writeConfig(tunnelId, tunnelName, hostname, localService);
     send('log', 'Config written ✓');
 
-    // Route DNS
+    // Route DNS — fail the whole setup if this fails (tunnel won't work without it)
     send('log', `Routing DNS: ${hostname} → tunnel...`);
     try {
       await tunnelService.routeDNS(tunnelName, hostname);
       send('log', 'DNS route configured ✓');
     } catch (e) {
-      send('log', `DNS: ${e.message.split('\n')[0]} (may already exist — OK)`);
+      const msg = e.message.split('\n')[0];
+      // "already exists" is OK — the record is just being reused
+      if (/already exist|duplicate/i.test(msg)) {
+        send('log', `DNS: record already exists — OK`);
+      } else {
+        send('error', `DNS routing failed: ${msg}\nMake sure your domain is on Cloudflare and the API key has DNS permissions.`);
+        return end();
+      }
     }
 
     // Persist to DB for UI display
     await TunnelConfig.destroy({ where: {} });
     const config = await TunnelConfig.create({
-      tunnel_name:  tunnelName,
-      tunnel_id:    tunnelId,
+      tunnel_name:   tunnelName,
+      tunnel_id:     tunnelId,
       hostname,
       local_service: localService,
       status: 'stopped',
@@ -186,7 +214,7 @@ async function setupSSE(req, res) {
 
 const setupSimpleValidators = [
   body('tunnel_name').trim().notEmpty().matches(/^[A-Za-z0-9\-_]{1,64}$/),
-  body('hostname').trim().notEmpty().isFQDN(),
+  body('hostname').trim().notEmpty(),
   body('local_service').trim().notEmpty().isURL({ require_tld: false }),
 ];
 
@@ -194,7 +222,10 @@ async function setupSimple(req, res) {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
-  const { tunnel_name, hostname, local_service } = req.body;
+  const { tunnel_name, local_service } = req.body;
+  const hostname = sanitizeHostname(req.body.hostname);
+
+  if (!hostname) return res.status(400).json({ error: 'Invalid hostname' });
 
   // Validate local_service is a safe localhost URL
   try {
@@ -215,28 +246,34 @@ async function setupSimple(req, res) {
   try {
     logger.info('Setting up tunnel', { event: 'tunnel_setup', tunnel_name, hostname });
 
+    // Clear any previous fatal error so a fresh setup always starts clean
+    tunnelService.clearFatalError();
+
     // Find or create tunnel
     const tunnelId = await tunnelService.findOrCreateTunnel(tunnel_name);
 
-    // Write config.yml with ingress rules (DNS routing happens here)
+    // Write config.yml with ingress rules
     tunnelService.writeConfig(tunnelId, tunnel_name, hostname, local_service);
 
-    // Route DNS — run in parallel with DB save for speed
-    const [config] = await Promise.all([
-      (async () => {
-        await TunnelConfig.destroy({ where: {} });
-        return TunnelConfig.create({
-          tunnel_name,
-          tunnel_id:    tunnelId,
-          hostname,
-          local_service,
-          status: 'stopped',
-        });
-      })(),
-      tunnelService.routeDNS(tunnel_name, hostname).catch(e => {
-        logger.warn('DNS routing skipped (may already exist)', { error: e.message });
-      }),
-    ]);
+    // Route DNS
+    try {
+      await tunnelService.routeDNS(tunnel_name, hostname);
+    } catch (e) {
+      if (!/already exist|duplicate/i.test(e.message)) {
+        return res.status(500).json({ error: `DNS routing failed: ${e.message.split('\n')[0]}` });
+      }
+      logger.warn('DNS record already exists — reusing', { hostname });
+    }
+
+    // Persist to DB
+    await TunnelConfig.destroy({ where: {} });
+    const config = await TunnelConfig.create({
+      tunnel_name,
+      tunnel_id:    tunnelId,
+      hostname,
+      local_service,
+      status: 'stopped',
+    });
 
     // Stop existing tunnel, then start by name
     await tunnelService.stop();
@@ -332,6 +369,7 @@ async function uninstallService(req, res) {
 async function reconfigure(req, res) {
   try {
     await tunnelService.stop();
+    tunnelService.clearFatalError();
     await TunnelConfig.destroy({ where: {} });
     res.json({ message: 'Configuration cleared' });
   } catch (err) {

@@ -464,7 +464,8 @@ function TunnelSetup() {
 
   const installed    = status.installed;
   const authed       = status.authenticated;
-  const hasTunnel    = !!status.config?.tunnel_id && !reconfiguring;
+  const isFatal      = !!status.fatalError;
+  const hasTunnel    = !!status.config?.tunnel_id && !reconfiguring && !isFatal;
   const isRunning    = status.status === 'running';
   const hostname     = status.config?.hostname || '';
   const svcInstalled = status.config?.service_installed;
@@ -478,6 +479,21 @@ function TunnelSetup() {
           <button onClick={() => setError('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', fontSize: '0.9rem', padding: 0, lineHeight: 1 }}>
             <i className="bi bi-x-lg" />
           </button>
+        </div>
+      )}
+
+      {isFatal && (
+        <div className="alert alert-error" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+            <i className="bi bi-exclamation-triangle-fill" style={{ marginTop: 2, flexShrink: 0 }} />
+            <div>
+              <strong>Tunnel nicht gefunden — Neu konfigurieren erforderlich</strong>
+              <div style={{ fontSize: '0.82rem', marginTop: 2, opacity: 0.85 }}>{status.fatalError}</div>
+            </div>
+          </div>
+          <div style={{ fontSize: '0.82rem', opacity: 0.75 }}>
+            Der Tunnel existiert nicht mehr auf Cloudflare. Bitte erstelle ihn unten neu.
+          </div>
         </div>
       )}
 

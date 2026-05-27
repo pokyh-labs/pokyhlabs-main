@@ -11,6 +11,19 @@ const logger = require('../utils/logger');
 const IS_WINDOWS = process.platform === 'win32';
 const IS_DOCKER  = fs.existsSync('/.dockerenv');
 
+// Errors that mean cloudflared will NEVER succeed without reconfiguration.
+// Don't restart on these — just mark as fatal and wait for user to re-setup.
+const FATAL_PATTERNS = [
+  /error parsing tunnel id/i,
+  /tunnel not found/i,
+  /no such tunnel/i,
+  /unauthorized/i,
+  /invalid tunnel credential/i,
+  /credentials file not found/i,
+  /failed to unmarshal/i,
+  /neither the id nor the name of any/i,
+];
+
 // ── Validation helpers ────────────────────────────────────────────────────────
 
 function assertSafeToken(token) {
@@ -63,10 +76,12 @@ class TunnelService {
     this.process       = null;
     this.pid           = null;
     this.status        = 'stopped';
+    this.fatalError    = null;
     this._cfPath       = null;
     this._loginProcess = null;
     this._restartTimer = null;
     this._currentName  = null;
+    this._lastStderr   = '';
   }
 
   // ── cloudflared directory / config paths ─────────────────────────────────────
@@ -298,6 +313,8 @@ class TunnelService {
     if (this._restartTimer) { clearTimeout(this._restartTimer); this._restartTimer = null; }
 
     this._currentName = name;
+    this._lastStderr  = '';
+    this.fatalError   = null;
 
     this.process = spawn(p, ['tunnel', 'run', name], {
       detached: false, stdio: ['ignore', 'pipe', 'pipe'],
@@ -306,13 +323,35 @@ class TunnelService {
     this.status = 'running';
 
     this.process.stdout.on('data', d => logger.info(`[cloudflared] ${d.toString().trim()}`));
-    this.process.stderr.on('data', d => logger.warn(`[cloudflared] ${d.toString().trim()}`));
+    this.process.stderr.on('data', d => {
+      const text = d.toString();
+      this._lastStderr += text;
+      logger.warn(`[cloudflared] ${text.trim()}`);
+    });
 
     this.process.on('close', code => {
+      this.process = null; this.pid = null;
+      const nameToResume  = this._currentName;
+      const stderrCapture = this._lastStderr;
+
+      // Detect non-recoverable errors — no point restarting, tunnel no longer exists
+      const fatalLine = stderrCapture.split('\n').find(l => FATAL_PATTERNS.some(p => p.test(l)));
+      if (fatalLine) {
+        this.fatalError    = fatalLine.trim();
+        this.status        = 'error';
+        this._currentName  = null;
+        logger.error('cloudflared fatal error — reconfiguration required', { error: this.fatalError });
+        return;
+      }
+
+      this.status = 'stopped';
+      if (!nameToResume) {
+        logger.info(`cloudflared exited (${code}) — stopped intentionally, not restarting`);
+        return;
+      }
       logger.info(`cloudflared exited (${code}). Restarting in 5s...`);
-      this.process = null; this.pid = null; this.status = 'stopped';
       this._restartTimer = setTimeout(() => {
-        this.startByName(this._currentName).catch(err => {
+        this.startByName(nameToResume).catch(err => {
           logger.error('Tunnel restart failed', { error: err.message });
           this.status = 'error';
         });
@@ -322,8 +361,10 @@ class TunnelService {
     this.process.on('error', err => {
       logger.error('[cloudflared] failed to start', { error: err.message });
       this.process = null; this.pid = null; this.status = 'error';
+      const nameToResume = this._currentName;
+      if (!nameToResume) return;
       this._restartTimer = setTimeout(() => {
-        this.startByName(this._currentName).catch(e =>
+        this.startByName(nameToResume).catch(e =>
           logger.error('Tunnel restart failed', { error: e.message })
         );
       }, 10000);
@@ -360,6 +401,15 @@ class TunnelService {
     return { pid: this.pid };
   }
 
+  /** Call before re-running setup to clear a fatal error state. */
+  clearFatalError() {
+    this.fatalError   = null;
+    this._currentName = null;
+    if (this._restartTimer) { clearTimeout(this._restartTimer); this._restartTimer = null; }
+    if (this.status === 'error') this.status = 'stopped';
+    try { fs.unlinkSync(this.cfConfigPath()); } catch {}
+  }
+
   async stop() {
     if (this._restartTimer) { clearTimeout(this._restartTimer); this._restartTimer = null; }
     this._currentName = null;
@@ -390,12 +440,13 @@ class TunnelService {
 
   getStatus() {
     return {
-      status:   this.status,
-      pid:      this.pid,
-      running:  this.status === 'running',
-      isDocker: IS_DOCKER,
-      configured:    this.isTunnelConfigured(),
+      status:         this.status,
+      pid:            this.pid,
+      running:        this.status === 'running',
+      isDocker:       IS_DOCKER,
+      configured:     this.isTunnelConfigured(),
       configHostname: this.getHostnameFromConfig(),
+      fatalError:     this.fatalError || null,
     };
   }
 
