@@ -3,6 +3,7 @@ const {
   getStatus,
   install, installSSE,
   loginStart, loginStatus, loginSSE,
+  setupSSE,
   setupSimple, setupSimpleValidators,
   start, stop,
   installService, uninstallService,
@@ -29,5 +30,6 @@ router.post('/reconfigure',         ...guard, reconfigure);
 // SSE streams — auth via ?token= (EventSource can't send headers)
 router.get('/install/stream', installSSE);
 router.get('/login/stream',   loginSSE);
+router.get('/setup/stream',   setupSSE);
 
 module.exports = router;

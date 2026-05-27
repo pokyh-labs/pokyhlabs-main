@@ -22,19 +22,15 @@ async function main() {
   const { app: backendApp, initDatabase } = require('./backend/src/app');
   await initDatabase();
 
-  // 2. Auto-resume tunnel if it was running before restart
+  // 2. Auto-resume tunnel if configured (reads ~/.cloudflared/config.yml — reference-repo approach)
   try {
-    const { TunnelConfig } = require('./backend/src/models');
-    const { decryptSecret } = require('./backend/src/config/security');
     const tunnelService = require('./backend/src/services/tunnelService');
-    const config = await TunnelConfig.findOne({
-      where: { status: 'running' },
-      order: [['created_at', 'DESC']],
-    });
-    if (config?.tunnel_token_encrypted) {
-      const token = decryptSecret(config.tunnel_token_encrypted);
-      await tunnelService.startWithToken(token);
-      console.log('> Cloudflare tunnel auto-resumed');
+    if (tunnelService.isTunnelConfigured()) {
+      const name = tunnelService.getTunnelNameFromConfig();
+      if (name) {
+        await tunnelService.startByName(name);
+        console.log(`> Cloudflare tunnel '${name}' auto-resumed`);
+      }
     }
   } catch (err) {
     console.warn('> Tunnel auto-resume failed (reconfigure in admin panel):', err.message);
