@@ -236,6 +236,7 @@ const paths = [
   '/owa/auth/logon.aspx',
   '/autodiscover/autodiscover.xml',
   '/Telerik.Web.UI.WebResource.axd',
+  '/routes',
 ];
 
 module.exports = { responses, paths };
