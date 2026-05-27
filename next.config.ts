@@ -2,6 +2,7 @@ import type { NextConfig } from "next"
 
 const nextConfig: NextConfig = {
   transpilePackages: ["gsap", "lenis", "three"],
+  allowedDevOrigins: ["pokyh.studio", "localhost:3000"],
   compress: true,
   poweredByHeader: false,
   images: {
