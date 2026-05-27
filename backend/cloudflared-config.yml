@@ -1,0 +1,2 @@
+ingress:
+  - service: http://backend:3000
