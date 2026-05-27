@@ -5,6 +5,7 @@ import { siteConfig, structuredData } from "@/lib/seo.config"
 import Header from "@/components/Header"
 import Footer from "@/components/Footer"
 import RevealObserver from "@/components/RevealObserver"
+import SmoothScroll from "@/components/SmoothScroll"
 import Analytics from "@/components/Analytics"
 import CookieConsent from "@/components/CookieConsent"
 
@@ -124,6 +125,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body>
+        <SmoothScroll />
         <Header />
         <main id="main-content">
           {children}

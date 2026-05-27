@@ -97,8 +97,7 @@ async function getBySlug(req, res) {
   const cached = cache.get(cacheKey);
   if (cached) {
     res.setHeader('X-Cache', 'HIT');
-    Blog.increment('views', { where: { slug, status: 'published' } }).catch(() => {});
-    return res.json({ ...cached, views: (cached.views || 0) + 1 });
+    return res.json(cached);
   }
 
   const blog = await Blog.findOne({
@@ -107,12 +106,32 @@ async function getBySlug(req, res) {
   });
   if (!blog) return err(res, 404, 'Blog not found');
 
-  await blog.increment('views');
-  await blog.reload();
   const plain = blog.toJSON();
   cache.set(cacheKey, plain, BLOG_SINGLE_TTL);
   res.setHeader('X-Cache', 'MISS');
   res.json(plain);
+}
+
+// Public: increment view counter when a post is opened
+async function incrementView(req, res) {
+  const { slug } = req.params;
+
+  const blog = await Blog.findOne({
+    where: { slug, status: 'published' },
+    attributes: ['id', 'views'],
+  });
+  if (!blog) return err(res, 404, 'Blog not found');
+
+  await Blog.increment('views', { where: { id: blog.id } });
+  const newViews = blog.views + 1;
+
+  const cacheKey = KEYS.BLOG_SLUG(slug);
+  const cached = cache.get(cacheKey);
+  if (cached) {
+    cache.set(cacheKey, { ...cached, views: newViews }, BLOG_SINGLE_TTL);
+  }
+
+  res.json({ views: newViews });
 }
 
 // Admin: get all blogs
@@ -395,4 +414,4 @@ async function patchViews(req, res) {
   res.json({ id: blog.id, views: v });
 }
 
-module.exports = { getPublished, getBySlug, getAll, create, update, deleteBlog, stats, patchViews, blogValidators, importPdf, importHtml };
+module.exports = { getPublished, getBySlug, incrementView, getAll, create, update, deleteBlog, stats, patchViews, blogValidators, importPdf, importHtml };

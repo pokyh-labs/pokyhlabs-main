@@ -4,7 +4,6 @@ import { useEffect, useRef, ReactNode } from "react";
 import Link from "next/link";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import Lenis from "lenis";
 import { team, type TeamMember } from "@/lib/team.config";
 
 const WordReveal = ({ text }: { text: string }) => (
@@ -37,27 +36,6 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
 
   useEffect(() => {
     gsap.registerPlugin(ScrollTrigger);
-
-    // --- Lenis smooth scroll ---
-    const lenis = new Lenis({
-      duration: 1.2,
-      easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-      smoothWheel: true,
-      wheelMultiplier: 1,
-      touchMultiplier: 1.5,
-    });
-
-    // Expose Lenis so the header (logo / nav links) can drive smooth scrolls
-    // without having to re-instantiate or import the singleton.
-    (window as unknown as { __lenis?: unknown }).__lenis = lenis;
-
-    function raf(time: number) {
-      lenis.raf(time);
-      rafId = requestAnimationFrame(raf);
-    }
-    let rafId = requestAnimationFrame(raf);
-
-    lenis.on("scroll", ScrollTrigger.update);
 
     // --- Dark section: rises with rounded top corners ---
     if (contentRef.current) {
@@ -306,9 +284,6 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
     ScrollTrigger.refresh();
 
     return () => {
-      cancelAnimationFrame(rafId);
-      lenis.destroy();
-      delete (window as unknown as { __lenis?: unknown }).__lenis;
       ScrollTrigger.getAll().forEach((t) => t.kill());
     };
   }, []);

@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const {
-  getPublished, getBySlug, getAll, create, update, deleteBlog, stats, patchViews, blogValidators, importPdf, importHtml
+  getPublished, getBySlug, incrementView, getAll, create, update, deleteBlog, stats, patchViews, blogValidators, importPdf, importHtml
 } = require('../controllers/blogController');
 const { authenticate } = require('../middleware/authenticate');
 const { authorize } = require('../middleware/authorize');
@@ -10,6 +10,7 @@ const { uploadPdf, uploadHtml } = require('../middleware/upload');
 
 // Public routes
 router.get('/', apiRateLimiter, getPublished);
+router.post('/:slug/view', apiRateLimiter, incrementView);
 router.get('/:slug', apiRateLimiter, getBySlug);
 
 // Admin routes
