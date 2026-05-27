@@ -1,4 +1,4 @@
-import type { Metadata } from "next"
+import type { Metadata, Viewport } from "next"
 import { Instrument_Serif, DM_Mono, Inter } from "next/font/google"
 import "./globals.css"
 import { siteConfig, structuredData } from "@/lib/seo.config"
@@ -76,6 +76,9 @@ export const metadata: Metadata = {
       : undefined,
   },
   icons: { icon: "/assets/logo.png", apple: "/assets/logo.png" },
+}
+
+export const viewport: Viewport = {
   themeColor: "#0c0c0c",
 }
 
