@@ -385,9 +385,9 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
               suppressHydrationWarning
               style={{ fontSize: "clamp(2rem, 3.5vw, 4rem)", fontWeight: 400, lineHeight: 1.3, marginBottom: "3rem" }}
             >
-              <WordReveal text="We are Pokyhlabs – a digital studio crafting fast," /><br />
-              <WordReveal text="scalable, and immersive web experiences that" /><br />
-              <WordReveal text="merge creativity with engineering precision." />
+              <WordReveal text="Websites, apps, hosting." /><br />
+              <WordReveal text="Whatever the idea needs," /><br />
+              <WordReveal text="we build it." />
             </h2>
           </div>
 
@@ -402,8 +402,8 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
                 color: "#d1d1d1",
               }}
             >
-              <WordReveal text="We specialize in developing digital platforms, cutting-edge products, and interactive" /><br />
-              <WordReveal text="brand experiences using modern web technologies." />
+              <WordReveal text="From a single landing page to a full product." /><br />
+              <WordReveal text="We keep it clean, fast, and running." />
             </p>
           </div>
 
@@ -457,7 +457,7 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
               suppressHydrationWarning
               style={{ fontSize: "clamp(2rem, 3.5vw, 4rem)", fontWeight: 400, lineHeight: 1.3, marginBottom: "2rem" }}
             >
-              <WordReveal text="Pushing the boundaries of the digital world." />
+              <WordReveal text="Every project starts from scratch." />
             </h2>
           </div>
 
@@ -473,7 +473,8 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
                 maxWidth: "800px",
               }}
             >
-              <WordReveal text="Every pixel we place and every line of code we write is intentional. By combining beautiful design with robust development, we build digital products that not only look incredible but perform flawlessly under pressure." />
+              <WordReveal text="No templates, no shortcuts. Fast, clean, built to last." /><br />
+              <WordReveal text="Code we'd want to maintain, designs we'd want to use." />
             </p>
           </div>
 
@@ -605,8 +606,8 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
                 }}
               >
                 <WordReveal text="Two developers." /><br />
-                <WordReveal text="One studio." /><br />
-                <WordReveal text="Built from Südtirol." />
+                <WordReveal text="Built from Südtirol." /><br />
+                <WordReveal text="Not an agency." />
               </h2>
             </div>
 
@@ -622,8 +623,8 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
                   margin: "0 auto",
                 }}
               >
-                <WordReveal text="A small studio with one obsession — how the web feels," /><br />
-                <WordReveal text="how it moves, and how it stays with you long after you leave." />
+                <WordReveal text="We care about how the web feels, how it moves," /><br />
+                <WordReveal text="and whether it holds up three years later." />
               </p>
             </div>
           </div>
@@ -649,8 +650,7 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
                   maxWidth: "820px",
                 }}
               >
-                <WordReveal text="We don't do templates. Every project starts from zero —" /><br />
-                <WordReveal text="engineered for speed, built to scale, crafted to last." />
+                <WordReveal text="You talk directly to the people building it." />
               </h3>
             </div>
 
@@ -665,8 +665,8 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
                   maxWidth: "640px",
                 }}
               >
-                <WordReveal text="Pixel by pixel, line by line. We write code we'd want to read" /><br />
-                <WordReveal text="and ship interfaces we'd want to use." />
+                <WordReveal text="Short feedback loops, no hand-offs." /><br />
+                <WordReveal text="Just two developers who give a damn about the details." />
               </p>
             </div>
           </div>
@@ -732,7 +732,7 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
                 fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
               }}
             >
-              We&apos;re Felix and Emanuel — two friends from Südtirol who build digital products together. No big agency, no overhead. Just two developers who care about the details.
+              Felix and Emanuel, two friends from Südtirol building digital products together. No overhead, no hand-offs. Just the two of us.
             </p>
 
             {/* text-left | photo-middle | text-right */}

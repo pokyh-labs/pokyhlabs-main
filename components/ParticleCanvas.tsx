@@ -440,6 +440,21 @@ export default function ParticleCanvas() {
       let blend = within > HOLD ? (within - HOLD) / TRANS : 0;
       blend = smoothstep(Math.min(1, Math.max(0, blend)));
 
+      // Highlight-wave that travels around the shape while it sits still.
+      // Fades in during HOLD, fades back out during TRANS so it never collides with morph motion.
+      const WAVE_SPEED = 0.65;             // rad/s — one revolution ~10s
+      const WAVE_DEPTH_PHASE = 0.0014;     // 3D feel: depth shifts wave angle
+      let waveActivity;
+      if (within < HOLD) {
+        waveActivity = Math.min(1, within / 0.9);
+      } else {
+        waveActivity = 1 - blend;
+      }
+      waveActivity = smoothstep(waveActivity);
+      const waveAngle = time * WAVE_SPEED;
+      const waveAngle2 = -time * WAVE_SPEED * 0.43 + 1.7; // gentle counter-wave
+      const waveActive = waveActivity > 0.01;
+
       // Smoothly blend per-shape base tilt between current and next shape (defensive lookup).
       // Camera oscillation is intentionally disabled — only the static per-shape tilt remains.
       const cLen = camPresets.length || 1;

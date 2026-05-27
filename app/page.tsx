@@ -75,7 +75,7 @@ export default function Home() {
               marginBottom: "1.25rem",
             }}
           >
-            Digital Studio aus Südtirol — 3D Websites, Webdesign & Hosting
+            Digital Studio aus Südtirol: 3D Websites, Webdesign & Hosting
           </h2>
           <p
             data-speakable="true"

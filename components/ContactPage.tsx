@@ -51,7 +51,7 @@ const ALL_SERVICES: ServiceCard[] = [
   {
     id: "hosting",
     label: "Hosting",
-    description: "We run your site / app on our servers — SSL & monitoring",
+    description: "Managed hosting with SSL and uptime monitoring",
     chip: "€20/mo",
     icon: HOSTING_ICON,
   },
@@ -337,7 +337,7 @@ export default function ContactPage() {
             marginBottom: "1.75rem",
             animation: "chIn 0.5s cubic-bezier(0.22,0.61,0.36,1) 100ms both",
           }}>
-            pokyh.studio — Contact
+            pokyh.studio / Contact
           </p>
           <h1
             ref={headlineRef}
@@ -370,7 +370,7 @@ export default function ContactPage() {
             fontWeight: 400,
             animation: "chIn 0.6s cubic-bezier(0.22,0.61,0.36,1) 900ms both",
           }}>
-            Tell us about your idea — no tech knowledge needed. It takes about 2 minutes,
+            Tell us about your idea. No tech knowledge needed. Takes about 2 minutes,
             and we&apos;ll get back to you within 24 hours with a clear next step.
           </p>
         </div>
@@ -678,10 +678,10 @@ function StepServices({ services, include3d, onToggle, onToggle3d, hostingCatego
 
   const discountSub =
     discountPercent === 15
-      ? "Website + App + Hosting — full bundle. 15% off development, plus hosting fixed at €20/mo."
+      ? "Website + App + Hosting bundle. 15% off development, hosting stays at €20/mo."
       : discountPercent === 10
-      ? "Website + App together — 10% off the development cost."
-      : "Website + Hosting together — 5% off development, hosting fixed at €20/mo."
+      ? "Website + App combo. 10% off the development cost."
+      : "Website + Hosting combo. 5% off development, hosting stays at €20/mo."
 
   const rowLabelStyle: React.CSSProperties = {
     fontFamily: "var(--font-dm-mono)",
@@ -695,7 +695,7 @@ function StepServices({ services, include3d, onToggle, onToggle3d, hostingCatego
   return (
     <div ref={containerRef}>
       <div data-a="heading">
-        <StepHeading label="01" title="What can we build?" sub="Pick one or combine — we'll handle the rest." />
+        <StepHeading label="01" title="What can we build?" sub="Pick one or combine, we'll handle the rest." />
       </div>
 
       <p data-a="section-label" style={{
@@ -890,7 +890,7 @@ function StepServices({ services, include3d, onToggle, onToggle3d, hostingCatego
               })}
             </div>
             <p style={{ fontFamily: "var(--font-inter)", fontSize: "0.74rem", color: "rgba(255,255,255,0.3)", marginTop: "0.65rem" }}>
-              &ldquo;Both&rdquo; means one app that works on iPhone and Android — cheaper than two separate apps.
+              &ldquo;Both&rdquo; means one app that runs on iPhone and Android. Cheaper than building two.
             </p>
           </div>
         </div>
@@ -900,7 +900,7 @@ function StepServices({ services, include3d, onToggle, onToggle3d, hostingCatego
           <div style={{ padding: "1rem 1.3rem" }}>
             <p style={rowLabelStyle}>Hosting &middot; What kind of project?</p>
             <p style={{ fontFamily: "var(--font-inter)", fontSize: "0.78rem", color: "rgba(255,255,255,0.32)", lineHeight: 1.5, marginBottom: "0.8rem" }}>
-              Pick the closest match — we&apos;ll figure out the technical side.
+              Pick the closest match. We&apos;ll figure out the technical side.
             </p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
               {HOSTING_CATEGORIES.map(cat => {
@@ -1007,17 +1007,6 @@ function StepServices({ services, include3d, onToggle, onToggle3d, hostingCatego
           alignItems: "center",
           gap: 14,
         }}>
-          <div data-discount="icon" style={{
-            width: 36, height: 36, borderRadius: 10,
-            background: "rgba(89,61,248,0.15)",
-            border: "1px solid rgba(89,61,248,0.28)",
-            display: "grid", placeItems: "center", flexShrink: 0,
-            willChange: "transform, filter, opacity",
-          }}>
-            <svg viewBox="0 0 20 20" fill="none" stroke="rgba(167,139,250,0.85)" strokeWidth={1.4} style={{ width: 18, height: 18 }}>
-              <path d="M9 2l1.5 4.5H15l-3.5 2.5L13 13.5 9 11l-4 2.5 1.5-4.5L3 6.5h4.5z" />
-            </svg>
-          </div>
           <div>
             <p data-discount="text" style={{ fontFamily: "var(--font-inter)", fontSize: "0.92rem", fontWeight: 600, color: "rgba(167,139,250,0.95)", letterSpacing: "-0.01em", willChange: "transform, filter, opacity" }}>
               {discountLabel}
@@ -1066,8 +1055,8 @@ function StepHosting({ repoUrl, onChangeRepo, error, onBack, onNext }: {
   }, [])
 
   const features = [
-    "Full setup & deployment — we handle it",
-    "SSL certificate (HTTPS) — free, included",
+    "Full setup and deployment, handled",
+    "SSL certificate, free and included",
     "24/7 uptime monitoring",
     "Custom domain support",
   ]
@@ -1075,7 +1064,7 @@ function StepHosting({ repoUrl, onChangeRepo, error, onBack, onNext }: {
   return (
     <div ref={containerRef}>
       <div data-a="heading">
-        <StepHeading label="02" title="Hosting details." sub="We handle the technical side — you just share your files." />
+        <StepHeading label="02" title="Hosting details." sub="We handle the technical side. Just share your files." />
       </div>
 
       <div data-a="pricing" style={{
@@ -1159,7 +1148,7 @@ function StepHosting({ repoUrl, onChangeRepo, error, onBack, onNext }: {
           onBlur={e => { if (!error) e.currentTarget.style.borderBottomColor = "rgba(255,255,255,0.1)" }}
         />
         <p style={{ fontFamily: "var(--font-inter)", fontSize: "0.8rem", color: "rgba(255,255,255,0.28)", marginTop: "0.6rem", lineHeight: 1.5 }}>
-          GitHub repo, a ZIP file, or any other link — we&apos;ll take it from there.
+          GitHub repo, a ZIP, or any other link. We&apos;ll take it from there.
         </p>
         {error && <ErrorMsg msg={error} style={{ marginTop: "0.4rem" }} />}
       </div>
@@ -1199,12 +1188,12 @@ function StepDescription({ value, onChange, onBack, onNext }: {
 
   return (
     <div ref={containerRef}>
-      <div data-a="heading"><StepHeading label="02" title="Tell us about your project." sub="Optional — but the more we know, the more accurate our quote." /></div>
+      <div data-a="heading"><StepHeading label="02" title="Tell us about your project." sub="Optional, but the more we know, the more accurate our quote." /></div>
       <div data-a="field">
         <textarea
           value={value}
           onChange={e => onChange(e.target.value)}
-          placeholder="What are you building? Who is it for? Any examples or references you like? Don't worry about technical details — just describe it like you'd explain it to a friend."
+          placeholder="What are you building? Who is it for? Any references you like? No need for technical details. Just describe it like you'd explain it to a friend."
           rows={7}
           className="c-input"
           style={{
@@ -1268,7 +1257,7 @@ function StepDetails({ company, onChangeCompany, deadline, onChangeDeadline, onB
   return (
     <div ref={containerRef}>
       <div data-a="heading">
-        <StepHeading label="03" title="A few quick details." sub="Both fields are optional — skip anything you're not sure about." />
+        <StepHeading label="03" title="A few quick details." sub="Both fields are optional. Skip anything you're not sure about." />
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "2.5rem", marginBottom: "3rem" }}>
@@ -1386,9 +1375,9 @@ function StepContact({ name, setName, email, setEmail, services, hasWebsite, has
   if (hasWebsite) summaryItems.push(include3d ? "Website (with 3D)" : "Website")
   if (hasApp) {
     const platform = appPlatform === "both" ? "iOS & Android" : appPlatform === "ios" ? "iOS" : "Android"
-    summaryItems.push(`Mobile App — ${platform}`)
+    summaryItems.push(`Mobile App (${platform})`)
   }
-  if (hasHosting) summaryItems.push("Hosting — €20/mo")
+  if (hasHosting) summaryItems.push("Hosting at €20/mo")
 
   return (
     <div ref={containerRef}>
