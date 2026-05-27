@@ -22,7 +22,25 @@ async function main() {
   const { app: backendApp, initDatabase } = require('./backend/src/app');
   await initDatabase();
 
-  // 2. Prepare Next.js
+  // 2. Auto-resume tunnel if it was running before restart
+  try {
+    const { TunnelConfig } = require('./backend/src/models');
+    const { decryptSecret } = require('./backend/src/config/security');
+    const tunnelService = require('./backend/src/services/tunnelService');
+    const config = await TunnelConfig.findOne({
+      where: { status: 'running' },
+      order: [['created_at', 'DESC']],
+    });
+    if (config?.tunnel_token_encrypted) {
+      const token = decryptSecret(config.tunnel_token_encrypted);
+      await tunnelService.startWithToken(token);
+      console.log('> Cloudflare tunnel auto-resumed');
+    }
+  } catch (err) {
+    console.warn('> Tunnel auto-resume failed (reconfigure in admin panel):', err.message);
+  }
+
+  // 3. Prepare Next.js
   const next = require('next');
   const nextApp = next({ dev, hostname: HOST, port: PORT });
   const handle = nextApp.getRequestHandler();

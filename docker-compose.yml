@@ -16,22 +16,14 @@ services:
       - ./backend/uploads:/app/backend/uploads
       - ./backend/logs:/app/backend/logs
       - sqlite_data:/app/data
+      - cloudflared_data:/root/.cloudflared
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:${PORT:-3000}/api/blogs"]
       interval: 15s
       timeout: 5s
-      retries: 3
-
-  # ── Cloudflare Tunnel (optional, aktivieren mit --profile tunnel) ──
-  cloudflared:
-    image: cloudflare/cloudflared:latest
-    restart: unless-stopped
-    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
-    depends_on:
-      app:
-        condition: service_healthy
-    profiles:
-      - tunnel
+      retries: 5
+      start_period: 30s
 
 volumes:
   sqlite_data:
+  cloudflared_data:
