@@ -14,6 +14,7 @@ interface BlogPost {
   image_url: string | null
   image_alt: string | null
   published_at: string
+  updated_at?: string
   views: number
   author: { username: string } | null
 }
@@ -94,7 +95,7 @@ export default async function BlogPostPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify(
-            articleSchema({ ...blog, author: blog.author?.username ?? null })
+            articleSchema({ ...blog, author: blog.author?.username ?? null, updatedAt: blog.updated_at ?? blog.published_at })
           ),
         }}
       />

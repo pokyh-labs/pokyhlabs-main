@@ -76,6 +76,7 @@ export const metadata: Metadata = {
       : undefined,
   },
   icons: { icon: "/assets/logo.png", apple: "/assets/logo.png" },
+  themeColor: "#0c0c0c",
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -83,6 +84,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang={siteConfig.lang} className={`${instrumentSerif.variable} ${dmMono.variable} ${inter.variable}`}>
       <head>
+        <link rel="preconnect" href="https://www.googletagmanager.com" />
+        <link rel="dns-prefetch" href="https://www.google-analytics.com" />
         {/* Run before anything paints:
             - disable native scroll restoration so reloads always land at top
             - force a real reload when the page is restored from bfcache or

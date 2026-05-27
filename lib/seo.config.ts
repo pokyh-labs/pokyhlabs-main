@@ -199,15 +199,15 @@ export const siteConfig = {
 
   // ─── Sitemap pages ───────────────────────────────────────────────────────
   pages: [
-    { path: "/",        priority: 1.0, changeFreq: "weekly"  as const },
-    { path: "/works",   priority: 0.9, changeFreq: "weekly"  as const },
-    { path: "/contact", priority: 0.9, changeFreq: "monthly" as const },
-    { path: "/blog",    priority: 0.8, changeFreq: "daily"   as const },
-    { path: "/impressum",         priority: 0.3, changeFreq: "yearly" as const },
-    { path: "/datenschutz",       priority: 0.3, changeFreq: "yearly" as const },
-    { path: "/agb",               priority: 0.3, changeFreq: "yearly" as const },
-    { path: "/widerruf",          priority: 0.3, changeFreq: "yearly" as const },
-    { path: "/cookie-richtlinie", priority: 0.3, changeFreq: "yearly" as const },
+    { path: "/",        priority: 1.0, changeFreq: "weekly"  as const, lastModified: "2026-05-27", images: ["https://pokyh.studio/opengraph-image", "https://pokyh.studio/assets/logo.png"] },
+    { path: "/works",   priority: 0.9, changeFreq: "monthly" as const, lastModified: "2026-05-27", images: ["https://pokyh.studio/opengraph-image"] },
+    { path: "/contact", priority: 0.9, changeFreq: "monthly" as const, lastModified: "2026-05-27" },
+    { path: "/blog",    priority: 0.8, changeFreq: "daily"   as const, lastModified: "2026-05-27" },
+    { path: "/impressum",         priority: 0.3, changeFreq: "yearly" as const, lastModified: "2025-01-15" },
+    { path: "/datenschutz",       priority: 0.3, changeFreq: "yearly" as const, lastModified: "2025-01-15" },
+    { path: "/agb",               priority: 0.3, changeFreq: "yearly" as const, lastModified: "2025-01-15" },
+    { path: "/widerruf",          priority: 0.3, changeFreq: "yearly" as const, lastModified: "2025-01-15" },
+    { path: "/cookie-richtlinie", priority: 0.3, changeFreq: "yearly" as const, lastModified: "2025-01-15" },
   ],
 }
 
@@ -487,6 +487,7 @@ export function articleSchema(post: {
   excerpt: string | null
   image_url: string | null
   published_at: string
+  updatedAt?: string
   author: string | null
   slug: string
 }) {
@@ -497,7 +498,7 @@ export function articleSchema(post: {
     description: post.excerpt ?? undefined,
     image: post.image_url ? [post.image_url] : [`${siteConfig.url}/opengraph-image`],
     datePublished: post.published_at,
-    dateModified: post.published_at,
+    dateModified: post.updatedAt ?? post.published_at,
     author: {
       "@type": "Person",
       name: post.author ?? "pokyh.studio",
