@@ -1,21 +1,31 @@
 "use client"
 
-
 import { useEffect, useRef, useState, useCallback } from "react"
 import gsap from "gsap"
 import { ScrollTrigger } from "gsap/ScrollTrigger"
 import Lenis from "lenis"
-// Register GSAP plugins globally before any component code runs
 gsap.registerPlugin(ScrollTrigger)
 
-type Step = 1 | 2 | 3 | 4 | 5 | 6
+type Step = 1 | 2 | 3 | 4 | 5
 type VisualStep = { n: number; label: string }
 
-const SERVICES = [
+const HOSTING_ICON = (
+  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={1.4} style={{ width: 22, height: 22 }}>
+    <rect x="2" y="4" width="16" height="5" rx="1.5" />
+    <rect x="2" y="11" width="16" height="5" rx="1.5" />
+    <circle cx="15" cy="6.5" r=".7" fill="currentColor" stroke="none" />
+    <circle cx="15" cy="13.5" r=".7" fill="currentColor" stroke="none" />
+  </svg>
+)
+
+type ServiceCard = { id: string; label: string; description: string; chip: string | null; icon: React.ReactNode }
+
+const ALL_SERVICES: ServiceCard[] = [
   {
     id: "website",
     label: "Website",
-    description: "Landing page, corporate site or web app",
+    description: "Company site, online shop, or landing page",
+    chip: null,
     icon: (
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={1.4} style={{ width: 22, height: 22 }}>
         <rect x="2" y="3" width="16" height="13" rx="2" />
@@ -27,8 +37,9 @@ const SERVICES = [
   },
   {
     id: "app",
-    label: "App",
-    description: "iOS, Android or cross-platform",
+    label: "Mobile App",
+    description: "An app for iPhone and / or Android",
+    chip: null,
     icon: (
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={1.4} style={{ width: 22, height: 22 }}>
         <rect x="5" y="2" width="10" height="16" rx="2.5" />
@@ -40,30 +51,39 @@ const SERVICES = [
   {
     id: "hosting",
     label: "Hosting",
-    description: "Managed hosting, SSL & uptime monitoring",
-    icon: (
-      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={1.4} style={{ width: 22, height: 22 }}>
-        <rect x="2" y="4" width="16" height="5" rx="1.5" />
-        <rect x="2" y="11" width="16" height="5" rx="1.5" />
-        <circle cx="15" cy="6.5" r=".7" fill="currentColor" stroke="none" />
-        <circle cx="15" cy="13.5" r=".7" fill="currentColor" stroke="none" />
-      </svg>
-    ),
+    description: "We run your site / app on our servers — SSL & monitoring",
+    chip: "€20/mo",
+    icon: HOSTING_ICON,
   },
 ]
 
+const APP_PLATFORMS = [
+  { id: "both",    label: "Both" },
+  { id: "ios",     label: "iPhone (iOS)" },
+  { id: "android", label: "Android" },
+]
+
+// Four steps for the normal flow (was five — Company + Deadline merged into "Details").
 const STEPS: VisualStep[] = [
   { n: 1, label: "Services" },
   { n: 2, label: "Project" },
-  { n: 3, label: "Company" },
-  { n: 4, label: "Deadline" },
-  { n: 5, label: "Contact" },
+  { n: 3, label: "Details" },
+  { n: 4, label: "Contact" },
 ]
 
 const HOSTING_STEPS: VisualStep[] = [
-  { n: 1, label: "Service" },
+  { n: 1, label: "Services" },
   { n: 2, label: "Hosting" },
-  { n: 5, label: "Contact" },
+  { n: 4, label: "Contact" },
+]
+
+// Friendly categories for non-technical users. The tech-stack list is hidden behind an "Advanced" toggle.
+const HOSTING_CATEGORIES = [
+  { id: "website",   label: "Website" },
+  { id: "shop",      label: "Online Shop" },
+  { id: "webapp",    label: "Web App / Tool" },
+  { id: "wordpress", label: "WordPress" },
+  { id: "other",     label: "Other / Not sure" },
 ]
 
 const HOSTING_STACKS = [
@@ -73,7 +93,6 @@ const HOSTING_STACKS = [
   { id: "vue",       label: "Vue.js" },
   { id: "nuxt",      label: "Nuxt.js" },
   { id: "angular",   label: "Angular" },
-  { id: "wordpress", label: "WordPress" },
   { id: "php",       label: "PHP / Laravel" },
   { id: "python",    label: "Python" },
   { id: "go",        label: "Go" },
@@ -91,23 +110,32 @@ export default function ContactPage() {
   const [step, setStep] = useState<Step>(1)
   const [services, setServices] = useState<string[]>([])
   const [include3d, setInclude3d] = useState(false)
+  const [appPlatform, setAppPlatform] = useState<"ios" | "android" | "both">("both")
+  const [showAdvancedStack, setShowAdvancedStack] = useState(false)
   const [description, setDescription] = useState("")
   const [repoUrl, setRepoUrl] = useState("")
   const [company, setCompany] = useState("")
   const [deadline, setDeadline] = useState("")
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
+  const [hostingCategory, setHostingCategory] = useState<string>("")
   const [hostingStack, setHostingStack] = useState<string[]>([])
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
 
+  const hasWebsite = services.includes("website")
+  const hasApp = services.includes("app")
+  const hasHosting = services.includes("hosting")
   const isHostingOnly = services.length > 0 && services.every(s => s === "hosting")
+  const discountPercent =
+    (hasWebsite && hasApp && hasHosting) ? 15 :
+    (hasWebsite && hasApp) ? 10 :
+    (hasWebsite && hasHosting) ? 5 : 0
   const visibleSteps = isHostingOnly ? HOSTING_STEPS : STEPS
 
   useEffect(() => {
     gsap.registerPlugin(ScrollTrigger)
 
-    // --- Lenis smooth scroll (matches HomeClientWrapper) ---
     const lenis = new Lenis({
       duration: 1.2,
       easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
@@ -124,7 +152,6 @@ export default function ContactPage() {
     rafId = requestAnimationFrame(raf)
     lenis.on("scroll", ScrollTrigger.update)
 
-    // Cursor glow
     const cursor = document.createElement("div")
     cursor.style.cssText =
       "position:fixed;top:0;left:0;width:400px;height:400px;border-radius:50%;" +
@@ -135,7 +162,6 @@ export default function ContactPage() {
       gsap.to(cursor, { x: e.clientX, y: e.clientY, duration: 0.8, ease: "power3.out" })
     window.addEventListener("mousemove", moveCursor)
 
-    // Headline character animation
     if (headlineRef.current) {
       const lines = headlineRef.current.querySelectorAll<HTMLSpanElement>(".contact-line")
       lines.forEach((line, li) => {
@@ -159,8 +185,6 @@ export default function ContactPage() {
       })
     }
 
-    // No scroll-to-reveal on the section itself — magic happens inside.
-
     return () => {
       window.removeEventListener("mousemove", moveCursor)
       if (document.body.contains(cursor)) document.body.removeChild(cursor)
@@ -175,58 +199,98 @@ export default function ContactPage() {
     setServices(prev => {
       const next = prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
       if (!next.includes("website")) setInclude3d(false)
-      if (!next.includes("hosting")) setHostingStack([])
+      if (!next.includes("hosting")) {
+        setHostingCategory("")
+        setHostingStack([])
+        setShowAdvancedStack(false)
+      }
+      if (next.includes("app") && !prev.includes("app")) {
+        setAppPlatform("both")
+      }
       return next
     })
-    setErrors(e => ({ ...e, services: "" }))
+    setErrors(e => ({ ...e, services: "", hostingCategory: "" }))
   }, [])
 
   const toggleHostingStack = useCallback((id: string) => {
     setHostingStack(prev => prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id])
   }, [])
 
+  const selectHostingCategory = useCallback((id: string) => {
+    setHostingCategory(id)
+    setErrors(e => ({ ...e, hostingCategory: "" }))
+  }, [])
+
+  // Smoothly bring the form section back to the top of the viewport on every step transition,
+  // so each new step starts cleanly aligned regardless of where the user had scrolled.
+  const scrollToForm = () => {
+    const formEl = formRef.current
+    if (!formEl) return
+    const lenis = (window as unknown as {
+      __lenis?: { scrollTo: (target: HTMLElement, opts?: { duration?: number; offset?: number }) => void }
+    }).__lenis
+    if (lenis) lenis.scrollTo(formEl, { duration: 1.0, offset: 0 })
+    else formEl.scrollIntoView({ behavior: "smooth", block: "start" })
+  }
+
   const goNext = () => {
     const e: Record<string, string> = {}
-    if (step === 1 && services.length === 0) e.services = "Select at least one service."
-    if (step === 2 && isHostingOnly && !repoUrl.trim()) {
-      e.repoUrl = "Please share a link so we know what to host."
+    if (step === 1) {
+      if (services.length === 0) e.services = "Please select at least one service."
+      else if (services.includes("hosting") && !hostingCategory) e.hostingCategory = "Please pick a project type for your hosting."
     }
-    if (step === 5) {
-      if (!name.trim()) e.name = "Name is required."
-      if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.email = "Valid email required."
+    if (step === 2 && isHostingOnly && !repoUrl.trim()) {
+      e.repoUrl = "Please share a link to your project."
+    }
+    if (step === 4) {
+      if (!name.trim()) e.name = "Your name is required."
+      if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.email = "Please enter a valid email address."
     }
     if (Object.keys(e).length) { setErrors(e); return }
     setErrors({})
-    // Hosting-only: jump from step 2 straight to step 5 (skip company + deadline)
-    if (isHostingOnly && step === 2) { setStep(5); return }
+    if (isHostingOnly && step === 2) { setStep(4); requestAnimationFrame(scrollToForm); return }
     setStep(s => (s + 1) as Step)
+    requestAnimationFrame(scrollToForm)
   }
 
   const goBack = () => {
     setErrors({})
-    // Hosting-only: jump from contact back to hosting step
-    if (isHostingOnly && step === 5) { setStep(2); return }
+    if (isHostingOnly && step === 4) { setStep(2); requestAnimationFrame(scrollToForm); return }
     setStep(s => (s - 1) as Step)
+    requestAnimationFrame(scrollToForm)
   }
 
   const handleSubmit = async () => {
     const e: Record<string, string> = {}
-    if (!name.trim()) e.name = "Name is required."
-    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.email = "Valid email required."
+    if (!name.trim()) e.name = "Your name is required."
+    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.email = "Please enter a valid email address."
     if (Object.keys(e).length) { setErrors(e); return }
 
     const finalServices = services.includes("website") && include3d
       ? [...services, "threejs"]
       : services
 
-    // Build description with all hosting details + optional combo discount note
     const descParts: string[] = []
-    const hasDiscount = services.includes("website") && services.includes("hosting")
-    if (hasDiscount) descParts.push("Kombipaket: Website + Hosting (5% Rabatt auf Entwicklung, Hosting fix €20/mo)")
-    if (services.includes("hosting") && hostingStack.length > 0) {
-      descParts.push(`Tech Stack: ${hostingStack.join(", ")}`)
+    if (discountPercent > 0) {
+      const combo = [
+        hasWebsite && "Website",
+        hasApp && "App",
+        hasHosting && "Hosting",
+      ].filter(Boolean).join(" + ")
+      descParts.push(`Bundle: ${combo} (${discountPercent}% off development${hasHosting ? ", hosting fixed at €20/mo" : ""})`)
     }
-    if (isHostingOnly && repoUrl.trim()) descParts.push(`Repo / File URL: ${repoUrl.trim()}`)
+    if (hasApp) {
+      const platformLabel = appPlatform === "both" ? "iOS & Android" : appPlatform === "ios" ? "iOS" : "Android"
+      descParts.push(`App Platform: ${platformLabel}`)
+    }
+    if (hasHosting && hostingCategory) {
+      const catLabel = HOSTING_CATEGORIES.find(c => c.id === hostingCategory)?.label
+      if (catLabel) descParts.push(`Hosting type: ${catLabel}`)
+    }
+    if (hasHosting && hostingStack.length > 0) {
+      descParts.push(`Tech stack: ${hostingStack.join(", ")}`)
+    }
+    if (isHostingOnly && repoUrl.trim()) descParts.push(`Project link: ${repoUrl.trim()}`)
     if (description.trim()) descParts.push(description.trim())
     const finalDescription = descParts.length > 0 ? descParts.join("\n\n") : null
 
@@ -249,13 +313,17 @@ export default function ContactPage() {
         setErrors({ submit: (d as { error?: string }).error ?? "Something went wrong. Please try again." })
         return
       }
-      setStep(6)
+      setStep(5)
+      requestAnimationFrame(scrollToForm)
     } catch {
       setErrors({ submit: "Network error. Please try again." })
     } finally {
       setSubmitting(false)
     }
   }
+
+  const stepIndex = visibleSteps.findIndex(s => s.n === step)
+  const totalSteps = visibleSteps.length
 
   return (
     <div style={{ backgroundColor: "var(--bg)", minHeight: "100vh" }}>
@@ -268,6 +336,10 @@ export default function ContactPage() {
         .c-btn:hover:not([disabled]) { transform: translateY(-1px); }
         .c-back { transition: color 0.18s; }
         .c-back:hover { color: rgba(255,255,255,0.85) !important; }
+        .platform-pill { transition: border-color 0.18s, background 0.18s, color 0.18s, transform 0.15s; cursor:pointer; }
+        .platform-pill:hover { transform: translateY(-1px); }
+        .hosting-expand-btn { transition: color 0.18s, opacity 0.18s; cursor:pointer; }
+        .hosting-expand-btn:hover { opacity: 0.85; }
       `}</style>
 
       {/* ── Hero ── */}
@@ -298,22 +370,26 @@ export default function ContactPage() {
               userSelect: "none",
             }}
           >
-            <span className="contact-line" data-text="Let's work." style={{ display: "block" }}>
-              Let&apos;s work.
+            <span className="contact-line" data-text="Let's build" style={{ display: "block" }}>
+              Let&apos;s build
+            </span>
+            <span className="contact-line" data-text="something." style={{ display: "block" }}>
+              something.
             </span>
           </h1>
           <p style={{
             marginTop: "2rem",
             fontFamily: "var(--font-inter)",
-            fontSize: "clamp(0.9rem, 1.2vw, 1.1rem)",
+            fontSize: "clamp(0.95rem, 1.2vw, 1.15rem)",
             color: "var(--black)",
-            opacity: 0.45,
-            maxWidth: 400,
+            opacity: 0.5,
+            maxWidth: 460,
             lineHeight: 1.65,
             fontWeight: 400,
             animation: "chIn 0.6s cubic-bezier(0.22,0.61,0.36,1) 900ms both",
           }}>
-            Tell us about your project and we&apos;ll get back within 24 hours.
+            Tell us about your idea — no tech knowledge needed. It takes about 2 minutes,
+            and we&apos;ll get back to you within 24 hours with a clear next step.
           </p>
         </div>
 
@@ -330,7 +406,7 @@ export default function ContactPage() {
             hello@pokyh.studio
           </span>
           <span style={{ fontFamily: "var(--font-dm-mono)", fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--black)", opacity: 0.35, animation: "chIn 0.5s cubic-bezier(0.22,0.61,0.36,1) 1400ms both" }}>
-            Response within 24h
+            Reply within 24h
           </span>
         </div>
       </div>
@@ -348,47 +424,42 @@ export default function ContactPage() {
           overflow: "hidden",
         }}
       >
-        <div style={{ maxWidth: 700, margin: "0 auto", position: "relative", zIndex: 2 }}>
+        <div style={{ maxWidth: 720, margin: "0 auto", position: "relative", zIndex: 2 }}>
 
           {/* Step indicator */}
-          {step < 6 && (
-            <div ref={stepIndicatorRef} style={{ display: "flex", alignItems: "center", marginBottom: "clamp(44px,8vh,80px)" }}>
-              {visibleSteps.map(({ n, label }, i) => {
-                const done = step > n
-                const active = step === n
-                return (
-                  <div key={n} style={{ display: "flex", alignItems: "center", flex: i < visibleSteps.length - 1 ? 1 : undefined }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 9, flexShrink: 0 }}>
-                      <div style={{
-                        width: 26, height: 26, borderRadius: "50%",
-                        border: `1px solid ${done || active ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.12)"}`,
-                        background: done ? "rgba(255,255,255,0.88)" : active ? "rgba(255,255,255,0.08)" : "transparent",
-                        display: "grid", placeItems: "center", flexShrink: 0, transition: "all 0.3s",
-                      }}>
-                        {done ? (
-                          <svg viewBox="0 0 12 12" fill="none" style={{ width: 9, height: 9 }}>
-                            <polyline points="2,6 5,9 10,3" stroke="#1a1a1a" strokeWidth={1.8} strokeLinecap="round" />
-                          </svg>
-                        ) : (
-                          <span style={{ fontFamily: "var(--font-dm-mono)", fontSize: 9, color: active ? "rgba(255,255,255,0.88)" : "rgba(255,255,255,0.2)" }}>
-                            {String(i + 1).padStart(2, "0")}
-                          </span>
-                        )}
-                      </div>
-                      <span style={{ fontFamily: "var(--font-dm-mono)", fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: done || active ? "rgba(255,255,255,0.65)" : "rgba(255,255,255,0.2)", transition: "color 0.3s" }}>
-                        {label}
-                      </span>
-                    </div>
-                    {i < visibleSteps.length - 1 && (
-                      <div style={{ flex: 1, height: 1, margin: "0 14px", background: done ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.06)", transition: "background 0.3s" }} />
-                    )}
-                  </div>
-                )
-              })}
+          {step < 5 && (
+            <div ref={stepIndicatorRef} style={{ marginBottom: "clamp(44px,8vh,80px)" }}>
+              {/* Progress label */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+                <span style={{ fontFamily: "var(--font-dm-mono)", fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.5)" }}>
+                  Step {stepIndex + 1} of {totalSteps}
+                </span>
+                <span style={{ fontFamily: "var(--font-dm-mono)", fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.88)" }}>
+                  {visibleSteps[stepIndex]?.label}
+                </span>
+              </div>
+              {/* Progress dots */}
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                {visibleSteps.map((s, i) => {
+                  const done = i < stepIndex
+                  const active = i === stepIndex
+                  return (
+                    <div
+                      key={s.n}
+                      style={{
+                        flex: 1,
+                        height: 3,
+                        borderRadius: 999,
+                        background: done ? "rgba(255,255,255,0.65)" : active ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.08)",
+                        transition: "background 0.35s ease",
+                      }}
+                    />
+                  )
+                })}
+              </div>
             </div>
           )}
 
-          {/* Step content — key remounts, each step animates its own children */}
           <div key={step}>
             {step === 1 && (
               <StepServices
@@ -396,9 +467,17 @@ export default function ContactPage() {
                 include3d={include3d}
                 onToggle={toggleService}
                 onToggle3d={() => setInclude3d(v => !v)}
+                hostingCategory={hostingCategory}
+                onSelectCategory={selectHostingCategory}
                 hostingStack={hostingStack}
                 onToggleStack={toggleHostingStack}
+                appPlatform={appPlatform}
+                onPlatformChange={setAppPlatform}
+                showAdvancedStack={showAdvancedStack}
+                onToggleAdvancedStack={() => setShowAdvancedStack(v => !v)}
+                discountPercent={discountPercent}
                 error={errors.services}
+                errorHostingCategory={errors.hostingCategory}
                 onNext={goNext}
               />
             )}
@@ -412,16 +491,24 @@ export default function ContactPage() {
             {step === 2 && !isHostingOnly && (
               <StepDescription value={description} onChange={setDescription} onBack={goBack} onNext={goNext} />
             )}
-            {step === 3 && (
-              <StepCompany value={company} onChange={setCompany} onBack={goBack} onNext={goNext} />
+            {step === 3 && !isHostingOnly && (
+              <StepDetails
+                company={company} onChangeCompany={setCompany}
+                deadline={deadline} onChangeDeadline={setDeadline}
+                onBack={goBack} onNext={goNext}
+              />
             )}
             {step === 4 && (
-              <StepDeadline value={deadline} onChange={setDeadline} onBack={goBack} onNext={goNext} />
-            )}
-            {step === 5 && (
               <StepContact
                 name={name} setName={setName}
                 email={email} setEmail={setEmail}
+                services={services}
+                hasWebsite={hasWebsite}
+                hasApp={hasApp}
+                hasHosting={hasHosting}
+                include3d={include3d}
+                appPlatform={appPlatform}
+                discountPercent={discountPercent}
                 errors={errors}
                 submitting={submitting}
                 submitError={errors.submit}
@@ -429,7 +516,7 @@ export default function ContactPage() {
                 onSubmit={handleSubmit}
               />
             )}
-            {step === 6 && <StepSuccess name={name} />}
+            {step === 5 && <StepSuccess name={name} />}
           </div>
         </div>
       </div>
@@ -438,174 +525,217 @@ export default function ContactPage() {
 }
 
 /* ── Step 1: Services ─────────────────────────────────────────────── */
-function StepServices({ services, include3d, onToggle, onToggle3d, hostingStack, onToggleStack, error, onNext }: {
+function StepServices({ services, include3d, onToggle, onToggle3d, hostingCategory, onSelectCategory, hostingStack, onToggleStack, appPlatform, onPlatformChange, showAdvancedStack, onToggleAdvancedStack, discountPercent, error, errorHostingCategory, onNext }: {
   services: string[]; include3d: boolean
   onToggle: (id: string) => void; onToggle3d: () => void
+  hostingCategory: string; onSelectCategory: (id: string) => void
   hostingStack: string[]; onToggleStack: (id: string) => void
-  error?: string; onNext: () => void
+  appPlatform: string; onPlatformChange: (p: "ios" | "android" | "both") => void
+  showAdvancedStack: boolean; onToggleAdvancedStack: () => void
+  discountPercent: number
+  error?: string; errorHostingCategory?: string; onNext: () => void
 }) {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const stackRef = useRef<HTMLDivElement>(null)
-  const discountRef = useRef<HTMLDivElement>(null)
-  const threeDRef = useRef<HTMLDivElement>(null)
+  const containerRef     = useRef<HTMLDivElement>(null)
+  const threeDRowRef     = useRef<HTMLDivElement>(null)
+  const appRowRef        = useRef<HTMLDivElement>(null)
+  const hostingRowRef    = useRef<HTMLDivElement>(null)
+  const advancedStackRef = useRef<HTMLDivElement>(null)
+  const discountRef      = useRef<HTMLDivElement>(null)
+
   const websiteSelected = services.includes("website")
   const hostingSelected = services.includes("hosting")
-  const showDiscount = websiteSelected && hostingSelected
-  const prevHosting = useRef(hostingSelected)
-  const prevDiscount = useRef(false)
-  const prevWebsite = useRef(websiteSelected)
+  const appSelected     = services.includes("app")
+  const hasAnyService   = services.length > 0
+  const showDiscount    = discountPercent > 0
+
+  const prevWebsite  = useRef(websiteSelected)
+  const prevApp      = useRef(appSelected)
+  const prevHosting  = useRef(hostingSelected)
+  const prevAdvanced = useRef(showAdvancedStack)
+  const prevDiscount = useRef(showDiscount)
 
   useEffect(() => {
     const ctx = gsap.context(() => {
-      // Initial hidden state — visible only when scrolled into view
-      gsap.set("[data-a='heading']", { autoAlpha: 0, y: 24 })
-      gsap.set("[data-a='card']", { autoAlpha: 0, y: 60, scale: 0.92, rotateX: -35, filter: "blur(12px)" })
-      gsap.set("[data-a='nav']", { autoAlpha: 0, y: 18, filter: "blur(8px)" })
+      gsap.set("[data-a='heading']",       { autoAlpha: 0, y: 24 })
+      gsap.set("[data-a='section-label']", { autoAlpha: 0, y: 14 })
+      gsap.set("[data-a='card']",          { autoAlpha: 0, y: 50, scale: 0.92, rotateX: -30, filter: "blur(12px)" })
+      gsap.set("[data-a='nav']",           { autoAlpha: 0, y: 18, filter: "blur(8px)" })
+
+      // Always start expandable rows hidden so they animate in cleanly (including on Back navigation)
+      gsap.set(threeDRowRef.current,     { autoAlpha: 0, height: 0, overflow: "hidden" })
+      gsap.set(appRowRef.current,        { autoAlpha: 0, height: 0, overflow: "hidden" })
+      gsap.set(hostingRowRef.current,    { autoAlpha: 0, height: 0, overflow: "hidden" })
+      gsap.set(advancedStackRef.current, { autoAlpha: 0, height: 0, overflow: "hidden" })
+      gsap.set(discountRef.current,      { autoAlpha: 0, height: 0, overflow: "hidden" })
 
       const tl = gsap.timeline({ paused: true, defaults: { ease: "power3.out" } })
-      ScrollTrigger.create({
-        trigger: containerRef.current,
-        start: "top 92%",
-        once: true,
-        onEnter: () => tl.play(),
-      })
-      tl.to("[data-a='heading']", { autoAlpha: 1, y: 0, duration: 0.5 })
-        .to("[data-a='card']", { autoAlpha: 1, y: 0, scale: 1, rotateX: 0, filter: "blur(0px)", duration: 0.85, stagger: 0.08, ease: "expo.out" }, "-=0.2")
-        .to("[data-a='nav']", { autoAlpha: 1, y: 0, filter: "blur(0px)", duration: 0.45 }, "-=0.35")
+      tl.to("[data-a='heading']",       { autoAlpha: 1, y: 0, duration: 0.5 })
+        .to("[data-a='section-label']", { autoAlpha: 1, y: 0, duration: 0.4 }, "-=0.25")
+        .to("[data-a='card']",          { autoAlpha: 1, y: 0, scale: 1, rotateX: 0, filter: "blur(0px)", duration: 0.8, stagger: 0.08, ease: "expo.out" }, "-=0.25")
+        .to("[data-a='nav']",           { autoAlpha: 1, y: 0, filter: "blur(0px)", duration: 0.45 }, "-=0.4")
+        .call(() => {
+          // Staggered expand for any rows already selected (e.g. pressing Back from a later step)
+          let d = 0
+          const expandDelayed = (el: HTMLElement | null) => {
+            if (!el) return
+            gsap.fromTo(el,
+              { height: 0, autoAlpha: 0 },
+              { height: "auto", autoAlpha: 1, duration: 0.4, ease: "power3.out", clearProps: "height,overflow", delay: d }
+            )
+            d += 0.07
+          }
+          if (websiteSelected)   expandDelayed(threeDRowRef.current)
+          if (appSelected)       expandDelayed(appRowRef.current)
+          if (hostingSelected)   expandDelayed(hostingRowRef.current)
+          if (showAdvancedStack) expandDelayed(advancedStackRef.current)
+          if (showDiscount)      expandDelayed(discountRef.current)
+        }, [], "-=0.3")
+
+      const el = containerRef.current
+      if (el) {
+        const rect = el.getBoundingClientRect()
+        if (rect.top < window.innerHeight * 0.92) {
+          tl.play()
+        } else {
+          ScrollTrigger.create({
+            trigger: el,
+            start: "top 92%",
+            once: true,
+            onEnter: () => tl.play(),
+          })
+        }
+      }
     }, containerRef)
 
-    // Initial collapsed state for the three expandable rows
-    if (threeDRef.current && !websiteSelected) {
-      gsap.set(threeDRef.current, { autoAlpha: 0, height: 0, overflow: "hidden" })
-    }
-    if (stackRef.current && !hostingSelected) {
-      gsap.set(stackRef.current, { autoAlpha: 0, height: 0, overflow: "hidden" })
-    }
-    if (discountRef.current && !showDiscount) {
-      gsap.set(discountRef.current, { autoAlpha: 0, height: 0, overflow: "hidden" })
-    }
-
     return () => ctx.revert()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Animate 3D toggle in/out when website selection changes
-  useEffect(() => {
-    const el = threeDRef.current
+  const expand = (el: HTMLElement | null) => {
     if (!el) return
+    gsap.fromTo(el, { height: 0, autoAlpha: 0 }, {
+      height: "auto", autoAlpha: 1, duration: 0.42, ease: "power3.out",
+      clearProps: "height,overflow",
+    })
+  }
+  const collapse = (el: HTMLElement | null, dur = 0.3) => {
+    if (!el) return
+    gsap.to(el, { height: 0, autoAlpha: 0, duration: dur, ease: "power2.in", onStart: () => { el.style.overflow = "hidden" } })
+  }
+
+  // Website (3D) row
+  useEffect(() => {
     if (prevWebsite.current === websiteSelected) return
     prevWebsite.current = websiteSelected
-    if (websiteSelected) {
-      const inner = el.querySelector<HTMLElement>(".threeD-inner")
-      gsap.fromTo(el,
-        { height: 0, autoAlpha: 0 },
-        {
-          height: "auto", autoAlpha: 1, duration: 0.45, ease: "power3.out",
-          clearProps: "height,overflow",
-          onStart: () => { if (inner) gsap.set(inner, { autoAlpha: 0, y: 18, scale: 0.96, filter: "blur(10px)" }) },
-          onComplete: () => {
-            if (inner) {
-              gsap.to(inner, {
-                autoAlpha: 1, y: 0, scale: 1, filter: "blur(0px)",
-                duration: 0.55, ease: "expo.out",
-              })
-            }
-          },
-        }
-      )
-    } else {
-      gsap.to(el, {
-        height: 0, autoAlpha: 0, duration: 0.28, ease: "power2.in",
-        onStart: () => { if (el) el.style.overflow = "hidden" },
-      })
-    }
+    if (websiteSelected) expand(threeDRowRef.current)
+    else collapse(threeDRowRef.current)
   }, [websiteSelected])
 
-  // Animate tech stack section in/out with staggered children reveal
+  // App platform row
   useEffect(() => {
-    const el = stackRef.current
-    if (!el) return
+    if (prevApp.current === appSelected) return
+    prevApp.current = appSelected
+    if (appSelected) expand(appRowRef.current)
+    else collapse(appRowRef.current)
+  }, [appSelected])
+
+  // Hosting row
+  useEffect(() => {
     if (prevHosting.current === hostingSelected) return
     prevHosting.current = hostingSelected
-    if (hostingSelected) {
-      const heading = el.querySelector<HTMLElement>("[data-stack='heading']")
-      const desc = el.querySelector<HTMLElement>("[data-stack='desc']")
-      const pills = el.querySelectorAll<HTMLElement>("[data-pill]")
-      gsap.set([heading, desc].filter(Boolean), { autoAlpha: 0, y: 14, filter: "blur(8px)" })
-      gsap.set(pills, { autoAlpha: 0, y: 18, scale: 0.55, filter: "blur(10px)" })
-      gsap.fromTo(el,
-        { height: 0, autoAlpha: 0 },
-        {
-          height: "auto", autoAlpha: 1, duration: 0.45, ease: "power3.out",
-          clearProps: "height,overflow",
-          onComplete: () => {
-            const tl = gsap.timeline()
-            if (heading) tl.to(heading, { autoAlpha: 1, y: 0, filter: "blur(0px)", duration: 0.5, ease: "power3.out" })
-            if (desc) tl.to(desc, { autoAlpha: 1, y: 0, filter: "blur(0px)", duration: 0.5, ease: "power3.out" }, "-=0.35")
-            tl.to(pills, {
-              autoAlpha: 1, y: 0, scale: 1, filter: "blur(0px)",
-              duration: 0.6, stagger: { each: 0.028, from: "start" }, ease: "expo.out",
-            }, "-=0.3")
-          },
-        }
-      )
-    } else {
-      gsap.to(el, {
-        height: 0, autoAlpha: 0, duration: 0.28, ease: "power2.in",
-        onStart: () => { if (el) el.style.overflow = "hidden" },
-      })
-    }
+    if (hostingSelected) expand(hostingRowRef.current)
+    else collapse(hostingRowRef.current)
   }, [hostingSelected])
 
-  // Animate discount badge in/out with springy entry + staggered inner reveal
+  // Advanced stack expand
   useEffect(() => {
-    const el = discountRef.current
+    if (prevAdvanced.current === showAdvancedStack) return
+    prevAdvanced.current = showAdvancedStack
+    const el = advancedStackRef.current
     if (!el) return
+    if (showAdvancedStack) {
+      const pills = el.querySelectorAll<HTMLElement>("[data-pill]")
+      gsap.set(pills, { autoAlpha: 0, y: 14, scale: 0.7, filter: "blur(8px)" })
+      gsap.fromTo(el, { height: 0, autoAlpha: 0 }, {
+        height: "auto", autoAlpha: 1, duration: 0.4, ease: "power3.out",
+        clearProps: "height,overflow",
+        onComplete: () => {
+          gsap.to(pills, { autoAlpha: 1, y: 0, scale: 1, filter: "blur(0px)", duration: 0.5, stagger: { each: 0.025, from: "start" }, ease: "expo.out" })
+        },
+      })
+    } else collapse(el)
+  }, [showAdvancedStack])
+
+  // Discount banner
+  useEffect(() => {
     if (prevDiscount.current === showDiscount) return
     prevDiscount.current = showDiscount
+    const el = discountRef.current
+    if (!el) return
     if (showDiscount) {
       const icon = el.querySelector<HTMLElement>("[data-discount='icon']")
       const text = el.querySelectorAll<HTMLElement>("[data-discount='text']")
       gsap.set(icon, { autoAlpha: 0, scale: 0.4, rotate: -40, filter: "blur(8px)" })
       gsap.set(text, { autoAlpha: 0, x: -14, filter: "blur(6px)" })
-      gsap.fromTo(el,
-        { height: 0, autoAlpha: 0, scale: 0.96 },
-        {
-          height: "auto", autoAlpha: 1, scale: 1, duration: 0.5, ease: "back.out(1.6)",
-          clearProps: "height,overflow,scale",
-          onComplete: () => {
-            const tl = gsap.timeline()
-            tl.to(icon, { autoAlpha: 1, scale: 1, rotate: 0, filter: "blur(0px)", duration: 0.6, ease: "back.out(2)" })
-              .to(text, {
-                autoAlpha: 1, x: 0, filter: "blur(0px)",
-                duration: 0.45, stagger: 0.08, ease: "power3.out",
-              }, "-=0.4")
-          },
-        }
-      )
-    } else {
-      gsap.to(el, {
-        height: 0, autoAlpha: 0, duration: 0.25, ease: "power2.in",
-        onStart: () => { if (el) el.style.overflow = "hidden" },
+      gsap.fromTo(el, { height: 0, autoAlpha: 0, scale: 0.96 }, {
+        height: "auto", autoAlpha: 1, scale: 1, duration: 0.5, ease: "back.out(1.6)",
+        clearProps: "height,overflow,scale",
+        onComplete: () => {
+          const tl = gsap.timeline()
+          tl.to(icon, { autoAlpha: 1, scale: 1, rotate: 0, filter: "blur(0px)", duration: 0.6, ease: "back.out(2)" })
+            .to(text, { autoAlpha: 1, x: 0, filter: "blur(0px)", duration: 0.45, stagger: 0.08, ease: "power3.out" }, "-=0.4")
+        },
       })
-    }
+    } else collapse(el, 0.25)
   }, [showDiscount])
+
+  const discountLabel =
+    discountPercent === 15 ? "Save 15% on development" :
+    discountPercent === 10 ? "Save 10% on development" :
+    "Save 5% on development"
+
+  const discountSub =
+    discountPercent === 15
+      ? "Website + App + Hosting — full bundle. 15% off development, plus hosting fixed at €20/mo."
+      : discountPercent === 10
+      ? "Website + App together — 10% off the development cost."
+      : "Website + Hosting together — 5% off development, hosting fixed at €20/mo."
+
+  const rowLabelStyle: React.CSSProperties = {
+    fontFamily: "var(--font-dm-mono)",
+    fontSize: 10,
+    letterSpacing: "0.22em",
+    textTransform: "uppercase",
+    color: "rgba(255,255,255,0.45)",
+    marginBottom: "0.75rem",
+  }
 
   return (
     <div ref={containerRef}>
       <div data-a="heading">
-        <StepHeading label="01" title="What do you need?" sub="Select all that apply." />
+        <StepHeading label="01" title="What can we build?" sub="Pick one or combine — we'll handle the rest." />
       </div>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
-          gap: 10,
-          marginBottom: "1rem",
-          perspective: 1200,
-        }}
-      >
-        {SERVICES.map(svc => {
+      <p data-a="section-label" style={{
+        fontFamily: "var(--font-dm-mono)",
+        fontSize: 10,
+        letterSpacing: "0.22em",
+        textTransform: "uppercase",
+        color: "rgba(255,255,255,0.35)",
+        marginBottom: "0.85rem",
+      }}>
+        Choose your services
+      </p>
+
+      {/* Unified 3-card service grid */}
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+        gap: 12,
+        marginBottom: "1.25rem",
+        perspective: 1200,
+      }}>
+        {ALL_SERVICES.map(svc => {
           const active = services.includes(svc.id)
           return (
             <button
@@ -614,145 +744,304 @@ function StepServices({ services, include3d, onToggle, onToggle3d, hostingStack,
               onClick={() => onToggle(svc.id)}
               className="svc-btn"
               style={{
-                background: active ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.02)",
-                border: `1px solid ${active ? "rgba(255,255,255,0.22)" : "rgba(255,255,255,0.07)"}`,
-                borderRadius: 14,
-                padding: "1.2rem 1.2rem 1.1rem",
+                background: active ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.025)",
+                border: `1px solid ${active ? "rgba(255,255,255,0.24)" : "rgba(255,255,255,0.08)"}`,
+                borderRadius: 16,
+                padding: "1.3rem 1.3rem 1.2rem",
                 color: "#fff",
                 position: "relative",
+                minHeight: 158,
+                display: "flex",
+                flexDirection: "column",
               }}
             >
-              <div style={{ color: active ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.28)", marginBottom: "0.8rem", transition: "color 0.18s" }}>
-                {svc.icon}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "0.95rem" }}>
+                <div style={{ color: active ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.32)", transition: "color 0.18s" }}>
+                  {svc.icon}
+                </div>
+                {active ? (
+                  <div style={{ width: 18, height: 18, borderRadius: "50%", background: "rgba(255,255,255,0.88)", display: "grid", placeItems: "center", flexShrink: 0 }}>
+                    <svg viewBox="0 0 12 12" fill="none" style={{ width: 8, height: 8 }}>
+                      <polyline points="2,6 5,9 10,3" stroke="#1a1a1a" strokeWidth={2} strokeLinecap="round" />
+                    </svg>
+                  </div>
+                ) : svc.chip ? (
+                  <span style={{
+                    fontFamily: "var(--font-dm-mono)",
+                    fontSize: 9,
+                    letterSpacing: "0.14em",
+                    textTransform: "uppercase",
+                    color: "rgba(255,255,255,0.4)",
+                    background: "rgba(255,255,255,0.04)",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    borderRadius: 999,
+                    padding: "3px 9px",
+                    lineHeight: 1.1,
+                  }}>
+                    {svc.chip}
+                  </span>
+                ) : null}
               </div>
-              <div style={{ fontFamily: "var(--font-inter)", fontSize: "0.9rem", fontWeight: 600, letterSpacing: "-0.015em", color: active ? "#fff" : "rgba(255,255,255,0.55)", marginBottom: "0.3rem", transition: "color 0.18s" }}>
+              <div style={{
+                fontFamily: "var(--font-inter)",
+                fontSize: "0.95rem",
+                fontWeight: 600,
+                letterSpacing: "-0.015em",
+                color: active ? "#fff" : "rgba(255,255,255,0.68)",
+                marginBottom: "0.3rem",
+                transition: "color 0.18s",
+              }}>
                 {svc.label}
               </div>
-              <div style={{ fontFamily: "var(--font-inter)", fontSize: "0.75rem", lineHeight: 1.5, color: active ? "rgba(255,255,255,0.42)" : "rgba(255,255,255,0.22)", transition: "color 0.18s" }}>
+              <div style={{
+                fontFamily: "var(--font-inter)",
+                fontSize: "0.78rem",
+                lineHeight: 1.5,
+                color: active ? "rgba(255,255,255,0.5)" : "rgba(255,255,255,0.3)",
+                transition: "color 0.18s",
+              }}>
                 {svc.description}
               </div>
-              {active && (
-                <div style={{ position: "absolute", top: 10, right: 10, width: 18, height: 18, borderRadius: "50%", background: "rgba(255,255,255,0.88)", display: "grid", placeItems: "center" }}>
-                  <svg viewBox="0 0 12 12" fill="none" style={{ width: 8, height: 8 }}>
-                    <polyline points="2,6 5,9 10,3" stroke="#1a1a1a" strokeWidth={2} strokeLinecap="round" />
-                  </svg>
-                </div>
-              )}
             </button>
           )
         })}
       </div>
 
-      {/* 3D toggle — always in DOM, GSAP-animated in/out when website is toggled */}
-      <div ref={threeDRef} style={{ overflow: "hidden" }}>
-        <div className="threeD-inner" style={{ marginBottom: "1rem", willChange: "transform, filter, opacity" }}>
-          <button
-            onClick={onToggle3d}
-            className="svc-btn"
-            style={{
-              width: "100%",
-              background: include3d ? "rgba(89,61,248,0.12)" : "rgba(255,255,255,0.02)",
-              border: `1px solid ${include3d ? "rgba(89,61,248,0.45)" : "rgba(255,255,255,0.1)"}`,
-              borderRadius: 14,
-              padding: "1rem 1.2rem",
-              color: "#fff",
-              display: "flex",
-              alignItems: "center",
-              gap: 14,
-            }}
-          >
-            <div style={{
-              width: 20, height: 20, borderRadius: 6,
-              border: `1.5px solid ${include3d ? "rgba(89,61,248,0.7)" : "rgba(255,255,255,0.2)"}`,
-              background: include3d ? "rgba(89,61,248,0.25)" : "transparent",
-              display: "grid", placeItems: "center", flexShrink: 0, transition: "all 0.18s",
-            }}>
-              {include3d && (
-                <svg viewBox="0 0 12 12" fill="none" style={{ width: 8, height: 8 }}>
-                  <polyline points="2,6 5,9 10,3" stroke="#a78bfa" strokeWidth={2} strokeLinecap="round" />
-                </svg>
-              )}
-            </div>
-            <div style={{ textAlign: "left" }}>
-              <div style={{ fontFamily: "var(--font-inter)", fontSize: "0.875rem", fontWeight: 500, color: include3d ? "#c4b5fd" : "rgba(255,255,255,0.55)", letterSpacing: "-0.01em", transition: "color 0.18s" }}>
-                Add 3D & WebGL elements
+      {/* Unified configuration panel — CSS-transitioned border/bg, GSAP-animated rows inside */}
+      <div style={{
+        borderRadius: 16,
+        border: `1px solid ${hasAnyService ? "rgba(255,255,255,0.08)" : "transparent"}`,
+        background: hasAnyService ? "rgba(255,255,255,0.025)" : "transparent",
+        marginBottom: hasAnyService ? "1.25rem" : 0,
+        overflow: "hidden",
+        transition: "border-color 0.35s ease, background-color 0.35s ease, margin-bottom 0.35s ease",
+      }}>
+        {/* Website — 3D add-on */}
+        <div ref={threeDRowRef} style={{ overflow: "hidden" }}>
+          <div style={{ padding: "1rem 1.3rem" }}>
+            <p style={rowLabelStyle}>Website</p>
+            <button
+              onClick={onToggle3d}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                background: "transparent",
+                border: "none",
+                cursor: "pointer",
+                padding: 0,
+                color: "#fff",
+                textAlign: "left",
+              }}
+            >
+              <div style={{
+                width: 20, height: 20, borderRadius: 6,
+                border: `1.5px solid ${include3d ? "rgba(89,61,248,0.7)" : "rgba(255,255,255,0.24)"}`,
+                background: include3d ? "rgba(89,61,248,0.25)" : "transparent",
+                display: "grid", placeItems: "center", flexShrink: 0, transition: "all 0.18s",
+              }}>
+                {include3d && (
+                  <svg viewBox="0 0 12 12" fill="none" style={{ width: 8, height: 8 }}>
+                    <polyline points="2,6 5,9 10,3" stroke="#a78bfa" strokeWidth={2} strokeLinecap="round" />
+                  </svg>
+                )}
               </div>
-              <div style={{ fontFamily: "var(--font-inter)", fontSize: "0.75rem", color: "rgba(255,255,255,0.22)", marginTop: 2 }}>
-                Immersive 3D experiences in the browser — no app needed
+              <div>
+                <div style={{
+                  fontFamily: "var(--font-inter)",
+                  fontSize: "0.9rem",
+                  fontWeight: 500,
+                  letterSpacing: "-0.01em",
+                  color: include3d ? "#c4b5fd" : "rgba(255,255,255,0.82)",
+                  transition: "color 0.18s",
+                }}>
+                  Add 3D animations
+                </div>
+                <div style={{
+                  fontFamily: "var(--font-inter)",
+                  fontSize: "0.75rem",
+                  color: "rgba(255,255,255,0.32)",
+                  marginTop: 2,
+                }}>
+                  Eye-catching effects that make your site stand out
+                </div>
               </div>
-            </div>
-          </button>
+            </button>
+          </div>
         </div>
-      </div>
 
-      {/* Tech stack — always in DOM, GSAP-animated in/out when hosting is toggled */}
-      <div ref={stackRef} style={{ overflow: "hidden" }}>
-        <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "1.1rem", marginBottom: "1rem" }}>
-          <p data-stack="heading" style={{ fontFamily: "var(--font-dm-mono)", fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.28)", marginBottom: "0.45rem", willChange: "transform, filter, opacity" }}>
-            Tech Stack
-          </p>
-          <p data-stack="desc" style={{ fontFamily: "var(--font-inter)", fontSize: "0.78rem", color: "rgba(255,255,255,0.2)", lineHeight: 1.5, marginBottom: "0.9rem", willChange: "transform, filter, opacity" }}>
-            Was soll gehostet werden? Mehrfachauswahl möglich.
-          </p>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-            {HOSTING_STACKS.map(stack => {
-              const active = hostingStack.includes(stack.id)
-              return (
-                <button
-                  key={stack.id}
-                  data-pill="true"
-                  onClick={() => onToggleStack(stack.id)}
-                  className="svc-btn"
-                  style={{
-                    background: active ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.03)",
-                    border: `1px solid ${active ? "rgba(255,255,255,0.30)" : "rgba(255,255,255,0.08)"}`,
-                    borderRadius: 999,
-                    padding: "6px 16px",
-                    color: active ? "rgba(255,255,255,0.88)" : "rgba(255,255,255,0.35)",
-                    fontFamily: "var(--font-inter)",
-                    fontSize: "0.8rem",
-                    fontWeight: active ? 500 : 400,
-                    letterSpacing: "-0.01em",
-                    cursor: "pointer",
-                  }}
-                >
-                  {stack.label}
-                </button>
-              )
-            })}
+        {/* Mobile App — platform */}
+        <div ref={appRowRef} style={{ overflow: "hidden" }}>
+          <div style={{ padding: "1rem 1.3rem" }}>
+            <p style={rowLabelStyle}>Mobile App &middot; Which platform?</p>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {APP_PLATFORMS.map(p => {
+                const active = appPlatform === p.id
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => onPlatformChange(p.id as "ios" | "android" | "both")}
+                    className="platform-pill"
+                    style={{
+                      background: active ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.03)",
+                      border: `1px solid ${active ? "rgba(255,255,255,0.30)" : "rgba(255,255,255,0.08)"}`,
+                      borderRadius: 999,
+                      padding: "7px 18px",
+                      color: active ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.45)",
+                      fontFamily: "var(--font-inter)",
+                      fontSize: "0.82rem",
+                      fontWeight: active ? 600 : 400,
+                      letterSpacing: "-0.01em",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 7,
+                    }}
+                  >
+                    {active && (
+                      <svg viewBox="0 0 12 12" fill="none" style={{ width: 8, height: 8, flexShrink: 0 }}>
+                        <polyline points="2,6 5,9 10,3" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" />
+                      </svg>
+                    )}
+                    {p.label}
+                  </button>
+                )
+              })}
+            </div>
+            <p style={{ fontFamily: "var(--font-inter)", fontSize: "0.74rem", color: "rgba(255,255,255,0.3)", marginTop: "0.65rem" }}>
+              &ldquo;Both&rdquo; means one app that works on iPhone and Android — cheaper than two separate apps.
+            </p>
+          </div>
+        </div>
+
+        {/* Hosting — project type */}
+        <div ref={hostingRowRef} style={{ overflow: "hidden" }}>
+          <div style={{ padding: "1rem 1.3rem" }}>
+            <p style={rowLabelStyle}>Hosting &middot; What kind of project?</p>
+            <p style={{ fontFamily: "var(--font-inter)", fontSize: "0.78rem", color: "rgba(255,255,255,0.32)", lineHeight: 1.5, marginBottom: "0.8rem" }}>
+              Pick the closest match — we&apos;ll figure out the technical side.
+            </p>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {HOSTING_CATEGORIES.map(cat => {
+                const active = hostingCategory === cat.id
+                return (
+                  <button
+                    key={cat.id}
+                    data-pill="true"
+                    onClick={() => onSelectCategory(active ? "" : cat.id)}
+                    className="platform-pill"
+                    style={{
+                      background: active ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.03)",
+                      border: `1px solid ${active ? "rgba(255,255,255,0.30)" : errorHostingCategory ? "rgba(255,80,80,0.4)" : "rgba(255,255,255,0.08)"}`,
+                      borderRadius: 999,
+                      padding: "7px 18px",
+                      color: active ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.42)",
+                      fontFamily: "var(--font-inter)",
+                      fontSize: "0.82rem",
+                      fontWeight: active ? 600 : 400,
+                      letterSpacing: "-0.01em",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 7,
+                    }}
+                  >
+                    {active && (
+                      <svg viewBox="0 0 12 12" fill="none" style={{ width: 8, height: 8, flexShrink: 0 }}>
+                        <polyline points="2,6 5,9 10,3" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" />
+                      </svg>
+                    )}
+                    {cat.label}
+                  </button>
+                )
+              })}
+            </div>
+
+            {errorHostingCategory && <ErrorMsg msg={errorHostingCategory} style={{ marginTop: "0.7rem" }} />}
+
+            <button
+              onClick={onToggleAdvancedStack}
+              className="hosting-expand-btn"
+              style={{
+                background: "transparent",
+                border: "none",
+                padding: 0,
+                marginTop: "0.95rem",
+                color: "rgba(255,255,255,0.4)",
+                fontFamily: "var(--font-dm-mono)",
+                fontSize: 9,
+                letterSpacing: "0.18em",
+                textTransform: "uppercase",
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              {showAdvancedStack ? "Hide tech options" : "I know the tech stack"}
+              <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={1.6} style={{ width: 9, height: 9, transform: showAdvancedStack ? "rotate(180deg)" : "none", transition: "transform 0.25s" }}>
+                <polyline points="2,4 6,8 10,4" strokeLinecap="round" />
+              </svg>
+            </button>
+
+            <div ref={advancedStackRef} style={{ overflow: "hidden" }}>
+              <div style={{ paddingTop: "0.85rem", display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {HOSTING_STACKS.map(stack => {
+                  const active = hostingStack.includes(stack.id)
+                  return (
+                    <button
+                      key={stack.id}
+                      data-pill="true"
+                      onClick={() => onToggleStack(stack.id)}
+                      className="platform-pill"
+                      style={{
+                        background: active ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.03)",
+                        border: `1px solid ${active ? "rgba(255,255,255,0.30)" : "rgba(255,255,255,0.08)"}`,
+                        borderRadius: 999,
+                        padding: "6px 14px",
+                        color: active ? "rgba(255,255,255,0.88)" : "rgba(255,255,255,0.38)",
+                        fontFamily: "var(--font-inter)",
+                        fontSize: "0.78rem",
+                        fontWeight: active ? 500 : 400,
+                        letterSpacing: "-0.01em",
+                      }}
+                    >
+                      {stack.label}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Combo discount — always in DOM, GSAP-animated in/out when website+hosting toggled */}
+      {/* Discount banner */}
       <div ref={discountRef} style={{ overflow: "hidden", height: 0 }}>
         <div style={{
           background: "rgba(89,61,248,0.07)",
           border: "1px solid rgba(89,61,248,0.22)",
           borderRadius: 12,
-          padding: "0.85rem 1.1rem",
-          marginBottom: "1rem",
+          padding: "0.95rem 1.15rem",
+          marginBottom: "1.5rem",
           display: "flex",
           alignItems: "center",
-          gap: 12,
+          gap: 14,
         }}>
           <div data-discount="icon" style={{
-            width: 32, height: 32, borderRadius: 8,
+            width: 36, height: 36, borderRadius: 10,
             background: "rgba(89,61,248,0.15)",
             border: "1px solid rgba(89,61,248,0.28)",
             display: "grid", placeItems: "center", flexShrink: 0,
             willChange: "transform, filter, opacity",
           }}>
-            <svg viewBox="0 0 20 20" fill="none" stroke="rgba(167,139,250,0.8)" strokeWidth={1.4} style={{ width: 16, height: 16 }}>
+            <svg viewBox="0 0 20 20" fill="none" stroke="rgba(167,139,250,0.85)" strokeWidth={1.4} style={{ width: 18, height: 18 }}>
               <path d="M9 2l1.5 4.5H15l-3.5 2.5L13 13.5 9 11l-4 2.5 1.5-4.5L3 6.5h4.5z" />
             </svg>
           </div>
           <div>
-            <p data-discount="text" style={{ fontFamily: "var(--font-inter)", fontSize: "0.875rem", fontWeight: 600, color: "rgba(167,139,250,0.92)", letterSpacing: "-0.01em", willChange: "transform, filter, opacity" }}>
-              5% Kombirabatt auf die Entwicklung
+            <p data-discount="text" style={{ fontFamily: "var(--font-inter)", fontSize: "0.92rem", fontWeight: 600, color: "rgba(167,139,250,0.95)", letterSpacing: "-0.01em", willChange: "transform, filter, opacity" }}>
+              {discountLabel}
             </p>
-            <p data-discount="text" style={{ fontFamily: "var(--font-inter)", fontSize: "0.75rem", color: "rgba(255,255,255,0.28)", marginTop: 2, lineHeight: 1.4, willChange: "transform, filter, opacity" }}>
-              Website + Hosting zusammen → 5% Rabatt auf die Entwicklungskosten. Hosting bleibt fix €20/mo.
+            <p data-discount="text" style={{ fontFamily: "var(--font-inter)", fontSize: "0.76rem", color: "rgba(255,255,255,0.35)", marginTop: 2, lineHeight: 1.45, willChange: "transform, filter, opacity" }}>
+              {discountSub}
             </p>
           </div>
         </div>
@@ -764,7 +1053,7 @@ function StepServices({ services, include3d, onToggle, onToggle3d, hostingStack,
   )
 }
 
-/* ── Step 2 (Hosting-only): Hosting details + repo link ──────────── */
+/* ── Step 2 (Hosting-only): Hosting details + project link ──────── */
 function StepHosting({ repoUrl, onChangeRepo, error, onBack, onNext }: {
   repoUrl: string; onChangeRepo: (v: string) => void
   error?: string; onBack: () => void; onNext: () => void
@@ -779,50 +1068,49 @@ function StepHosting({ repoUrl, onChangeRepo, error, onBack, onNext }: {
       gsap.set("[data-a='nav']",     { autoAlpha: 0, y: 18, filter: "blur(8px)" })
 
       const tl = gsap.timeline({ paused: true, defaults: { ease: "power3.out" } })
-      ScrollTrigger.create({
-        trigger: containerRef.current,
-        start: "top 92%",
-        once: true,
-        onEnter: () => tl.play(),
-      })
       tl.to("[data-a='heading']",  { autoAlpha: 1, y: 0, filter: "blur(0px)", duration: 0.55 })
         .to("[data-a='pricing']",  { autoAlpha: 1, y: 0, scale: 1, filter: "blur(0px)", duration: 0.7, ease: "expo.out" }, "-=0.3")
         .to("[data-a='field']",    { autoAlpha: 1, y: 0, filter: "blur(0px)", duration: 0.55 }, "-=0.4")
         .to("[data-a='nav']",      { autoAlpha: 1, y: 0, filter: "blur(0px)", duration: 0.45 }, "-=0.3")
+
+      const el = containerRef.current
+      if (el) {
+        const rect = el.getBoundingClientRect()
+        if (rect.top < window.innerHeight * 0.92) tl.play()
+        else ScrollTrigger.create({ trigger: el, start: "top 92%", once: true, onEnter: () => tl.play() })
+      }
     }, containerRef)
     return () => ctx.revert()
   }, [])
 
   const features = [
-    "Managed deployment & setup",
-    "SSL certificate (HTTPS)",
-    "24 / 7 uptime monitoring",
+    "Full setup & deployment — we handle it",
+    "SSL certificate (HTTPS) — free, included",
+    "24/7 uptime monitoring",
     "Custom domain support",
   ]
 
   return (
     <div ref={containerRef}>
       <div data-a="heading">
-        <StepHeading label="02" title="Hosting details." sub="We take care of everything — you just share your files." />
+        <StepHeading label="02" title="Hosting details." sub="We handle the technical side — you just share your files." />
       </div>
 
-      {/* Pricing card */}
       <div data-a="pricing" style={{
         background: "rgba(255,255,255,0.03)",
         border: "1px solid rgba(255,255,255,0.09)",
         borderRadius: 18,
-        padding: "1.5rem 1.6rem",
+        padding: "1.6rem 1.7rem",
         marginBottom: "2rem",
       }}>
-        {/* Price row */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "1.25rem" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "1.35rem" }}>
           <div>
-            <p style={{ fontFamily: "var(--font-dm-mono)", fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.28)", marginBottom: 6 }}>
-              Hosting-Paket
+            <p style={{ fontFamily: "var(--font-dm-mono)", fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.32)", marginBottom: 8 }}>
+              Hosting plan
             </p>
-            <p style={{ fontFamily: "var(--font-inter)", fontSize: "clamp(1.8rem, 3.5vw, 2.6rem)", fontWeight: 300, letterSpacing: "-0.04em", color: "#fff", lineHeight: 1 }}>
+            <p style={{ fontFamily: "var(--font-inter)", fontSize: "clamp(1.9rem, 3.5vw, 2.8rem)", fontWeight: 300, letterSpacing: "-0.04em", color: "#fff", lineHeight: 1 }}>
               €20
-              <span style={{ fontSize: "0.95rem", fontWeight: 400, color: "rgba(255,255,255,0.3)", letterSpacing: "-0.01em", marginLeft: 6 }}>/ Monat</span>
+              <span style={{ fontSize: "1rem", fontWeight: 400, color: "rgba(255,255,255,0.35)", letterSpacing: "-0.01em", marginLeft: 6 }}>/ month</span>
             </p>
           </div>
           <div style={{
@@ -834,14 +1122,13 @@ function StepHosting({ repoUrl, onChangeRepo, error, onBack, onNext }: {
             fontSize: 10,
             letterSpacing: "0.15em",
             textTransform: "uppercase",
-            color: "rgba(255,255,255,0.45)",
+            color: "rgba(255,255,255,0.5)",
           }}>
-            Alles inklusive
+            Everything included
           </div>
         </div>
 
-        {/* Feature list */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 10, borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "1.25rem" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 11, borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "1.3rem" }}>
           {features.map(f => (
             <div key={f} style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <div style={{
@@ -854,7 +1141,7 @@ function StepHosting({ repoUrl, onChangeRepo, error, onBack, onNext }: {
                   <polyline points="2,6 5,9 10,3" stroke="rgba(255,255,255,0.6)" strokeWidth={2} strokeLinecap="round" />
                 </svg>
               </div>
-              <span style={{ fontFamily: "var(--font-inter)", fontSize: "0.85rem", color: "rgba(255,255,255,0.45)", letterSpacing: "-0.01em" }}>
+              <span style={{ fontFamily: "var(--font-inter)", fontSize: "0.88rem", color: "rgba(255,255,255,0.5)", letterSpacing: "-0.01em" }}>
                 {f}
               </span>
             </div>
@@ -862,16 +1149,15 @@ function StepHosting({ repoUrl, onChangeRepo, error, onBack, onNext }: {
         </div>
       </div>
 
-      {/* Repo URL input */}
       <div data-a="field" style={{ marginBottom: error ? "0.5rem" : "3rem" }}>
-        <label style={{ display: "block", fontFamily: "var(--font-dm-mono)", fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.28)", marginBottom: "0.6rem" }}>
-          Your repo or file link
+        <label style={{ display: "block", fontFamily: "var(--font-dm-mono)", fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.32)", marginBottom: "0.65rem" }}>
+          Link to your project
         </label>
         <input
           type="url"
           value={repoUrl}
           onChange={e => onChangeRepo(e.target.value)}
-          placeholder="https://github.com/your-username/your-repo"
+          placeholder="https://github.com/your-username/your-project"
           className="c-input"
           onKeyDown={e => { if (e.key === "Enter") onNext() }}
           style={{
@@ -890,8 +1176,8 @@ function StepHosting({ repoUrl, onChangeRepo, error, onBack, onNext }: {
           onFocus={e => { if (!error) e.currentTarget.style.borderBottomColor = "rgba(255,255,255,0.38)" }}
           onBlur={e => { if (!error) e.currentTarget.style.borderBottomColor = "rgba(255,255,255,0.1)" }}
         />
-        <p style={{ fontFamily: "var(--font-inter)", fontSize: "0.78rem", color: "rgba(255,255,255,0.2)", marginTop: "0.55rem", lineHeight: 1.5 }}>
-          GitHub-Repo, ZIP-URL oder jeder andere Link zu deinen Projektdateien — wir richten alles ein.
+        <p style={{ fontFamily: "var(--font-inter)", fontSize: "0.8rem", color: "rgba(255,255,255,0.28)", marginTop: "0.6rem", lineHeight: 1.5 }}>
+          GitHub repo, a ZIP file, or any other link — we&apos;ll take it from there.
         </p>
         {error && <ErrorMsg msg={error} style={{ marginTop: "0.4rem" }} />}
       </div>
@@ -915,36 +1201,37 @@ function StepDescription({ value, onChange, onBack, onNext }: {
       gsap.set("[data-a='nav']",     { autoAlpha: 0, y: 18, filter: "blur(8px)" })
 
       const tl = gsap.timeline({ paused: true, defaults: { ease: "power3.out" } })
-      ScrollTrigger.create({
-        trigger: containerRef.current,
-        start: "top 92%",
-        once: true,
-        onEnter: () => tl.play(),
-      })
       tl.to("[data-a='heading']", { autoAlpha: 1, y: 0, filter: "blur(0px)", duration: 0.55 })
         .to("[data-a='field']",   { autoAlpha: 1, y: 0, filter: "blur(0px)", duration: 0.6, ease: "expo.out" }, "-=0.3")
         .to("[data-a='nav']",     { autoAlpha: 1, y: 0, filter: "blur(0px)", duration: 0.45 }, "-=0.3")
+
+      const el = containerRef.current
+      if (el) {
+        const rect = el.getBoundingClientRect()
+        if (rect.top < window.innerHeight * 0.92) tl.play()
+        else ScrollTrigger.create({ trigger: el, start: "top 92%", once: true, onEnter: () => tl.play() })
+      }
     }, containerRef)
     return () => ctx.revert()
   }, [])
 
   return (
     <div ref={containerRef}>
-      <div data-a="heading"><StepHeading label="02" title="Describe your project." sub="Optional — helps us give you a precise quote." /></div>
+      <div data-a="heading"><StepHeading label="02" title="Tell us about your project." sub="Optional — but the more we know, the more accurate our quote." /></div>
       <div data-a="field">
         <textarea
           value={value}
           onChange={e => onChange(e.target.value)}
-          placeholder="What are you building? Who are your users? Any references or ideas?"
-          rows={6}
+          placeholder="What are you building? Who is it for? Any examples or references you like? Don't worry about technical details — just describe it like you'd explain it to a friend."
+          rows={7}
           className="c-input"
           style={{
             width: "100%",
             background: "rgba(255,255,255,0.03)",
             border: "1px solid rgba(255,255,255,0.08)",
             borderRadius: 14,
-            padding: "1.1rem 1.25rem",
-            color: "rgba(255,255,255,0.82)",
+            padding: "1.2rem 1.3rem",
+            color: "rgba(255,255,255,0.85)",
             fontFamily: "var(--font-inter)",
             fontSize: "0.95rem",
             lineHeight: 1.7,
@@ -961,69 +1248,11 @@ function StepDescription({ value, onChange, onBack, onNext }: {
   )
 }
 
-/* ── Step 3: Company ──────────────────────────────────────────────── */
-function StepCompany({ value, onChange, onBack, onNext }: {
-  value: string; onChange: (v: string) => void; onBack: () => void; onNext: () => void
-}) {
-  const containerRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const ctx = gsap.context(() => {
-      gsap.set("[data-a='heading']", { autoAlpha: 0, y: 28, filter: "blur(10px)" })
-      gsap.set("[data-a='field']",   { autoAlpha: 0, y: 24, filter: "blur(10px)" })
-      gsap.set("[data-a='nav']",     { autoAlpha: 0, y: 18, filter: "blur(8px)" })
-
-      const tl = gsap.timeline({ paused: true, defaults: { ease: "power3.out" } })
-      ScrollTrigger.create({
-        trigger: containerRef.current,
-        start: "top 92%",
-        once: true,
-        onEnter: () => tl.play(),
-      })
-      tl.to("[data-a='heading']", { autoAlpha: 1, y: 0, filter: "blur(0px)", duration: 0.55 })
-        .to("[data-a='field']",   { autoAlpha: 1, y: 0, filter: "blur(0px)", duration: 0.6, ease: "expo.out" }, "-=0.3")
-        .to("[data-a='nav']",     { autoAlpha: 1, y: 0, filter: "blur(0px)", duration: 0.45 }, "-=0.3")
-    }, containerRef)
-    return () => ctx.revert()
-  }, [])
-
-  return (
-    <div ref={containerRef}>
-      <div data-a="heading"><StepHeading label="03" title="What's the company?" sub="Optional — leave blank if personal." /></div>
-      <div data-a="field">
-        <input
-          type="text"
-          value={value}
-          onChange={e => onChange(e.target.value)}
-          placeholder="Company or brand name"
-          className="c-input"
-          style={{
-            width: "100%",
-            background: "transparent",
-            border: "none",
-            borderBottom: "1px solid rgba(255,255,255,0.1)",
-            padding: "0.75rem 0",
-            color: "#fff",
-            fontFamily: "var(--font-inter)",
-            fontSize: "clamp(1.2rem, 2.5vw, 1.6rem)",
-            fontWeight: 300,
-            letterSpacing: "-0.02em",
-            marginBottom: "3rem",
-            boxSizing: "border-box",
-          }}
-          onFocus={e => (e.currentTarget.style.borderBottomColor = "rgba(255,255,255,0.38)")}
-          onBlur={e => (e.currentTarget.style.borderBottomColor = "rgba(255,255,255,0.1)")}
-          onKeyDown={e => { if (e.key === "Enter") onNext() }}
-        />
-      </div>
-      <div data-a="nav"><NavRow onBack={onBack} onNext={onNext} nextLabel="Continue" /></div>
-    </div>
-  )
-}
-
-/* ── Step 4: Deadline ─────────────────────────────────────────────── */
-function StepDeadline({ value, onChange, onBack, onNext }: {
-  value: string; onChange: (v: string) => void; onBack: () => void; onNext: () => void
+/* ── Step 3: Details (Company + Deadline combined) ───────────────── */
+function StepDetails({ company, onChangeCompany, deadline, onChangeDeadline, onBack, onNext }: {
+  company: string; onChangeCompany: (v: string) => void
+  deadline: string; onChangeDeadline: (v: string) => void
+  onBack: () => void; onNext: () => void
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -1040,15 +1269,16 @@ function StepDeadline({ value, onChange, onBack, onNext }: {
       gsap.set("[data-a='nav']",     { autoAlpha: 0, y: 18, filter: "blur(8px)" })
 
       const tl = gsap.timeline({ paused: true, defaults: { ease: "power3.out" } })
-      ScrollTrigger.create({
-        trigger: containerRef.current,
-        start: "top 92%",
-        once: true,
-        onEnter: () => tl.play(),
-      })
       tl.to("[data-a='heading']", { autoAlpha: 1, y: 0, filter: "blur(0px)", duration: 0.55 })
-        .to("[data-a='field']",   { autoAlpha: 1, y: 0, filter: "blur(0px)", duration: 0.6, ease: "expo.out" }, "-=0.3")
+        .to("[data-a='field']",   { autoAlpha: 1, y: 0, filter: "blur(0px)", duration: 0.6, stagger: 0.12, ease: "expo.out" }, "-=0.3")
         .to("[data-a='nav']",     { autoAlpha: 1, y: 0, filter: "blur(0px)", duration: 0.45 }, "-=0.3")
+
+      const el = containerRef.current
+      if (el) {
+        const rect = el.getBoundingClientRect()
+        if (rect.top < window.innerHeight * 0.92) tl.play()
+        else ScrollTrigger.create({ trigger: el, start: "top 92%", once: true, onEnter: () => tl.play() })
+      }
     }, containerRef)
     return () => ctx.revert()
   }, [])
@@ -1056,46 +1286,92 @@ function StepDeadline({ value, onChange, onBack, onNext }: {
   return (
     <div ref={containerRef}>
       <div data-a="heading">
-        <StepHeading label="04" title="When do you need it?" sub="Optional — earliest possible is 1 week from today." />
+        <StepHeading label="03" title="A few quick details." sub="Both fields are optional — skip anything you're not sure about." />
       </div>
-      <div data-a="field" style={{ marginBottom: "3rem" }}>
-        <style>{`
-          .deadline-input::-webkit-calendar-picker-indicator { filter: invert(1) opacity(0.4); cursor: pointer; }
-          .deadline-input::-webkit-inner-spin-button { display: none; }
-        `}</style>
-        <input
-          type="date"
-          value={value}
-          min={minDate}
-          onChange={e => onChange(e.target.value)}
-          className="c-input deadline-input"
-          style={{
-            width: "100%",
-            background: "transparent",
-            border: "none",
-            borderBottom: "1px solid rgba(255,255,255,0.1)",
-            padding: "0.75rem 0",
-            color: value ? "#fff" : "rgba(255,255,255,0.25)",
-            fontFamily: "var(--font-inter)",
-            fontSize: "clamp(1.2rem, 2.5vw, 1.6rem)",
-            fontWeight: 300,
-            letterSpacing: "-0.02em",
-            boxSizing: "border-box",
-            colorScheme: "dark",
-          }}
-          onFocus={e => (e.currentTarget.style.borderBottomColor = "rgba(255,255,255,0.38)")}
-          onBlur={e => (e.currentTarget.style.borderBottomColor = "rgba(255,255,255,0.1)")}
-        />
+
+      <div style={{ display: "flex", flexDirection: "column", gap: "2.5rem", marginBottom: "3rem" }}>
+        <div data-a="field">
+          <label style={{ display: "block", fontFamily: "var(--font-dm-mono)", fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.55)", marginBottom: "0.7rem" }}>
+            Company or brand
+            <span style={{ marginLeft: 8, color: "rgba(255,255,255,0.35)", letterSpacing: "0.1em" }}>(optional)</span>
+          </label>
+          <input
+            type="text"
+            value={company}
+            onChange={e => onChangeCompany(e.target.value)}
+            placeholder="Your company or brand name"
+            className="c-input"
+            style={{
+              width: "100%",
+              background: "transparent",
+              border: "none",
+              borderBottom: "1px solid rgba(255,255,255,0.1)",
+              padding: "0.7rem 0",
+              color: "#fff",
+              fontFamily: "var(--font-inter)",
+              fontSize: "clamp(1.1rem, 2vw, 1.4rem)",
+              fontWeight: 300,
+              letterSpacing: "-0.02em",
+              boxSizing: "border-box",
+            }}
+            onFocus={e => (e.currentTarget.style.borderBottomColor = "rgba(255,255,255,0.38)")}
+            onBlur={e => (e.currentTarget.style.borderBottomColor = "rgba(255,255,255,0.1)")}
+          />
+          <p style={{ fontFamily: "var(--font-inter)", fontSize: "0.78rem", color: "rgba(255,255,255,0.25)", marginTop: "0.55rem", lineHeight: 1.5 }}>
+            Leave blank if this is a personal project.
+          </p>
+        </div>
+
+        <div data-a="field">
+          <label style={{ display: "block", fontFamily: "var(--font-dm-mono)", fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.55)", marginBottom: "0.7rem" }}>
+            Target launch date
+            <span style={{ marginLeft: 8, color: "rgba(255,255,255,0.35)", letterSpacing: "0.1em" }}>(optional)</span>
+          </label>
+          <style>{`
+            .deadline-input::-webkit-calendar-picker-indicator { filter: invert(1) opacity(0.4); cursor: pointer; }
+            .deadline-input::-webkit-inner-spin-button { display: none; }
+          `}</style>
+          <input
+            type="date"
+            value={deadline}
+            min={minDate}
+            onChange={e => onChangeDeadline(e.target.value)}
+            className="c-input deadline-input"
+            style={{
+              width: "100%",
+              background: "transparent",
+              border: "none",
+              borderBottom: "1px solid rgba(255,255,255,0.1)",
+              padding: "0.7rem 0",
+              color: deadline ? "#fff" : "rgba(255,255,255,0.25)",
+              fontFamily: "var(--font-inter)",
+              fontSize: "clamp(1.1rem, 2vw, 1.4rem)",
+              fontWeight: 300,
+              letterSpacing: "-0.02em",
+              boxSizing: "border-box",
+              colorScheme: "dark",
+            }}
+            onFocus={e => (e.currentTarget.style.borderBottomColor = "rgba(255,255,255,0.38)")}
+            onBlur={e => (e.currentTarget.style.borderBottomColor = "rgba(255,255,255,0.1)")}
+          />
+          <p style={{ fontFamily: "var(--font-inter)", fontSize: "0.78rem", color: "rgba(255,255,255,0.25)", marginTop: "0.55rem", lineHeight: 1.5 }}>
+            Earliest possible is 1 week from today.
+          </p>
+        </div>
       </div>
+
       <div data-a="nav"><NavRow onBack={onBack} onNext={onNext} nextLabel="Continue" /></div>
     </div>
   )
 }
 
-/* ── Step 5: Contact ──────────────────────────────────────────────── */
-function StepContact({ name, setName, email, setEmail, errors, submitting, submitError, onBack, onSubmit }: {
+/* ── Step 4: Contact (with summary) ───────────────────────────────── */
+function StepContact({ name, setName, email, setEmail, services, hasWebsite, hasApp, hasHosting, include3d, appPlatform, discountPercent, errors, submitting, submitError, onBack, onSubmit }: {
   name: string; setName: (v: string) => void
   email: string; setEmail: (v: string) => void
+  services: string[]
+  hasWebsite: boolean; hasApp: boolean; hasHosting: boolean
+  include3d: boolean; appPlatform: string; discountPercent: number
   errors: Record<string, string>; submitting: boolean
   submitError?: string; onBack: () => void; onSubmit: () => void
 }) {
@@ -1104,41 +1380,94 @@ function StepContact({ name, setName, email, setEmail, errors, submitting, submi
   useEffect(() => {
     const ctx = gsap.context(() => {
       gsap.set("[data-a='heading']", { autoAlpha: 0, y: 28, filter: "blur(10px)" })
+      gsap.set("[data-a='summary']", { autoAlpha: 0, y: 24, filter: "blur(10px)" })
       gsap.set("[data-a='field']",   { autoAlpha: 0, y: 24, filter: "blur(10px)" })
       gsap.set("[data-a='nav']",     { autoAlpha: 0, y: 18, filter: "blur(8px)" })
 
       const tl = gsap.timeline({ paused: true, defaults: { ease: "power3.out" } })
-      ScrollTrigger.create({
-        trigger: containerRef.current,
-        start: "top 92%",
-        once: true,
-        onEnter: () => tl.play(),
-      })
       tl.to("[data-a='heading']", { autoAlpha: 1, y: 0, filter: "blur(0px)", duration: 0.55 })
+        .to("[data-a='summary']", { autoAlpha: 1, y: 0, filter: "blur(0px)", duration: 0.55, ease: "expo.out" }, "-=0.3")
         .to("[data-a='field']",   { autoAlpha: 1, y: 0, filter: "blur(0px)", duration: 0.55, stagger: 0.1, ease: "expo.out" }, "-=0.3")
         .to("[data-a='nav']",     { autoAlpha: 1, y: 0, filter: "blur(0px)", duration: 0.45 }, "-=0.3")
+
+      const el = containerRef.current
+      if (el) {
+        const rect = el.getBoundingClientRect()
+        if (rect.top < window.innerHeight * 0.92) tl.play()
+        else ScrollTrigger.create({ trigger: el, start: "top 92%", once: true, onEnter: () => tl.play() })
+      }
     }, containerRef)
     return () => ctx.revert()
   }, [])
 
+  const summaryItems: string[] = []
+  if (hasWebsite) summaryItems.push(include3d ? "Website (with 3D)" : "Website")
+  if (hasApp) {
+    const platform = appPlatform === "both" ? "iOS & Android" : appPlatform === "ios" ? "iOS" : "Android"
+    summaryItems.push(`Mobile App — ${platform}`)
+  }
+  if (hasHosting) summaryItems.push("Hosting — €20/mo")
+
   return (
     <div ref={containerRef}>
-      <div data-a="heading"><StepHeading label="05" title="How can we reach you?" sub="We'll reply within 24 hours." /></div>
+      <div data-a="heading"><StepHeading label="04" title="How can we reach you?" sub="We'll reply within 24 hours with a clear next step." /></div>
+
+      {services.length > 0 && (
+        <div data-a="summary" style={{
+          background: "rgba(255,255,255,0.03)",
+          border: "1px solid rgba(255,255,255,0.08)",
+          borderRadius: 14,
+          padding: "1.05rem 1.25rem",
+          marginBottom: "2.25rem",
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
+            <p style={{ fontFamily: "var(--font-dm-mono)", fontSize: 9, letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(255,255,255,0.35)" }}>
+              Your request
+            </p>
+            {discountPercent > 0 && (
+              <span style={{
+                background: "rgba(89,61,248,0.14)",
+                border: "1px solid rgba(89,61,248,0.32)",
+                borderRadius: 999,
+                padding: "3px 10px",
+                fontFamily: "var(--font-dm-mono)",
+                fontSize: 9,
+                letterSpacing: "0.14em",
+                textTransform: "uppercase",
+                color: "rgba(167,139,250,0.95)",
+              }}>
+                −{discountPercent}% bundle
+              </span>
+            )}
+          </div>
+          <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 8 }}>
+            {summaryItems.map(item => (
+              <li key={item} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ width: 5, height: 5, borderRadius: "50%", background: "rgba(255,255,255,0.5)", flexShrink: 0 }} />
+                <span style={{ fontFamily: "var(--font-inter)", fontSize: "0.9rem", color: "rgba(255,255,255,0.78)", letterSpacing: "-0.01em" }}>
+                  {item}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <div style={{ display: "flex", flexDirection: "column", gap: "2.25rem", marginBottom: "3rem" }}>
         <div data-a="field">
           <UnderlineField label="Your name" value={name} onChange={setName} placeholder="Full name" error={errors.name} onEnter={onSubmit} />
         </div>
         <div data-a="field">
-          <UnderlineField label="Email address" type="email" value={email} onChange={setEmail} placeholder="your@email.com" error={errors.email} onEnter={onSubmit} />
+          <UnderlineField label="Email address" type="email" value={email} onChange={setEmail} placeholder="you@email.com" error={errors.email} onEnter={onSubmit} />
         </div>
       </div>
       {submitError && <ErrorMsg msg={submitError} style={{ marginBottom: "1.5rem" }} />}
-      <div data-a="nav"><NavRow onBack={onBack} onNext={onSubmit} nextLabel={submitting ? "Sending…" : "Send enquiry"} isFinal disabled={submitting} /></div>
+      <div data-a="nav"><NavRow onBack={onBack} onNext={onSubmit} nextLabel={submitting ? "Sending…" : "Send request"} isFinal disabled={submitting} /></div>
     </div>
   )
 }
 
-/* ── Step 6: Success ──────────────────────────────────────────────── */
+/* ── Step 5: Success ──────────────────────────────────────────────── */
 function StepSuccess({ name }: { name: string }) {
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -1163,17 +1492,17 @@ function StepSuccess({ name }: { name: string }) {
       <h2 data-a="title" style={{ fontSize: "clamp(2rem, 4vw, 3.5rem)", fontWeight: 400, letterSpacing: "-0.03em", color: "#fff", fontFamily: "var(--font-inter)", marginBottom: "1rem" }}>
         {name ? `Thanks, ${name}.` : "Thanks."}
       </h2>
-      <p data-a="sub" style={{ fontFamily: "var(--font-inter)", fontSize: "clamp(0.9rem, 1.3vw, 1.05rem)", color: "rgba(255,255,255,0.33)", lineHeight: 1.7, maxWidth: 360, margin: "0 auto 3.5rem" }}>
-        Your enquiry is on its way. We&apos;ll review your project and get back to you soon.
+      <p data-a="sub" style={{ fontFamily: "var(--font-inter)", fontSize: "clamp(0.92rem, 1.3vw, 1.05rem)", color: "rgba(255,255,255,0.38)", lineHeight: 1.7, maxWidth: 400, margin: "0 auto 3.5rem" }}>
+        Your request is in. We&apos;ll get back to you within 24 hours.
       </p>
       <a
         data-a="link"
         href="/"
-        style={{ fontFamily: "var(--font-dm-mono)", fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.28)", textDecoration: "none", transition: "color 0.2s" }}
-        onMouseEnter={e => ((e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.65)")}
-        onMouseLeave={e => ((e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.28)")}
+        style={{ fontFamily: "var(--font-dm-mono)", fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.32)", textDecoration: "none", transition: "color 0.2s" }}
+        onMouseEnter={e => ((e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.7)")}
+        onMouseLeave={e => ((e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.32)")}
       >
-        ← Back to home
+        ← Back to homepage
       </a>
     </div>
   )
@@ -1183,12 +1512,11 @@ function StepSuccess({ name }: { name: string }) {
 function StepHeading({ label, title, sub }: { label: string; title: string; sub: string }) {
   const titleRef = useRef<HTMLHeadingElement>(null)
   const labelRef = useRef<HTMLParagraphElement>(null)
-  const subRef = useRef<HTMLParagraphElement>(null)
+  const subRef   = useRef<HTMLParagraphElement>(null)
 
   useEffect(() => {
     const t = titleRef.current
     if (!t) return
-    // Split title into per-word spans (preserves spaces) with per-char inner spans for blur reveal
     const words = title.split(" ")
     t.innerHTML = words
       .map(
@@ -1200,16 +1528,15 @@ function StepHeading({ label, title, sub }: { label: string; title: string; sub:
       .join("")
 
     const chars = t.querySelectorAll(".h-char")
-    // Set initial hidden state so nothing is visible before viewport entry
     gsap.set(chars, { autoAlpha: 0, y: 28, filter: "blur(14px)", rotateX: -40 })
 
-      const tl = gsap.timeline({ paused: true })
-      ScrollTrigger.create({
-        trigger: t,
-        start: "top 92%",
-        once: true,
-        onEnter: () => tl.play(),
-      })
+    const tl = gsap.timeline({ paused: true })
+    ScrollTrigger.create({
+      trigger: t,
+      start: "top 92%",
+      once: true,
+      onEnter: () => tl.play(),
+    })
     if (labelRef.current) {
       tl.fromTo(labelRef.current,
         { autoAlpha: 0, y: 12, filter: "blur(8px)" },
@@ -1228,16 +1555,16 @@ function StepHeading({ label, title, sub }: { label: string; title: string; sub:
 
   return (
     <div style={{ marginBottom: "clamp(1.75rem, 4vh, 3rem)", perspective: 800 }}>
-      <p ref={labelRef} style={{ fontFamily: "var(--font-dm-mono)", fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(255,255,255,0.4)", marginBottom: "0.85rem", opacity: 0 }}>
+      <p ref={labelRef} style={{ fontFamily: "var(--font-dm-mono)", fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(255,255,255,0.42)", marginBottom: "0.85rem", opacity: 0 }}>
         {label}
       </p>
       <h2
         ref={titleRef}
-        style={{ fontSize: "clamp(1.6rem, 3.2vw, 2.8rem)", fontWeight: 400, letterSpacing: "-0.03em", color: "#fff", fontFamily: "var(--font-inter)", marginBottom: "0.55rem", lineHeight: 1.08 }}
+        style={{ fontSize: "clamp(1.75rem, 3.4vw, 3rem)", fontWeight: 400, letterSpacing: "-0.03em", color: "#fff", fontFamily: "var(--font-inter)", marginBottom: "0.6rem", lineHeight: 1.08 }}
       >
         {title}
       </h2>
-      <p ref={subRef} style={{ fontFamily: "var(--font-inter)", fontSize: "0.875rem", color: "rgba(255,255,255,0.4)", lineHeight: 1.5, opacity: 0 }}>
+      <p ref={subRef} style={{ fontFamily: "var(--font-inter)", fontSize: "0.92rem", color: "rgba(255,255,255,0.45)", lineHeight: 1.55, opacity: 0 }}>
         {sub}
       </p>
     </div>
@@ -1250,7 +1577,7 @@ function UnderlineField({ label, value, onChange, placeholder, type = "text", er
 }) {
   return (
     <div>
-      <label style={{ display: "block", fontFamily: "var(--font-dm-mono)", fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.28)", marginBottom: "0.6rem" }}>
+      <label style={{ display: "block", fontFamily: "var(--font-dm-mono)", fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.55)", marginBottom: "0.7rem" }}>
         {label}
       </label>
       <input
@@ -1265,7 +1592,7 @@ function UnderlineField({ label, value, onChange, placeholder, type = "text", er
           background: "transparent",
           border: "none",
           borderBottom: `1px solid ${error ? "rgba(255,80,80,0.55)" : "rgba(255,255,255,0.1)"}`,
-          padding: "0.6rem 0",
+          padding: "0.65rem 0",
           color: "#fff",
           fontFamily: "var(--font-inter)",
           fontSize: "clamp(1.1rem, 2vw, 1.4rem)",
@@ -1292,13 +1619,12 @@ function ErrorMsg({ msg, style: s }: { msg: string; style?: React.CSSProperties 
 function NavRow({ onBack, onNext, nextLabel, isFinal, disabled }: {
   onBack?: () => void; onNext: () => void; nextLabel: string; isFinal?: boolean; disabled?: boolean
 }) {
-  const btnRef = useRef<HTMLButtonElement>(null)
+  const btnRef   = useRef<HTMLButtonElement>(null)
   const labelRef = useRef<HTMLSpanElement>(null)
+  void isFinal
 
-  // Magnetic effect — button reacts even when cursor is OUTSIDE its bounds
-  // (extended hover zone with smooth falloff)
   useEffect(() => {
-    const btn = btnRef.current
+    const btn   = btnRef.current
     const label = labelRef.current
     if (!btn || !label || disabled) return
 
@@ -1306,24 +1632,20 @@ function NavRow({ onBack, onNext, nextLabel, isFinal, disabled }: {
     const yTo  = gsap.quickTo(btn,   "y", { duration: 0.55, ease: "power3.out" })
     const lxTo = gsap.quickTo(label, "x", { duration: 0.45, ease: "power3.out" })
     const lyTo = gsap.quickTo(label, "y", { duration: 0.45, ease: "power3.out" })
-    const ZONE = 45          // px beyond button edges wo Magnetismus wirkt
-    const PULL = 0.42        // how strongly the button itself follows the cursor
-    const LABEL_PULL = 0.18  // inner-label parallax inside the button
+    const ZONE = 45
+    const PULL = 0.42
+    const LABEL_PULL = 0.18
 
     const handleMove = (e: MouseEvent) => {
-      const rect = btn.getBoundingClientRect()
+      const rect  = btn.getBoundingClientRect()
       const halfW = rect.width / 2
       const halfH = rect.height / 2
       const dx = e.clientX - (rect.left + halfW)
       const dy = e.clientY - (rect.top + halfH)
-
-      // Distance to nearest edge (0 if cursor is inside the button)
       const edgeX = Math.max(0, Math.abs(dx) - halfW)
       const edgeY = Math.max(0, Math.abs(dy) - halfH)
       const edgeDist = Math.hypot(edgeX, edgeY)
-
       if (edgeDist < ZONE) {
-        // Smooth quadratic falloff — 1 at edge, 0 at zone boundary
         const f = 1 - edgeDist / ZONE
         const falloff = f * f
         xTo(dx * PULL * falloff)
@@ -1345,7 +1667,7 @@ function NavRow({ onBack, onNext, nextLabel, isFinal, disabled }: {
         <button
           onClick={onBack}
           className="c-back"
-          style={{ background: "transparent", border: "none", cursor: "pointer", fontFamily: "var(--font-dm-mono)", fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.22)", padding: "4px 0" }}
+          style={{ background: "transparent", border: "none", cursor: "pointer", fontFamily: "var(--font-dm-mono)", fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.28)", padding: "4px 0" }}
         >
           ← Back
         </button>
@@ -1360,8 +1682,8 @@ function NavRow({ onBack, onNext, nextLabel, isFinal, disabled }: {
           color: "#111",
           border: "none",
           borderRadius: 999,
-          padding: "13px 32px",
-          fontSize: "0.875rem",
+          padding: "14px 34px",
+          fontSize: "0.9rem",
           fontWeight: 600,
           cursor: disabled ? "not-allowed" : "pointer",
           fontFamily: "var(--font-inter)",

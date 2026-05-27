@@ -95,7 +95,7 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
             scrollTrigger: {
               trigger: el,
               start: "top 98%",
-              end: "top 40%",
+              end: "top 70%",
               scrub: 0.5,
             },
           }
@@ -111,7 +111,7 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
             scrollTrigger: {
               trigger: el,
               start: "top 100%",
-              end: "top 75%",
+              end: "top 82%",
               scrub: 0.5,
             },
           }
@@ -174,7 +174,7 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
             scrollTrigger: {
               trigger: el,
               start: "top 98%",
-              end: "top 45%",
+              end: "top 70%",
               scrub: 0.5,
             },
           }
@@ -190,7 +190,7 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
             scrollTrigger: {
               trigger: el,
               start: "top 100%",
-              end: "top 75%",
+              end: "top 82%",
               scrub: 0.5,
             },
           }
