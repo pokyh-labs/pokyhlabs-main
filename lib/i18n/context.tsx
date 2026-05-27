@@ -50,7 +50,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <LanguageContext.Provider value={{ lang, switchLanguage }}>
-      <div ref={wrapperRef} style={{ willChange: "opacity, transform" }}>
+      <div ref={wrapperRef}>
         {children}
       </div>
     </LanguageContext.Provider>

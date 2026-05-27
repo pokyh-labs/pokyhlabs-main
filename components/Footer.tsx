@@ -1,6 +1,7 @@
 "use client"
 
 import type { CSSProperties } from "react"
+import { usePathname } from "next/navigation"
 import CookieSettingsButton from "@/components/CookieSettingsButton"
 import { useT } from "@/lib/i18n/context"
 
