@@ -2,12 +2,14 @@
 
 import { useEffect, useRef, useState, type CSSProperties } from "react"
 import { getConsent, setConsent, CONSENT_EVENT } from "@/lib/consent"
+import { useT } from "@/lib/i18n/context"
 
 const BEIGE = "#e4e2dc"
 const PURPLE = "#593df8"
 const BLACK = "#0c0c0c"
 
 export default function CookieConsent() {
+  const t = useT()
   const [mounted, setMounted] = useState(false)
   const [visible, setVisible] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
@@ -74,30 +76,29 @@ export default function CookieConsent() {
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Cookie-Einstellungen"
+      aria-label={t("cookie_aria")}
       style={overlay}
     >
       <div style={card}>
-        <p style={kicker}>COOKIES &amp; DATENSCHUTZ</p>
+        <p style={kicker}>{t("cookie_title")}</p>
 
         {!showSettings ? (
           <>
             <p style={bodyText}>
-              Wir verwenden notwendige Cookies, damit diese Website funktioniert. Mit deiner
-              Einwilligung nutzen wir zusätzlich Google Analytics, um die Nutzung der Website
-              anonymisiert zu analysieren. Details in unserer{" "}
-              <a href="/datenschutz" style={inlineLink}>Datenschutzerklärung</a> und{" "}
-              <a href="/cookie-richtlinie" style={inlineLink}>Cookie-Richtlinie</a>.
+              {t("cookie_body")}{" "}
+              <a href="/datenschutz" style={inlineLink}>{t("cookie_privacy_link")}</a>{" "}
+              {t("cookie_and")}{" "}
+              <a href="/cookie-richtlinie" style={inlineLink}>{t("cookie_policy_link")}</a>.
             </p>
             <div style={btnRow}>
               <button type="button" style={btnPrimary} onClick={acceptAll}>
-                Alle akzeptieren
+                {t("cookie_accept_all")}
               </button>
               <button type="button" style={btnOutline} onClick={rejectAll}>
-                Alle ablehnen
+                {t("cookie_reject_all")}
               </button>
               <button type="button" style={btnGhost} onClick={() => setShowSettings(true)}>
-                Einstellungen
+                {t("cookie_settings_btn")}
               </button>
             </div>
           </>
@@ -105,14 +106,14 @@ export default function CookieConsent() {
           <>
             <div style={{ display: "flex", flexDirection: "column", gap: 14, margin: "0.25rem 0 1.25rem" }}>
               <Category
-                title="Notwendig"
-                desc="Erforderlich für Grundfunktionen (Sprachwahl, Login, Speicherung deiner Cookie-Auswahl). Immer aktiv."
+                title={t("cookie_necessary")}
+                desc={t("cookie_necessary_desc")}
                 checked
                 disabled
               />
               <Category
-                title="Analyse — Google Analytics"
-                desc="Anonymisierte Statistik zur Verbesserung der Website. Wird erst nach deiner Einwilligung geladen."
+                title={t("cookie_analytics")}
+                desc={t("cookie_analytics_desc")}
                 checked={analytics}
                 disabled={false}
                 onChange={setAnalytics}
@@ -120,13 +121,13 @@ export default function CookieConsent() {
             </div>
             <div style={btnRow}>
               <button type="button" style={btnPrimary} onClick={saveSelection}>
-                Auswahl speichern
+                {t("cookie_save")}
               </button>
               <button type="button" style={btnOutline} onClick={acceptAll}>
-                Alle akzeptieren
+                {t("cookie_accept_all")}
               </button>
               <button type="button" style={btnGhost} onClick={rejectAll}>
-                Alle ablehnen
+                {t("cookie_reject_all")}
               </button>
             </div>
           </>

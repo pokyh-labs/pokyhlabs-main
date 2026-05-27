@@ -1,4 +1,9 @@
+"use client"
+
+import { useT } from "@/lib/i18n/context"
+
 export default function ScrollIndicator() {
+  const t = useT()
   return (
     <div
       aria-hidden="true"
@@ -19,7 +24,7 @@ export default function ScrollIndicator() {
         pointerEvents: "none",
       }}
     >
-      <span style={{ display: "inline-block", fontWeight: 700, fontSize: 12 }}>Scroll</span>
+      <span style={{ display: "inline-block", fontWeight: 700, fontSize: 12 }}>{t("scroll")}</span>
       <svg
         viewBox="0 0 14 28"
         aria-hidden="true"

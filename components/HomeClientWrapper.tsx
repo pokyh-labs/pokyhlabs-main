@@ -5,6 +5,7 @@ import Link from "next/link";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { team, type TeamMember } from "@/lib/team.config";
+import { useT } from "@/lib/i18n/context";
 
 const WordReveal = ({ text }: { text: string }) => (
   <>
@@ -19,6 +20,7 @@ const WordReveal = ({ text }: { text: string }) => (
 type Side = "left" | "right" | null;
 
 export default function HomeClientWrapper({ children }: { children: ReactNode }) {
+  const t = useT();
   const contentRef = useRef<HTMLDivElement>(null);
   const whiteRef = useRef<HTMLDivElement>(null);
   const linePathRef = useRef<SVGPathElement>(null);
@@ -385,9 +387,9 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
               suppressHydrationWarning
               style={{ fontSize: "clamp(2rem, 3.5vw, 4rem)", fontWeight: 400, lineHeight: 1.3, marginBottom: "3rem" }}
             >
-              <WordReveal text="Websites, apps, hosting." /><br />
-              <WordReveal text="Whatever the idea needs," /><br />
-              <WordReveal text="we build it." />
+              <WordReveal text={t("dark_h2_1")} /><br />
+              <WordReveal text={t("dark_h2_2")} /><br />
+              <WordReveal text={t("dark_h2_3")} />
             </h2>
           </div>
 
@@ -402,8 +404,8 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
                 color: "#d1d1d1",
               }}
             >
-              <WordReveal text="From a single landing page to a full product." /><br />
-              <WordReveal text="We keep it clean, fast, and running." />
+              <WordReveal text={t("dark_p1")} /><br />
+              <WordReveal text={t("dark_p2")} />
             </p>
           </div>
 
@@ -423,7 +425,7 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
                 textDecoration: "none",
               }}
             >
-              Discover Our Work
+              {t("dark_cta")}
               <span
                 style={{
                   display: "inline-flex",
@@ -457,7 +459,7 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
               suppressHydrationWarning
               style={{ fontSize: "clamp(2rem, 3.5vw, 4rem)", fontWeight: 400, lineHeight: 1.3, marginBottom: "2rem" }}
             >
-              <WordReveal text="Every project starts from scratch." />
+              <WordReveal text={t("scratch_h2")} />
             </h2>
           </div>
 
@@ -473,8 +475,8 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
                 maxWidth: "800px",
               }}
             >
-              <WordReveal text="No templates, no shortcuts. Fast, clean, built to last." /><br />
-              <WordReveal text="Code we'd want to maintain, designs we'd want to use." />
+              <WordReveal text={t("scratch_p1")} /><br />
+              <WordReveal text={t("scratch_p2")} />
             </p>
           </div>
 
@@ -495,7 +497,7 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
                 textDecoration: "none",
               }}
             >
-              Get In Touch
+              {t("scratch_cta")}
               <span
                 style={{
                   display: "inline-flex",
@@ -590,7 +592,7 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
               }}
             >
               <span style={{ display: "inline-block", width: 28, height: 1, background: "#888" }} />
-              About
+              {t("about_label")}
               <span style={{ display: "inline-block", width: 28, height: 1, background: "#888" }} />
             </div>
 
@@ -605,9 +607,9 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
                   marginBottom: "2.2rem",
                 }}
               >
-                <WordReveal text="Two developers." /><br />
-                <WordReveal text="Built from Südtirol." /><br />
-                <WordReveal text="Not an agency." />
+                <WordReveal text={t("about_h2_1")} /><br />
+                <WordReveal text={t("about_h2_2")} /><br />
+                <WordReveal text={t("about_h2_3")} />
               </h2>
             </div>
 
@@ -623,8 +625,8 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
                   margin: "0 auto",
                 }}
               >
-                <WordReveal text="We care about how the web feels, how it moves," /><br />
-                <WordReveal text="and whether it holds up three years later." />
+                <WordReveal text={t("about_p1")} /><br />
+                <WordReveal text={t("about_p2")} />
               </p>
             </div>
           </div>
@@ -650,7 +652,7 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
                   maxWidth: "820px",
                 }}
               >
-                <WordReveal text="You talk directly to the people building it." />
+                <WordReveal text={t("team_direct")} />
               </h3>
             </div>
 
@@ -665,8 +667,8 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
                   maxWidth: "640px",
                 }}
               >
-                <WordReveal text="Short feedback loops, no hand-offs." /><br />
-                <WordReveal text="Just two developers who give a damn about the details." />
+                <WordReveal text={t("team_feedback")} /><br />
+                <WordReveal text={t("team_details")} />
               </p>
             </div>
           </div>
@@ -696,7 +698,7 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
               }}
             >
               <span style={{ display: "inline-block", width: 28, height: 1, background: "#888" }} />
-              The Team
+              {t("team_label")}
             </div>
 
             <h2
@@ -713,11 +715,11 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
                 maxWidth: "880px",
               }}
             >
-              <span className="showcase-line" data-text="Two heads." suppressHydrationWarning style={{ display: "block" }}>
-                Two heads.
+              <span className="showcase-line" data-text={t("team_h2_1")} suppressHydrationWarning style={{ display: "block" }}>
+                {t("team_h2_1")}
               </span>
-              <span className="showcase-line" data-text="One studio." suppressHydrationWarning style={{ display: "block" }}>
-                One studio.
+              <span className="showcase-line" data-text={t("team_h2_2")} suppressHydrationWarning style={{ display: "block" }}>
+                {t("team_h2_2")}
               </span>
             </h2>
 
@@ -732,7 +734,7 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
                 fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
               }}
             >
-              Felix and Emanuel, two friends from Südtirol building digital products together. No overhead, no hand-offs. Just the two of us.
+              {t("team_p")}
             </p>
 
             {/* text-left | photo-middle | text-right */}
@@ -789,7 +791,7 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
                   fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
                 }}
               >
-                Got an idea? Let&apos;s build it together.
+                {t("team_idea")}
               </h3>
               <a
                 href="/contact"
@@ -806,7 +808,7 @@ export default function HomeClientWrapper({ children }: { children: ReactNode })
                   textDecoration: "none",
                 }}
               >
-                Start a project
+                {t("team_cta")}
                 <span
                   style={{
                     display: "inline-flex",

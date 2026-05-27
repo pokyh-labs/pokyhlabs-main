@@ -2,6 +2,8 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import gsap from "gsap";
+import { useLanguage, useT } from "@/lib/i18n/context";
+import type { Lang } from "@/lib/i18n/translations";
 
 // useLayoutEffect warns during SSR. Fall back to useEffect on the server so
 // Next.js doesn't print the warning, but use the layout variant on the client
@@ -12,26 +14,25 @@ const useIsoLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : use
 const COLOR_DUR = "0.35s";
 const MOBILE_BREAKPOINT = 1024;
 
-type Lang = "DE" | "EN" | "IT";
 const LANGS: { code: Lang; label: string }[] = [
   { code: "DE", label: "Deutsch" },
   { code: "EN", label: "English" },
   { code: "IT", label: "Italiano" },
 ];
 
-const NAV_LINKS = [
-  { href: "/", label: "Home" },
-  { href: "/#about", label: "About" },
-  { href: "/works", label: "Works" },
-  { href: "/blog", label: "Blog" },
+const NAV_HREFS = [
+  { href: "/", key: "nav_home" as const },
+  { href: "/#about", key: "nav_about" as const },
+  { href: "/works", key: "nav_works" as const },
+  { href: "/blog", key: "nav_blog" as const },
 ];
 
-const MENU_LINKS: { href: string; label: string; description: string; meta: string }[] = [
-  { href: "/", label: "Home", description: "Back to the start.", meta: "Index" },
-  { href: "/#about", label: "About", description: "Two developers, one studio — built from Südtirol.", meta: "Studio" },
-  { href: "/works", label: "Works", description: "Selected projects from 2024–2026.", meta: "Portfolio" },
-  { href: "/blog", label: "Blog", description: "Notes on craft, code & process.", meta: "Writing" },
-  { href: "/contact", label: "Contact", description: "Start a project — reply within 24h.", meta: "Get in touch" },
+const MENU_HREFS = [
+  { href: "/", labelKey: "nav_home" as const, descKey: "menu_home_desc" as const, metaKey: "menu_home_meta" as const },
+  { href: "/#about", labelKey: "nav_about" as const, descKey: "menu_about_desc" as const, metaKey: "menu_about_meta" as const },
+  { href: "/works", labelKey: "nav_works" as const, descKey: "menu_works_desc" as const, metaKey: "menu_works_meta" as const },
+  { href: "/blog", labelKey: "nav_blog" as const, descKey: "menu_blog_desc" as const, metaKey: "menu_blog_meta" as const },
+  { href: "/contact", labelKey: "nav_contact" as const, descKey: "menu_contact_desc" as const, metaKey: "menu_contact_meta" as const },
 ];
 
 // Smooth filter swap for the header logo: stays neutral on the page surface,
@@ -157,9 +158,10 @@ function snapToState(isMobile: boolean, scrolled: boolean, els: HeaderEls) {
 }
 
 export default function Header() {
+  const { lang, switchLanguage } = useLanguage();
+  const t = useT();
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [lang, setLang] = useState<Lang>("DE");
   const [logoBlack, setLogoBlack] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -254,13 +256,6 @@ export default function Header() {
     };
   }, []);
 
-  // --- localStorage lang persistence ---
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem("pokyh-lang") as Lang | null;
-      if (saved && LANGS.some((l) => l.code === saved)) setLang(saved);
-    } catch {}
-  }, []);
 
   // --- GSAP transition: scrolled state ---
   // Two modes feed into this effect:
@@ -404,13 +399,6 @@ export default function Header() {
     }
   }, [menuOpen]);
 
-  const setLanguage = (l: Lang) => {
-    setLang(l);
-    try {
-      localStorage.setItem("pokyh-lang", l);
-    } catch {}
-  };
-
   const onLogoClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     if (typeof window === "undefined") return;
     if (window.location.pathname === "/") {
@@ -519,8 +507,8 @@ export default function Header() {
             pointerEvents: "auto",
           }}
         >
-          {NAV_LINKS.map(({ href, label }) => (
-            <NavLink key={href} href={href} label={label} />
+          {NAV_HREFS.map(({ href, key }) => (
+            <NavLink key={href} href={href} label={t(key)} />
           ))}
         </nav>
 
@@ -538,9 +526,9 @@ export default function Header() {
           <LanguageButton
             wrapRef={langBtnRef}
             lang={lang}
-            setLang={setLanguage}
+            setLang={switchLanguage}
           />
-          <ContactPill contactRef={contactRef} />
+          <ContactPill contactRef={contactRef} t={t} />
           <BurgerButton
             burgerRef={burgerRef}
             onClick={() => setMenuOpen(true)}
@@ -552,7 +540,8 @@ export default function Header() {
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
         lang={lang}
-        setLang={setLanguage}
+        setLang={switchLanguage}
+        t={t}
       />
     </>
   );
@@ -608,7 +597,7 @@ function NavLink({ href, label }: { href: string; label: string }) {
   );
 }
 
-function ContactPill({ contactRef }: { contactRef: React.RefObject<HTMLAnchorElement | null> }) {
+function ContactPill({ contactRef, t }: { contactRef: React.RefObject<HTMLAnchorElement | null>; t: (k: import("@/lib/i18n/translations").TranslationKey) => string }) {
   return (
     <a
       ref={contactRef}
@@ -635,7 +624,7 @@ function ContactPill({ contactRef }: { contactRef: React.RefObject<HTMLAnchorEle
         (e.currentTarget as HTMLElement).style.transform = "";
       }}
     >
-      Contact
+      {t("header_contact")}
     </a>
   );
 }
@@ -898,11 +887,13 @@ function MenuOverlay({
   onClose,
   lang,
   setLang,
+  t,
 }: {
   open: boolean;
   onClose: () => void;
   lang: Lang;
   setLang: (l: Lang) => void;
+  t: (k: import("@/lib/i18n/translations").TranslationKey) => string;
 }) {
   const overlayRef = useRef<HTMLDivElement>(null);
   const backdropRef = useRef<HTMLDivElement>(null);
@@ -1206,7 +1197,7 @@ function MenuOverlay({
             }}
             onMouseLeave={() => setHoveredIdx(null)}
           >
-            {MENU_LINKS.map(({ href, label }, i) => (
+            {MENU_HREFS.map(({ href, labelKey }, i) => (
               <a
                 key={href}
                 href={href}
@@ -1239,7 +1230,7 @@ function MenuOverlay({
                       : "rgba(252,250,246,0.28)",
                   }}
                 >
-                  {label}
+                  {t(labelKey)}
                 </span>
               </a>
             ))}
@@ -1276,7 +1267,7 @@ function MenuOverlay({
             >
               {hoveredIdx === null
                 ? "pokyh · studio"
-                : MENU_LINKS[hoveredIdx].meta}
+                : t(MENU_HREFS[hoveredIdx].metaKey)}
             </span>
 
             {/* description */}
@@ -1293,8 +1284,8 @@ function MenuOverlay({
               }}
             >
               {hoveredIdx === null
-                ? "Digital studio aus Südtirol — 3D websites, web design & engineering."
-                : MENU_LINKS[hoveredIdx].description}
+                ? t("menu_default_desc")
+                : t(MENU_HREFS[hoveredIdx].descKey)}
             </p>
 
             {/* arrow hint when hovering a link */}
@@ -1313,7 +1304,7 @@ function MenuOverlay({
                   animation: "previewFadeIn .4s cubic-bezier(.2,.7,.2,1) .1s both",
                 }}
               >
-                Explore
+                {t("menu_explore")}
                 <svg
                   viewBox="0 0 24 24"
                   aria-hidden="true"

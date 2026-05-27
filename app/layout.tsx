@@ -8,6 +8,7 @@ import RevealObserver from "@/components/RevealObserver"
 import SmoothScroll from "@/components/SmoothScroll"
 import Analytics from "@/components/Analytics"
 import CookieConsent from "@/components/CookieConsent"
+import { LanguageProvider } from "@/lib/i18n/context"
 
 const instrumentSerif = Instrument_Serif({
   weight: "400",
@@ -125,16 +126,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body>
-        <SmoothScroll />
-        <Header />
-        <main id="main-content">
-          {children}
-        </main>
-        <Footer />
-        <RevealObserver />
-        {/* Google Analytics 4 — lädt ausschließlich nach Einwilligung (siehe CookieConsent) */}
-        <Analytics gaId={gaId} />
-        <CookieConsent />
+        <LanguageProvider>
+          <SmoothScroll />
+          <Header />
+          <main id="main-content">
+            {children}
+          </main>
+          <Footer />
+          <RevealObserver />
+          <Analytics gaId={gaId} />
+          <CookieConsent />
+        </LanguageProvider>
       </body>
     </html>
   )

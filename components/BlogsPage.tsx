@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback, forwardRef } from "react"
 import gsap from "gsap"
 import { ScrollTrigger } from "gsap/ScrollTrigger"
+import { useT } from "@/lib/i18n/context"
 
 interface Blog {
   id: number
@@ -27,6 +28,7 @@ function clientFetchBlogs(): Promise<Blog[]> {
 }
 
 export default function BlogsPage({ initialBlogs = [] }: { initialBlogs?: Blog[] }) {
+  const t = useT()
   const contentRef = useRef<HTMLDivElement>(null)
   const headlineRef = useRef<HTMLHeadingElement>(null)
   const [blogs, setBlogs] = useState<Blog[]>(initialBlogs)
@@ -38,7 +40,7 @@ export default function BlogsPage({ initialBlogs = [] }: { initialBlogs?: Blog[]
     setError(null)
     clientFetchBlogs()
       .then((list) => { setBlogs(list); setLoading(false) })
-      .catch(() => { setError("Could not load blog posts."); setLoading(false) })
+      .catch(() => { setError(t("blog_error")); setLoading(false) })
   }, [])
 
   useEffect(() => {
@@ -117,12 +119,12 @@ export default function BlogsPage({ initialBlogs = [] }: { initialBlogs?: Blog[]
               ref={headlineRef}
               style={{ width: "100%", color: "#0c0c0c", fontWeight: 500, fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif', lineHeight: 1.05, letterSpacing: "-0.02em", fontSize: "clamp(28px, 5.6vw, 96px)", userSelect: "none" }}
             >
-              <span className="blog-line" data-text="Blog." suppressHydrationWarning style={{ display: "block" }}>
-                Blog.
+              <span className="blog-line" data-text={t("blog_heading")} suppressHydrationWarning style={{ display: "block" }}>
+                {t("blog_heading")}
               </span>
             </h1>
             <p style={{ marginTop: "1.5rem", fontFamily: "var(--font-dm-mono), 'JetBrains Mono', monospace", fontSize: "clamp(1rem, 1.4vw, 1.25rem)", fontWeight: 400, letterSpacing: "0.15em", textTransform: "uppercase", color: "#0c0c0c", opacity: 0.7, userSelect: "none", animation: "chIn 0.6s cubic-bezier(0.22, 0.61, 0.36, 1) 900ms both" }}>
-              Thoughts, updates &amp; insights.
+              {t("blog_subtitle")}
             </p>
           </div>
         </div>
@@ -139,7 +141,7 @@ export default function BlogsPage({ initialBlogs = [] }: { initialBlogs?: Blog[]
             style={{ fontFamily: "var(--font-dm-mono), monospace", fontSize: "12px", letterSpacing: "0.2em", textTransform: "uppercase", color: "#555", marginBottom: "5rem", display: "flex", alignItems: "center", gap: "14px" }}
           >
             <span style={{ display: "inline-block", width: "28px", height: "1px", background: "#555" }} />
-            Latest Articles
+            {t("blog_latest")}
           </div>
 
           {loading ? (

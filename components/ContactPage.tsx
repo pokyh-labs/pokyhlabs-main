@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react"
 import gsap from "gsap"
 import { ScrollTrigger } from "gsap/ScrollTrigger"
+import { useT } from "@/lib/i18n/context"
 // Register GSAP plugins globally before any component code runs
 gsap.registerPlugin(ScrollTrigger)
 
@@ -18,13 +19,12 @@ const HOSTING_ICON = (
   </svg>
 )
 
-type ServiceCard = { id: string; label: string; description: string; chip: string | null; icon: React.ReactNode }
+type ServiceCardBase = { id: string; chip: string | null; icon: React.ReactNode }
+type ServiceCard = ServiceCardBase & { label: string; description: string }
 
-const ALL_SERVICES: ServiceCard[] = [
+const ALL_SERVICES_BASE: ServiceCardBase[] = [
   {
     id: "website",
-    label: "Website",
-    description: "Company site, online shop, or landing page",
     chip: null,
     icon: (
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={1.4} style={{ width: 22, height: 22 }}>
@@ -37,8 +37,6 @@ const ALL_SERVICES: ServiceCard[] = [
   },
   {
     id: "app",
-    label: "Mobile App",
-    description: "An app for iPhone and / or Android",
     chip: null,
     icon: (
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={1.4} style={{ width: 22, height: 22 }}>
@@ -50,41 +48,12 @@ const ALL_SERVICES: ServiceCard[] = [
   },
   {
     id: "hosting",
-    label: "Hosting",
-    description: "Managed hosting with SSL and uptime monitoring",
     chip: "€20/mo",
     icon: HOSTING_ICON,
   },
 ]
 
-const APP_PLATFORMS = [
-  { id: "both",    label: "Both" },
-  { id: "ios",     label: "iPhone (iOS)" },
-  { id: "android", label: "Android" },
-]
-
-// Four steps for the normal flow (was five — Company + Deadline merged into "Details").
-const STEPS: VisualStep[] = [
-  { n: 1, label: "Services" },
-  { n: 2, label: "Project" },
-  { n: 3, label: "Details" },
-  { n: 4, label: "Contact" },
-]
-
-const HOSTING_STEPS: VisualStep[] = [
-  { n: 1, label: "Services" },
-  { n: 2, label: "Hosting" },
-  { n: 4, label: "Contact" },
-]
-
 // Friendly categories for non-technical users. The tech-stack list is hidden behind an "Advanced" toggle.
-const HOSTING_CATEGORIES = [
-  { id: "website",   label: "Website" },
-  { id: "shop",      label: "Online Shop" },
-  { id: "webapp",    label: "Web App / Tool" },
-  { id: "wordpress", label: "WordPress" },
-  { id: "other",     label: "Other / Not sure" },
-]
 
 const HOSTING_STACKS = [
   { id: "nodejs",    label: "Node.js" },
@@ -103,6 +72,41 @@ const HOSTING_STACKS = [
 ]
 
 export default function ContactPage() {
+  const t = useT()
+
+  const ALL_SERVICES: ServiceCard[] = ALL_SERVICES_BASE.map(svc => ({
+    ...svc,
+    label: t(svc.id === "website" ? "contact_svc_website_label" : svc.id === "app" ? "contact_svc_app_label" : "contact_svc_hosting_label"),
+    description: t(svc.id === "website" ? "contact_svc_website_desc" : svc.id === "app" ? "contact_svc_app_desc" : "contact_svc_hosting_desc"),
+  }))
+
+  const APP_PLATFORMS = [
+    { id: "both",    label: t("contact_platform_both") },
+    { id: "ios",     label: t("contact_platform_ios") },
+    { id: "android", label: t("contact_platform_android") },
+  ]
+
+  const STEPS: VisualStep[] = [
+    { n: 1, label: t("contact_step_services") },
+    { n: 2, label: t("contact_step_project") },
+    { n: 3, label: t("contact_step_details") },
+    { n: 4, label: t("contact_step_contact") },
+  ]
+
+  const HOSTING_STEPS: VisualStep[] = [
+    { n: 1, label: t("contact_step_services") },
+    { n: 2, label: t("contact_step_hosting") },
+    { n: 4, label: t("contact_step_contact") },
+  ]
+
+  const HOSTING_CATEGORIES = [
+    { id: "website",   label: t("contact_hosting_website") },
+    { id: "shop",      label: t("contact_hosting_shop") },
+    { id: "webapp",    label: t("contact_hosting_webapp") },
+    { id: "wordpress", label: t("contact_hosting_wordpress") },
+    { id: "other",     label: t("contact_hosting_other") },
+  ]
+
   const headlineRef = useRef<HTMLHeadingElement>(null)
   const formRef = useRef<HTMLDivElement>(null)
   const stepIndicatorRef = useRef<HTMLDivElement>(null)
@@ -218,15 +222,15 @@ export default function ContactPage() {
   const goNext = () => {
     const e: Record<string, string> = {}
     if (step === 1) {
-      if (services.length === 0) e.services = "Please select at least one service."
-      else if (services.includes("hosting") && !hostingCategory) e.hostingCategory = "Please pick a project type for your hosting."
+      if (services.length === 0) e.services = t("contact_err_select_service")
+      else if (services.includes("hosting") && !hostingCategory) e.hostingCategory = t("contact_err_hosting_type")
     }
     if (step === 2 && isHostingOnly && !repoUrl.trim()) {
-      e.repoUrl = "Please share a link to your project."
+      e.repoUrl = t("contact_err_repo")
     }
     if (step === 4) {
-      if (!name.trim()) e.name = "Your name is required."
-      if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.email = "Please enter a valid email address."
+      if (!name.trim()) e.name = t("contact_err_name")
+      if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.email = t("contact_err_email")
     }
     if (Object.keys(e).length) { setErrors(e); return }
     setErrors({})
@@ -244,8 +248,8 @@ export default function ContactPage() {
 
   const handleSubmit = async () => {
     const e: Record<string, string> = {}
-    if (!name.trim()) e.name = "Your name is required."
-    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.email = "Please enter a valid email address."
+    if (!name.trim()) e.name = t("contact_err_name")
+    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.email = t("contact_err_email")
     if (Object.keys(e).length) { setErrors(e); return }
 
     const finalServices = services.includes("website") && include3d
@@ -292,13 +296,13 @@ export default function ContactPage() {
       })
       if (!res.ok) {
         const d = await res.json().catch(() => ({}))
-        setErrors({ submit: (d as { error?: string }).error ?? "Something went wrong. Please try again." })
+        setErrors({ submit: (d as { error?: string }).error ?? t("contact_err_generic") })
         return
       }
       setStep(5)
       requestAnimationFrame(scrollToForm)
     } catch {
-      setErrors({ submit: "Network error. Please try again." })
+      setErrors({ submit: t("contact_err_network") })
     } finally {
       setSubmitting(false)
     }
@@ -352,11 +356,8 @@ export default function ContactPage() {
               userSelect: "none",
             }}
           >
-            <span className="contact-line" data-text="Let's build" style={{ display: "block" }}>
-              Let&apos;s build
-            </span>
-            <span className="contact-line" data-text="something." style={{ display: "block" }}>
-              something.
+            <span className="contact-line" data-text={t("contact_hero_title")} style={{ display: "block" }}>
+              {t("contact_hero_title")}
             </span>
           </h1>
           <p style={{
@@ -370,8 +371,7 @@ export default function ContactPage() {
             fontWeight: 400,
             animation: "chIn 0.6s cubic-bezier(0.22,0.61,0.36,1) 900ms both",
           }}>
-            Tell us about your idea. No tech knowledge needed. Takes about 2 minutes,
-            and we&apos;ll get back to you within 24 hours with a clear next step.
+            {t("contact_hero_sub")}
           </p>
         </div>
 
@@ -388,7 +388,7 @@ export default function ContactPage() {
             hello@pokyh.studio
           </span>
           <span style={{ fontFamily: "var(--font-dm-mono)", fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--black)", opacity: 0.35, animation: "chIn 0.5s cubic-bezier(0.22,0.61,0.36,1) 1400ms both" }}>
-            Reply within 24h
+            {t("contact_reply")}
           </span>
         </div>
       </div>
@@ -414,7 +414,7 @@ export default function ContactPage() {
               {/* Progress label */}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
                 <span style={{ fontFamily: "var(--font-dm-mono)", fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.5)" }}>
-                  Step {stepIndex + 1} of {totalSteps}
+                  {t("contact_step_of").replace("{current}", String(stepIndex + 1)).replace("{total}", String(totalSteps))}
                 </span>
                 <span style={{ fontFamily: "var(--font-dm-mono)", fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.88)" }}>
                   {visibleSteps[stepIndex]?.label}
@@ -517,6 +517,28 @@ function StepServices({ services, include3d, onToggle, onToggle3d, hostingCatego
   discountPercent: number
   error?: string; errorHostingCategory?: string; onNext: () => void
 }) {
+  const t = useT()
+
+  const ALL_SERVICES: ServiceCard[] = ALL_SERVICES_BASE.map(svc => ({
+    ...svc,
+    label: t(svc.id === "website" ? "contact_svc_website_label" : svc.id === "app" ? "contact_svc_app_label" : "contact_svc_hosting_label"),
+    description: t(svc.id === "website" ? "contact_svc_website_desc" : svc.id === "app" ? "contact_svc_app_desc" : "contact_svc_hosting_desc"),
+  }))
+
+  const APP_PLATFORMS = [
+    { id: "both",    label: t("contact_platform_both") },
+    { id: "ios",     label: t("contact_platform_ios") },
+    { id: "android", label: t("contact_platform_android") },
+  ]
+
+  const HOSTING_CATEGORIES = [
+    { id: "website",   label: t("contact_hosting_website") },
+    { id: "shop",      label: t("contact_hosting_shop") },
+    { id: "webapp",    label: t("contact_hosting_webapp") },
+    { id: "wordpress", label: t("contact_hosting_wordpress") },
+    { id: "other",     label: t("contact_hosting_other") },
+  ]
+
   const containerRef     = useRef<HTMLDivElement>(null)
   const threeDRowRef     = useRef<HTMLDivElement>(null)
   const appRowRef        = useRef<HTMLDivElement>(null)
@@ -672,16 +694,16 @@ function StepServices({ services, include3d, onToggle, onToggle3d, hostingCatego
   }, [showDiscount])
 
   const discountLabel =
-    discountPercent === 15 ? "Save 15% on development" :
-    discountPercent === 10 ? "Save 10% on development" :
-    "Save 5% on development"
+    discountPercent === 15 ? t("contact_discount_15_label") :
+    discountPercent === 10 ? t("contact_discount_10_label") :
+    t("contact_discount_5_label")
 
   const discountSub =
     discountPercent === 15
-      ? "Website + App + Hosting bundle. 15% off development, hosting stays at €20/mo."
+      ? t("contact_discount_15_sub")
       : discountPercent === 10
-      ? "Website + App combo. 10% off the development cost."
-      : "Website + Hosting combo. 5% off development, hosting stays at €20/mo."
+      ? t("contact_discount_10_sub")
+      : t("contact_discount_5_sub")
 
   const rowLabelStyle: React.CSSProperties = {
     fontFamily: "var(--font-dm-mono)",
@@ -695,7 +717,7 @@ function StepServices({ services, include3d, onToggle, onToggle3d, hostingCatego
   return (
     <div ref={containerRef}>
       <div data-a="heading">
-        <StepHeading label="01" title="What can we build?" sub="Pick one or combine, we'll handle the rest." />
+        <StepHeading label="01" title={t("contact_step1_title")} sub={t("contact_step1_sub")} />
       </div>
 
       <p data-a="section-label" style={{
@@ -706,7 +728,7 @@ function StepServices({ services, include3d, onToggle, onToggle3d, hostingCatego
         color: "rgba(255,255,255,0.35)",
         marginBottom: "0.85rem",
       }}>
-        Choose your services
+        {t("contact_choose_services")}
       </p>
 
       {/* Unified 3-card service grid */}
@@ -801,7 +823,7 @@ function StepServices({ services, include3d, onToggle, onToggle3d, hostingCatego
         {/* Website — 3D add-on */}
         <div ref={threeDRowRef} style={{ overflow: "hidden" }}>
           <div style={{ padding: "1rem 1.3rem" }}>
-            <p style={rowLabelStyle}>Website</p>
+            <p style={rowLabelStyle}>{t("contact_svc_website_label")}</p>
             <button
               onClick={onToggle3d}
               style={{
@@ -837,7 +859,7 @@ function StepServices({ services, include3d, onToggle, onToggle3d, hostingCatego
                   color: include3d ? "#c4b5fd" : "rgba(255,255,255,0.82)",
                   transition: "color 0.18s",
                 }}>
-                  Add 3D animations
+                  {t("contact_3d_label")}
                 </div>
                 <div style={{
                   fontFamily: "var(--font-inter)",
@@ -845,7 +867,7 @@ function StepServices({ services, include3d, onToggle, onToggle3d, hostingCatego
                   color: "rgba(255,255,255,0.32)",
                   marginTop: 2,
                 }}>
-                  Eye-catching effects that make your site stand out
+                  {t("contact_3d_desc")}
                 </div>
               </div>
             </button>
@@ -855,7 +877,7 @@ function StepServices({ services, include3d, onToggle, onToggle3d, hostingCatego
         {/* Mobile App — platform */}
         <div ref={appRowRef} style={{ overflow: "hidden" }}>
           <div style={{ padding: "1rem 1.3rem" }}>
-            <p style={rowLabelStyle}>Mobile App &middot; Which platform?</p>
+            <p style={rowLabelStyle}>{t("contact_app_platform_q")}</p>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               {APP_PLATFORMS.map(p => {
                 const active = appPlatform === p.id
@@ -890,7 +912,7 @@ function StepServices({ services, include3d, onToggle, onToggle3d, hostingCatego
               })}
             </div>
             <p style={{ fontFamily: "var(--font-inter)", fontSize: "0.74rem", color: "rgba(255,255,255,0.3)", marginTop: "0.65rem" }}>
-              &ldquo;Both&rdquo; means one app that runs on iPhone and Android. Cheaper than building two.
+              {t("contact_platform_both_hint")}
             </p>
           </div>
         </div>
@@ -898,9 +920,9 @@ function StepServices({ services, include3d, onToggle, onToggle3d, hostingCatego
         {/* Hosting — project type */}
         <div ref={hostingRowRef} style={{ overflow: "hidden" }}>
           <div style={{ padding: "1rem 1.3rem" }}>
-            <p style={rowLabelStyle}>Hosting &middot; What kind of project?</p>
+            <p style={rowLabelStyle}>{t("contact_hosting_q")}</p>
             <p style={{ fontFamily: "var(--font-inter)", fontSize: "0.78rem", color: "rgba(255,255,255,0.32)", lineHeight: 1.5, marginBottom: "0.8rem" }}>
-              Pick the closest match. We&apos;ll figure out the technical side.
+              {t("contact_hosting_pick")}
             </p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
               {HOSTING_CATEGORIES.map(cat => {
@@ -957,7 +979,7 @@ function StepServices({ services, include3d, onToggle, onToggle3d, hostingCatego
                 gap: 6,
               }}
             >
-              {showAdvancedStack ? "Hide tech options" : "I know the tech stack"}
+              {showAdvancedStack ? t("contact_hide_tech") : t("contact_show_tech")}
               <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={1.6} style={{ width: 9, height: 9, transform: showAdvancedStack ? "rotate(180deg)" : "none", transition: "transform 0.25s" }}>
                 <polyline points="2,4 6,8 10,4" strokeLinecap="round" />
               </svg>
@@ -1019,7 +1041,7 @@ function StepServices({ services, include3d, onToggle, onToggle3d, hostingCatego
       </div>
 
       {error && <ErrorMsg msg={error} style={{ marginBottom: "1.5rem" }} />}
-      <div data-a="nav"><NavRow onNext={onNext} nextLabel="Continue" /></div>
+      <div data-a="nav"><NavRow onNext={onNext} nextLabel={t("contact_continue")} /></div>
     </div>
   )
 }
@@ -1029,6 +1051,7 @@ function StepHosting({ repoUrl, onChangeRepo, error, onBack, onNext }: {
   repoUrl: string; onChangeRepo: (v: string) => void
   error?: string; onBack: () => void; onNext: () => void
 }) {
+  const t = useT()
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -1055,16 +1078,16 @@ function StepHosting({ repoUrl, onChangeRepo, error, onBack, onNext }: {
   }, [])
 
   const features = [
-    "Full setup and deployment, handled",
-    "SSL certificate, free and included",
-    "24/7 uptime monitoring",
-    "Custom domain support",
+    t("contact_hosting_feat1"),
+    t("contact_hosting_feat2"),
+    t("contact_hosting_feat3"),
+    t("contact_hosting_feat4"),
   ]
 
   return (
     <div ref={containerRef}>
       <div data-a="heading">
-        <StepHeading label="02" title="Hosting details." sub="We handle the technical side. Just share your files." />
+        <StepHeading label="02" title={t("contact_hosting_title")} sub={t("contact_hosting_sub")} />
       </div>
 
       <div data-a="pricing" style={{
@@ -1077,11 +1100,11 @@ function StepHosting({ repoUrl, onChangeRepo, error, onBack, onNext }: {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "1.35rem" }}>
           <div>
             <p style={{ fontFamily: "var(--font-dm-mono)", fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.32)", marginBottom: 8 }}>
-              Hosting plan
+              {t("contact_hosting_plan")}
             </p>
             <p style={{ fontFamily: "var(--font-inter)", fontSize: "clamp(1.9rem, 3.5vw, 2.8rem)", fontWeight: 300, letterSpacing: "-0.04em", color: "#fff", lineHeight: 1 }}>
               €20
-              <span style={{ fontSize: "1rem", fontWeight: 400, color: "rgba(255,255,255,0.35)", letterSpacing: "-0.01em", marginLeft: 6 }}>/ month</span>
+              <span style={{ fontSize: "1rem", fontWeight: 400, color: "rgba(255,255,255,0.35)", letterSpacing: "-0.01em", marginLeft: 6 }}>{t("contact_per_month")}</span>
             </p>
           </div>
           <div style={{
@@ -1095,7 +1118,7 @@ function StepHosting({ repoUrl, onChangeRepo, error, onBack, onNext }: {
             textTransform: "uppercase",
             color: "rgba(255,255,255,0.5)",
           }}>
-            Everything included
+            {t("contact_all_included")}
           </div>
         </div>
 
@@ -1122,7 +1145,7 @@ function StepHosting({ repoUrl, onChangeRepo, error, onBack, onNext }: {
 
       <div data-a="field" style={{ marginBottom: error ? "0.5rem" : "3rem" }}>
         <label style={{ display: "block", fontFamily: "var(--font-dm-mono)", fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.32)", marginBottom: "0.65rem" }}>
-          Link to your project
+          {t("contact_repo_label")}
         </label>
         <input
           type="url"
@@ -1148,13 +1171,13 @@ function StepHosting({ repoUrl, onChangeRepo, error, onBack, onNext }: {
           onBlur={e => { if (!error) e.currentTarget.style.borderBottomColor = "rgba(255,255,255,0.1)" }}
         />
         <p style={{ fontFamily: "var(--font-inter)", fontSize: "0.8rem", color: "rgba(255,255,255,0.28)", marginTop: "0.6rem", lineHeight: 1.5 }}>
-          GitHub repo, a ZIP, or any other link. We&apos;ll take it from there.
+          {t("contact_repo_hint")}
         </p>
         {error && <ErrorMsg msg={error} style={{ marginTop: "0.4rem" }} />}
       </div>
       {error && <div style={{ marginBottom: "2.5rem" }} />}
 
-      <div data-a="nav"><NavRow onBack={onBack} onNext={onNext} nextLabel="Continue" /></div>
+      <div data-a="nav"><NavRow onBack={onBack} onNext={onNext} nextLabel={t("contact_continue")} /></div>
     </div>
   )
 }
@@ -1163,6 +1186,7 @@ function StepHosting({ repoUrl, onChangeRepo, error, onBack, onNext }: {
 function StepDescription({ value, onChange, onBack, onNext }: {
   value: string; onChange: (v: string) => void; onBack: () => void; onNext: () => void
 }) {
+  const t = useT()
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -1188,12 +1212,12 @@ function StepDescription({ value, onChange, onBack, onNext }: {
 
   return (
     <div ref={containerRef}>
-      <div data-a="heading"><StepHeading label="02" title="Tell us about your project." sub="Optional, but the more we know, the more accurate our quote." /></div>
+      <div data-a="heading"><StepHeading label="02" title={t("contact_step2_title")} sub={t("contact_step2_sub")} /></div>
       <div data-a="field">
         <textarea
           value={value}
           onChange={e => onChange(e.target.value)}
-          placeholder="What are you building? Who is it for? Any references you like? No need for technical details. Just describe it like you'd explain it to a friend."
+          placeholder={t("contact_desc_placeholder")}
           rows={7}
           className="c-input"
           style={{
@@ -1214,7 +1238,7 @@ function StepDescription({ value, onChange, onBack, onNext }: {
           onBlur={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)")}
         />
       </div>
-      <div data-a="nav"><NavRow onBack={onBack} onNext={onNext} nextLabel="Continue" /></div>
+      <div data-a="nav"><NavRow onBack={onBack} onNext={onNext} nextLabel={t("contact_continue")} /></div>
     </div>
   )
 }
@@ -1225,6 +1249,7 @@ function StepDetails({ company, onChangeCompany, deadline, onChangeDeadline, onB
   deadline: string; onChangeDeadline: (v: string) => void
   onBack: () => void; onNext: () => void
 }) {
+  const t = useT()
   const containerRef = useRef<HTMLDivElement>(null)
 
   const minDate = (() => {
@@ -1257,20 +1282,20 @@ function StepDetails({ company, onChangeCompany, deadline, onChangeDeadline, onB
   return (
     <div ref={containerRef}>
       <div data-a="heading">
-        <StepHeading label="03" title="A few quick details." sub="Both fields are optional. Skip anything you're not sure about." />
+        <StepHeading label="03" title={t("contact_step3_title")} sub={t("contact_step3_sub")} />
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "2.5rem", marginBottom: "3rem" }}>
         <div data-a="field">
           <label style={{ display: "block", fontFamily: "var(--font-dm-mono)", fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.55)", marginBottom: "0.7rem" }}>
-            Company or brand
-            <span style={{ marginLeft: 8, color: "rgba(255,255,255,0.35)", letterSpacing: "0.1em" }}>(optional)</span>
+            {t("contact_company_label")}
+            <span style={{ marginLeft: 8, color: "rgba(255,255,255,0.35)", letterSpacing: "0.1em" }}>{t("contact_optional")}</span>
           </label>
           <input
             type="text"
             value={company}
             onChange={e => onChangeCompany(e.target.value)}
-            placeholder="Your company or brand name"
+            placeholder={t("contact_company_ph")}
             className="c-input"
             style={{
               width: "100%",
@@ -1289,14 +1314,14 @@ function StepDetails({ company, onChangeCompany, deadline, onChangeDeadline, onB
             onBlur={e => (e.currentTarget.style.borderBottomColor = "rgba(255,255,255,0.1)")}
           />
           <p style={{ fontFamily: "var(--font-inter)", fontSize: "0.78rem", color: "rgba(255,255,255,0.25)", marginTop: "0.55rem", lineHeight: 1.5 }}>
-            Leave blank if this is a personal project.
+            {t("contact_company_hint")}
           </p>
         </div>
 
         <div data-a="field">
           <label style={{ display: "block", fontFamily: "var(--font-dm-mono)", fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.55)", marginBottom: "0.7rem" }}>
-            Target launch date
-            <span style={{ marginLeft: 8, color: "rgba(255,255,255,0.35)", letterSpacing: "0.1em" }}>(optional)</span>
+            {t("contact_deadline_label")}
+            <span style={{ marginLeft: 8, color: "rgba(255,255,255,0.35)", letterSpacing: "0.1em" }}>{t("contact_optional")}</span>
           </label>
           <style>{`
             .deadline-input::-webkit-calendar-picker-indicator { filter: invert(1) opacity(0.4); cursor: pointer; }
@@ -1326,12 +1351,12 @@ function StepDetails({ company, onChangeCompany, deadline, onChangeDeadline, onB
             onBlur={e => (e.currentTarget.style.borderBottomColor = "rgba(255,255,255,0.1)")}
           />
           <p style={{ fontFamily: "var(--font-inter)", fontSize: "0.78rem", color: "rgba(255,255,255,0.25)", marginTop: "0.55rem", lineHeight: 1.5 }}>
-            Earliest possible is 1 week from today.
+            {t("contact_deadline_hint")}
           </p>
         </div>
       </div>
 
-      <div data-a="nav"><NavRow onBack={onBack} onNext={onNext} nextLabel="Continue" /></div>
+      <div data-a="nav"><NavRow onBack={onBack} onNext={onNext} nextLabel={t("contact_continue")} /></div>
     </div>
   )
 }
@@ -1346,6 +1371,7 @@ function StepContact({ name, setName, email, setEmail, services, hasWebsite, has
   errors: Record<string, string>; submitting: boolean
   submitError?: string; onBack: () => void; onSubmit: () => void
 }) {
+  const t = useT()
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -1372,16 +1398,16 @@ function StepContact({ name, setName, email, setEmail, services, hasWebsite, has
   }, [])
 
   const summaryItems: string[] = []
-  if (hasWebsite) summaryItems.push(include3d ? "Website (with 3D)" : "Website")
+  if (hasWebsite) summaryItems.push(include3d ? t("contact_summary_website_3d") : t("contact_summary_website"))
   if (hasApp) {
     const platform = appPlatform === "both" ? "iOS & Android" : appPlatform === "ios" ? "iOS" : "Android"
-    summaryItems.push(`Mobile App (${platform})`)
+    summaryItems.push(t("contact_summary_app").replace("{platform}", platform))
   }
-  if (hasHosting) summaryItems.push("Hosting at €20/mo")
+  if (hasHosting) summaryItems.push(t("contact_summary_hosting"))
 
   return (
     <div ref={containerRef}>
-      <div data-a="heading"><StepHeading label="04" title="How can we reach you?" sub="We'll reply within 24 hours with a clear next step." /></div>
+      <div data-a="heading"><StepHeading label="04" title={t("contact_step4_title")} sub={t("contact_step4_sub")} /></div>
 
       {services.length > 0 && (
         <div data-a="summary" style={{
@@ -1393,7 +1419,7 @@ function StepContact({ name, setName, email, setEmail, services, hasWebsite, has
         }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
             <p style={{ fontFamily: "var(--font-dm-mono)", fontSize: 9, letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(255,255,255,0.35)" }}>
-              Your request
+              {t("contact_your_request")}
             </p>
             {discountPercent > 0 && (
               <span style={{
@@ -1426,20 +1452,21 @@ function StepContact({ name, setName, email, setEmail, services, hasWebsite, has
 
       <div style={{ display: "flex", flexDirection: "column", gap: "2.25rem", marginBottom: "3rem" }}>
         <div data-a="field">
-          <UnderlineField label="Your name" value={name} onChange={setName} placeholder="Full name" error={errors.name} onEnter={onSubmit} />
+          <UnderlineField label={t("contact_name_label")} value={name} onChange={setName} placeholder={t("contact_name_ph")} error={errors.name} onEnter={onSubmit} />
         </div>
         <div data-a="field">
-          <UnderlineField label="Email address" type="email" value={email} onChange={setEmail} placeholder="you@email.com" error={errors.email} onEnter={onSubmit} />
+          <UnderlineField label={t("contact_email_label")} type="email" value={email} onChange={setEmail} placeholder={t("contact_email_ph")} error={errors.email} onEnter={onSubmit} />
         </div>
       </div>
       {submitError && <ErrorMsg msg={submitError} style={{ marginBottom: "1.5rem" }} />}
-      <div data-a="nav"><NavRow onBack={onBack} onNext={onSubmit} nextLabel={submitting ? "Sending…" : "Send request"} isFinal disabled={submitting} /></div>
+      <div data-a="nav"><NavRow onBack={onBack} onNext={onSubmit} nextLabel={submitting ? t("contact_sending") : t("contact_send")} isFinal disabled={submitting} /></div>
     </div>
   )
 }
 
 /* ── Step 5: Success ──────────────────────────────────────────────── */
 function StepSuccess({ name }: { name: string }) {
+  const t = useT()
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -1461,10 +1488,10 @@ function StepSuccess({ name }: { name: string }) {
         </svg>
       </div>
       <h2 data-a="title" style={{ fontSize: "clamp(2rem, 4vw, 3.5rem)", fontWeight: 400, letterSpacing: "-0.03em", color: "#fff", fontFamily: "var(--font-inter)", marginBottom: "1rem" }}>
-        {name ? `Thanks, ${name}.` : "Thanks."}
+        {name ? t("contact_thanks_name").replace("{name}", name) : t("contact_thanks")}
       </h2>
       <p data-a="sub" style={{ fontFamily: "var(--font-inter)", fontSize: "clamp(0.92rem, 1.3vw, 1.05rem)", color: "rgba(255,255,255,0.38)", lineHeight: 1.7, maxWidth: 400, margin: "0 auto 3.5rem" }}>
-        Your request is in. We&apos;ll get back to you within 24 hours.
+        {t("contact_success_sub")}
       </p>
       <a
         data-a="link"
@@ -1473,7 +1500,7 @@ function StepSuccess({ name }: { name: string }) {
         onMouseEnter={e => ((e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.7)")}
         onMouseLeave={e => ((e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.32)")}
       >
-        ← Back to homepage
+        {t("contact_back_home")}
       </a>
     </div>
   )

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import gsap from "gsap"
 import { ScrollTrigger } from "gsap/ScrollTrigger"
+import { useT } from "@/lib/i18n/context"
 
 interface Project {
   id: number
@@ -17,6 +18,7 @@ interface Project {
 }
 
 export default function WorksPage({ initialProjects = [] }: { initialProjects?: Project[] }) {
+  const t = useT()
   const contentRef = useRef<HTMLDivElement>(null)
   const headlineRef = useRef<HTMLHeadingElement>(null)
   const [projects, setProjects] = useState<Project[]>(initialProjects)
@@ -102,12 +104,12 @@ export default function WorksPage({ initialProjects = [] }: { initialProjects?: 
               ref={headlineRef}
               style={{ width: "100%", color: "#0c0c0c", fontWeight: 500, fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif', lineHeight: 1.05, letterSpacing: "-0.02em", fontSize: "clamp(28px, 5.6vw, 96px)", userSelect: "none" }}
             >
-              <span className="works-line" data-text="Our Work." suppressHydrationWarning style={{ display: "block" }}>
-                Our Work.
+              <span className="works-line" data-text={t("works_heading")} suppressHydrationWarning style={{ display: "block" }}>
+                {t("works_heading")}
               </span>
             </h1>
             <p style={{ marginTop: "1.5rem", fontFamily: "var(--font-dm-mono), 'JetBrains Mono', monospace", fontSize: "clamp(1rem, 1.4vw, 1.25rem)", fontWeight: 400, letterSpacing: "0.15em", textTransform: "uppercase", color: "#0c0c0c", opacity: 0.7, userSelect: "none", animation: "chIn 0.6s cubic-bezier(0.22, 0.61, 0.36, 1) 900ms both" }}>
-              Digital experiences built to perform.
+              {t("works_subtitle")}
             </p>
           </div>
         </div>
@@ -124,7 +126,7 @@ export default function WorksPage({ initialProjects = [] }: { initialProjects?: 
             style={{ fontFamily: "var(--font-dm-mono), monospace", fontSize: "12px", letterSpacing: "0.2em", textTransform: "uppercase", color: "#555", marginBottom: "5rem", display: "flex", alignItems: "center", gap: "14px" }}
           >
             <span style={{ display: "inline-block", width: "28px", height: "1px", background: "#555" }} />
-            Selected Projects
+            {t("works_selected")}
           </div>
 
           {projects.length === 0 ? (
@@ -144,16 +146,17 @@ export default function WorksPage({ initialProjects = [] }: { initialProjects?: 
 }
 
 function EmptyState() {
+  const t = useT()
   return (
     <div
       data-reveal
       style={{ minHeight: "40vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", gap: "1.5rem" }}
     >
       <p style={{ fontSize: "clamp(1.5rem, 3vw, 2.5rem)", fontWeight: 400, color: "#333", lineHeight: 1.3 }}>
-        Projects coming soon.
+        {t("works_coming_soon")}
       </p>
       <p style={{ fontFamily: "var(--font-dm-mono), monospace", fontSize: "13px", letterSpacing: "0.08em", color: "#444" }}>
-        Projekte können im Admin-Dashboard verwaltet werden.
+        {t("works_admin_note")}
       </p>
     </div>
   )

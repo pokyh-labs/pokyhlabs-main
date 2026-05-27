@@ -2,53 +2,16 @@
 
 import type { CSSProperties } from "react"
 import CookieSettingsButton from "@/components/CookieSettingsButton"
+import { useT } from "@/lib/i18n/context"
 
 const PURPLE = "#593df8"
 const BEIGE = "#e4e2dc"
 
-// Stacked headline words on the left — each links to a real service deep-link
 const CATEGORIES = [
   { label: "3D", href: "/contact?service=threejs" },
   { label: "Web", href: "/contact?service=frontend" },
   { label: "Shop", href: "/contact?service=ecommerce" },
   { label: "Hosting", href: "/contact?service=hosting" },
-]
-
-const COLUMNS: { title: string; links: { label: string; href: string; external?: boolean }[] }[] = [
-  {
-    title: "Studio",
-    links: [
-      { label: "About", href: "/#about" },
-      { label: "Works", href: "/works" },
-      { label: "Blog", href: "/blog" },
-      { label: "Kontakt", href: "/contact" },
-    ],
-  },
-  {
-    title: "Services",
-    links: [
-      { label: "3D Websites", href: "/contact?service=threejs" },
-      { label: "Webdesign", href: "/contact?service=frontend" },
-      { label: "Webentwicklung", href: "/contact?service=backend" },
-      { label: "SEO", href: "/contact?service=seo" },
-    ],
-  },
-  {
-    title: "Mehr",
-    links: [
-      { label: "Hosting", href: "/contact?service=hosting" },
-      { label: "WordPress", href: "/contact?service=wordpress" },
-      { label: "E-Commerce", href: "/contact?service=ecommerce" },
-    ],
-  },
-]
-
-const LEGAL = [
-  { label: "Impressum", href: "/impressum" },
-  { label: "Datenschutz", href: "/datenschutz" },
-  { label: "AGB", href: "/agb" },
-  { label: "Widerruf", href: "/widerruf" },
-  { label: "Kontakt", href: "/contact" },
 ]
 
 // Subtle black speckle grain, encoded as an SVG data URI and laid over the purple.
@@ -78,6 +41,45 @@ const legalLinkStyle: CSSProperties = {
 }
 
 export default function Footer() {
+  const t = useT()
+
+  const COLUMNS = [
+    {
+      titleKey: "footer_col_studio" as const,
+      links: [
+        { labelKey: "footer_link_about" as const, href: "/#about" },
+        { labelKey: "footer_link_works" as const, href: "/works" },
+        { labelKey: "footer_link_blog" as const, href: "/blog" },
+        { labelKey: "footer_link_kontakt" as const, href: "/contact" },
+      ],
+    },
+    {
+      titleKey: "footer_col_services" as const,
+      links: [
+        { labelKey: "footer_link_3d" as const, href: "/contact?service=threejs" },
+        { labelKey: "footer_link_webdesign" as const, href: "/contact?service=frontend" },
+        { labelKey: "footer_link_webdev" as const, href: "/contact?service=backend" },
+        { labelKey: "footer_link_seo" as const, href: "/contact?service=seo" },
+      ],
+    },
+    {
+      titleKey: "footer_col_more" as const,
+      links: [
+        { labelKey: "footer_link_hosting" as const, href: "/contact?service=hosting" },
+        { labelKey: "footer_link_wordpress" as const, href: "/contact?service=wordpress" },
+        { labelKey: "footer_link_ecommerce" as const, href: "/contact?service=ecommerce" },
+      ],
+    },
+  ]
+
+  const LEGAL = [
+    { labelKey: "footer_legal_impressum" as const, href: "/impressum" },
+    { labelKey: "footer_legal_datenschutz" as const, href: "/datenschutz" },
+    { labelKey: "footer_legal_agb" as const, href: "/agb" },
+    { labelKey: "footer_legal_widerruf" as const, href: "/widerruf" },
+    { labelKey: "footer_legal_contact" as const, href: "/contact" },
+  ]
+
   const colHeading: CSSProperties = {
     fontSize: 18,
     fontWeight: 700,
@@ -111,7 +113,7 @@ export default function Footer() {
       {/* Top grid: stacked categories + link columns */}
       <div className="ft-top">
         {/* Stacked category words */}
-        <nav aria-label="Leistungen" data-reveal style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        <nav aria-label={t("footer_aria_services")} data-reveal style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           {CATEGORIES.map(({ label, href }) => (
             <a
               key={label}
@@ -143,19 +145,19 @@ export default function Footer() {
 
         {/* Link columns */}
         <div className="ft-cols">
-          {COLUMNS.map(({ title, links }, i) => (
+          {COLUMNS.map(({ titleKey, links }, i) => (
             <nav
-              key={title}
-              aria-label={title}
+              key={titleKey}
+              aria-label={t(titleKey)}
               data-reveal
               style={{ "--rd": `${(i + 1) * 90}ms` } as CSSProperties}
             >
-              <h2 style={colHeading}>{title}</h2>
+              <h2 style={colHeading}>{t(titleKey)}</h2>
               <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 12 }}>
-                {links.map(({ label, href, external }) => (
-                  <li key={label}>
-                    <a href={href} {...ext(external)} style={colLink} onMouseEnter={hoverIn} onMouseLeave={hoverOut}>
-                      {label}
+                {links.map(({ labelKey, href }) => (
+                  <li key={labelKey}>
+                    <a href={href} style={colLink} onMouseEnter={hoverIn} onMouseLeave={hoverOut}>
+                      {t(labelKey)}
                     </a>
                   </li>
                 ))}
@@ -183,15 +185,15 @@ export default function Footer() {
           </div>
 
           <div style={{ display: "flex", flexWrap: "wrap", gap: "1rem 1.75rem" }}>
-            {LEGAL.map(({ label, href }) => (
+            {LEGAL.map(({ labelKey, href }) => (
               <a
-                key={label}
+                key={labelKey}
                 href={href}
                 style={legalLinkStyle}
                 onMouseEnter={hoverIn}
                 onMouseLeave={hoverOut}
               >
-                {label}
+                {t(labelKey)}
               </a>
             ))}
             <CookieSettingsButton
@@ -199,7 +201,7 @@ export default function Footer() {
               onMouseEnter={hoverIn}
               onMouseLeave={hoverOut}
             >
-              Cookie-Einstellungen
+              {t("footer_cookie_settings")}
             </CookieSettingsButton>
           </div>
         </div>

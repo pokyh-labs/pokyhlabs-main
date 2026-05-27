@@ -5,18 +5,22 @@ import { isPlaceholder } from "@/lib/legal.config"
 export default function LegalLayout({
   title,
   lastUpdated,
+  kickerText = "RECHTLICHES",
+  standLabel = "Stand",
   children,
 }: {
   title: string
   lastUpdated: string
+  kickerText?: string
+  standLabel?: string
   children: ReactNode
 }) {
   return (
     <div style={page}>
       <article style={container}>
-        <p style={kicker}>RECHTLICHES</p>
+        <p style={kicker}>{kickerText}</p>
         <h1 style={h1}>{title}</h1>
-        <p style={stand}>Stand: {lastUpdated}</p>
+        <p style={stand}>{standLabel}: {lastUpdated}</p>
         <div className="legal-prose" style={content}>{children}</div>
       </article>
     </div>
