@@ -275,7 +275,13 @@ class TunnelService {
       return existing;
     }
     const p = await this.getPath();
-    const { stdout, stderr } = await execFileAsync(p, ['tunnel', 'create', name], { timeout: 30_000 });
+    let stdout, stderr;
+    try {
+      ({ stdout, stderr } = await execFileAsync(p, ['tunnel', 'create', name], { timeout: 30_000 }));
+    } catch (err) {
+      const detail = (err.stderr || err.stdout || '').trim();
+      throw new Error(detail || err.message);
+    }
     const m = (stdout + stderr).match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
     if (!m) throw new Error('Could not parse tunnel ID from cloudflared output');
     logger.info('Tunnel created', { name, id: m[1] });
@@ -285,7 +291,27 @@ class TunnelService {
   async routeDNS(name, hostname) {
     assertSafeName(name);
     const p = await this.getPath();
-    await execFileAsync(p, ['tunnel', 'route', 'dns', '--overwrite-dns', name, hostname], { timeout: 30_000 });
+
+    // Helper: run and throw a readable error (includes cloudflared's stderr output)
+    const run = async (args) => {
+      try {
+        return await execFileAsync(p, args, { timeout: 30_000 });
+      } catch (err) {
+        const detail = (err.stderr || err.stdout || '').trim();
+        throw new Error(detail || err.message);
+      }
+    };
+
+    try {
+      await run(['tunnel', 'route', 'dns', '--overwrite-dns', name, hostname]);
+    } catch (err) {
+      // Older cloudflared builds don't have --overwrite-dns; fall back without it
+      if (/unknown flag|flag.*overwrite/i.test(err.message)) {
+        await run(['tunnel', 'route', 'dns', name, hostname]);
+      } else {
+        throw err;
+      }
+    }
   }
 
   async getTunnelTokenCLI(name) {
