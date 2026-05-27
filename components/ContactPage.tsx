@@ -4,7 +4,6 @@
 import { useEffect, useRef, useState, useCallback } from "react"
 import gsap from "gsap"
 import { ScrollTrigger } from "gsap/ScrollTrigger"
-import Lenis from "lenis"
 // Register GSAP plugins globally before any component code runs
 gsap.registerPlugin(ScrollTrigger)
 
@@ -107,23 +106,6 @@ export default function ContactPage() {
   useEffect(() => {
     gsap.registerPlugin(ScrollTrigger)
 
-    // --- Lenis smooth scroll (matches HomeClientWrapper) ---
-    const lenis = new Lenis({
-      duration: 1.2,
-      easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-      smoothWheel: true,
-      wheelMultiplier: 1,
-      touchMultiplier: 1.5,
-    })
-    ;(window as unknown as { __lenis?: unknown }).__lenis = lenis
-    let rafId = 0
-    const raf = (time: number) => {
-      lenis.raf(time)
-      rafId = requestAnimationFrame(raf)
-    }
-    rafId = requestAnimationFrame(raf)
-    lenis.on("scroll", ScrollTrigger.update)
-
     // Cursor glow
     const cursor = document.createElement("div")
     cursor.style.cssText =
@@ -165,9 +147,6 @@ export default function ContactPage() {
       window.removeEventListener("mousemove", moveCursor)
       if (document.body.contains(cursor)) document.body.removeChild(cursor)
       ScrollTrigger.getAll().forEach((t) => t.kill())
-      cancelAnimationFrame(rafId)
-      lenis.destroy()
-      delete (window as unknown as { __lenis?: unknown }).__lenis
     }
   }, [])
 
