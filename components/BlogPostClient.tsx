@@ -34,29 +34,6 @@ export default function BlogPostClient({ blog }: { blog: BlogPost }) {
       .catch(() => {})
   }, [blog.slug])
 
-  useEffect(() => {
-    const cursor = document.createElement("div")
-    cursor.style.cssText =
-      "position:fixed;top:0;left:0;width:400px;height:400px;border-radius:50%;" +
-      "background-image:radial-gradient(circle,rgba(89,61,248,0.10)0%,transparent 70%);" +
-      "pointer-events:none;transform:translate(-50%,-50%);z-index:0;"
-    document.body.appendChild(cursor)
-
-    let animFrame: number
-    const moveCursor = (e: MouseEvent) => {
-      cancelAnimationFrame(animFrame)
-      animFrame = requestAnimationFrame(() => {
-        cursor.style.transform = `translate(calc(${e.clientX}px - 50%), calc(${e.clientY}px - 50%))`
-      })
-    }
-    window.addEventListener("mousemove", moveCursor)
-
-    return () => {
-      window.removeEventListener("mousemove", moveCursor)
-      cancelAnimationFrame(animFrame)
-      if (document.body.contains(cursor)) document.body.removeChild(cursor)
-    }
-  }, [])
 
   return (
     <article style={{ backgroundColor: "var(--bg)", minHeight: "100vh" }}>

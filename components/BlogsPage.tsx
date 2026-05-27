@@ -51,16 +51,6 @@ export default function BlogsPage({ initialBlogs = [] }: { initialBlogs?: Blog[]
   useEffect(() => {
     gsap.registerPlugin(ScrollTrigger)
 
-    const cursor = document.createElement("div")
-    cursor.style.cssText =
-      "position:fixed;top:0;left:0;width:400px;height:400px;border-radius:50%;" +
-      "background-image:radial-gradient(circle,rgba(89,61,248,0.10)0%,transparent 70%);" +
-      "pointer-events:none;transform:translate(-50%,-50%);z-index:0;"
-    document.body.appendChild(cursor)
-    const moveCursor = (e: MouseEvent) =>
-      gsap.to(cursor, { x: e.clientX, y: e.clientY, duration: 0.8, ease: "power3.out" })
-    window.addEventListener("mousemove", moveCursor)
-
     if (headlineRef.current) {
       const lines = headlineRef.current.querySelectorAll<HTMLSpanElement>(".blog-line")
       lines.forEach((line, li) => {
@@ -103,8 +93,6 @@ export default function BlogsPage({ initialBlogs = [] }: { initialBlogs?: Blog[]
     }
 
     return () => {
-      window.removeEventListener("mousemove", moveCursor)
-      if (document.body.contains(cursor)) document.body.removeChild(cursor)
       ScrollTrigger.getAll().forEach((t) => t.kill())
     }
   }, [])
