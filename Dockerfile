@@ -1,5 +1,5 @@
 # ── Build stage ───────────────────────────────────────────────────────────────
-FROM node:24-alpine AS builder
+FROM node:22-alpine AS builder
 WORKDIR /app
 
 # Build tools required for native addons (sqlite3 needs compilation on Alpine/musl)
@@ -7,7 +7,7 @@ RUN apk add --no-cache python3 make g++
 
 # Root deps (Next.js, gsap, dotenv …)
 COPY package*.json ./
-RUN npm ci --ignore-scripts
+RUN npm ci --include=dev --ignore-scripts
 
 # Backend deps — only package.json (no lock file) so npm install picks up the
 # latest compatible versions. .npmrc suppresses noise during install.
@@ -19,7 +19,7 @@ COPY . .
 RUN npm run build
 
 # ── Production stage ──────────────────────────────────────────────────────────
-FROM node:24-alpine
+FROM node:22-alpine
 # su-exec: lightweight privilege-drop tool (Alpine standard, replaces gosu)
 # cloudflared: pre-baked so the in-app tunnel setup is instant (no runtime download)
 #   uname -m maps: x86_64→amd64, aarch64→arm64, armv7l→arm

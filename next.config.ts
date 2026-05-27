@@ -1,6 +1,7 @@
 import type { NextConfig } from "next"
 
 const nextConfig: NextConfig = {
+  transpilePackages: ["gsap", "lenis", "three"],
   compress: true,
   poweredByHeader: false,
   images: {
