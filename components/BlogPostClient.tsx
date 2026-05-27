@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 
 interface BlogPost {
@@ -25,6 +25,15 @@ function formatDate(iso: string) {
 }
 
 export default function BlogPostClient({ blog }: { blog: BlogPost }) {
+  const [views, setViews] = useState(blog.views)
+
+  useEffect(() => {
+    fetch(`/api/blogs/${blog.slug}/view`, { method: 'POST' })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data?.views != null) setViews(data.views) })
+      .catch(() => {})
+  }, [blog.slug])
+
   useEffect(() => {
     const cursor = document.createElement("div")
     cursor.style.cssText =
@@ -199,7 +208,7 @@ export default function BlogPostClient({ blog }: { blog: BlogPost }) {
               opacity: 0.4,
             }}
           >
-            {blog.views} views
+            {views} views
           </span>
 
           <Link
