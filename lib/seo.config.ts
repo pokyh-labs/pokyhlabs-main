@@ -203,6 +203,11 @@ export const siteConfig = {
     { path: "/works",   priority: 0.9, changeFreq: "weekly"  as const },
     { path: "/contact", priority: 0.9, changeFreq: "monthly" as const },
     { path: "/blog",    priority: 0.8, changeFreq: "daily"   as const },
+    { path: "/impressum",         priority: 0.3, changeFreq: "yearly" as const },
+    { path: "/datenschutz",       priority: 0.3, changeFreq: "yearly" as const },
+    { path: "/agb",               priority: 0.3, changeFreq: "yearly" as const },
+    { path: "/widerruf",          priority: 0.3, changeFreq: "yearly" as const },
+    { path: "/cookie-richtlinie", priority: 0.3, changeFreq: "yearly" as const },
   ],
 }
 

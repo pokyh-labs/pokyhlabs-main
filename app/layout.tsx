@@ -5,6 +5,8 @@ import { siteConfig, structuredData } from "@/lib/seo.config"
 import Header from "@/components/Header"
 import Footer from "@/components/Footer"
 import RevealObserver from "@/components/RevealObserver"
+import Analytics from "@/components/Analytics"
+import CookieConsent from "@/components/CookieConsent"
 
 const instrumentSerif = Instrument_Serif({
   weight: "400",
@@ -120,17 +122,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             }),
           }}
         />
-        {/* Google Analytics 4 — aktiviert wenn NEXT_PUBLIC_GA_ID in .env.local gesetzt ist */}
-        {gaId && (
-          <>
-            <script async src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`} />
-            <script
-              dangerouslySetInnerHTML={{
-                __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','${gaId}',{page_path:window.location.pathname})`,
-              }}
-            />
-          </>
-        )}
       </head>
       <body>
         <Header />
@@ -139,6 +130,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </main>
         <Footer />
         <RevealObserver />
+        {/* Google Analytics 4 — lädt ausschließlich nach Einwilligung (siehe CookieConsent) */}
+        <Analytics gaId={gaId} />
+        <CookieConsent />
       </body>
     </html>
   )

@@ -1,6 +1,7 @@
 "use client"
 
 import type { CSSProperties } from "react"
+import CookieSettingsButton from "@/components/CookieSettingsButton"
 
 const PURPLE = "#593df8"
 const BEIGE = "#e4e2dc"
@@ -43,9 +44,10 @@ const COLUMNS: { title: string; links: { label: string; href: string; external?:
 ]
 
 const LEGAL = [
-  { label: "Media Inquiries", href: "mailto:hello@pokyh.studio" },
-  { label: "Discord", href: "https://discord.gg/ffhK8ztv9C", external: true },
-  { label: "GitHub", href: "https://github.com/pokyh-labs", external: true },
+  { label: "Impressum", href: "/impressum" },
+  { label: "Datenschutz", href: "/datenschutz" },
+  { label: "AGB", href: "/agb" },
+  { label: "Widerruf", href: "/widerruf" },
   { label: "Kontakt", href: "/contact" },
 ]
 
@@ -54,15 +56,26 @@ const LEGAL = [
 const grainSvg = `<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='1' stitchTiles='stitch' result='t'/><feColorMatrix in='t' type='matrix' values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  5 0 0 0 -4'/></filter><rect width='100%' height='100%' filter='url(#n)'/></svg>`
 const grain = `url("data:image/svg+xml,${encodeURIComponent(grainSvg)}")`
 
-function hoverIn(e: React.MouseEvent<HTMLAnchorElement>) {
+function hoverIn(e: React.MouseEvent<HTMLElement>) {
   e.currentTarget.style.opacity = "1"
 }
-function hoverOut(e: React.MouseEvent<HTMLAnchorElement>) {
+function hoverOut(e: React.MouseEvent<HTMLElement>) {
   e.currentTarget.style.opacity = "0.72"
 }
 
 const ext = (external?: boolean) =>
   external ? { target: "_blank", rel: "noopener noreferrer" } : {}
+
+const legalLinkStyle: CSSProperties = {
+  fontSize: 12,
+  fontWeight: 600,
+  letterSpacing: "0.12em",
+  textTransform: "uppercase",
+  color: BEIGE,
+  opacity: 0.72,
+  textDecoration: "none",
+  transition: "opacity .2s ease",
+}
 
 export default function Footer() {
   const colHeading: CSSProperties = {
@@ -170,27 +183,24 @@ export default function Footer() {
           </div>
 
           <div style={{ display: "flex", flexWrap: "wrap", gap: "1rem 1.75rem" }}>
-            {LEGAL.map(({ label, href, external }) => (
+            {LEGAL.map(({ label, href }) => (
               <a
                 key={label}
                 href={href}
-                {...ext(external)}
-                style={{
-                  fontSize: 12,
-                  fontWeight: 600,
-                  letterSpacing: "0.12em",
-                  textTransform: "uppercase",
-                  color: BEIGE,
-                  opacity: 0.72,
-                  textDecoration: "none",
-                  transition: "opacity .2s ease",
-                }}
+                style={legalLinkStyle}
                 onMouseEnter={hoverIn}
                 onMouseLeave={hoverOut}
               >
                 {label}
               </a>
             ))}
+            <CookieSettingsButton
+              style={legalLinkStyle}
+              onMouseEnter={hoverIn}
+              onMouseLeave={hoverOut}
+            >
+              Cookie-Einstellungen
+            </CookieSettingsButton>
           </div>
         </div>
       </div>
