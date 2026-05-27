@@ -36,9 +36,7 @@ services:
   cloudflared:
     image: cloudflare/cloudflared:2025.1.1
     restart: unless-stopped
-    command: tunnel --no-autoupdate --config /etc/cloudflared/config.yml run --token ${CLOUDFLARE_TUNNEL_TOKEN}
-    volumes:
-      - ./cloudflared-config.yml:/etc/cloudflared/config.yml:ro
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN} --url http://backend:${PORT:-3000}
     depends_on:
       - backend
 
