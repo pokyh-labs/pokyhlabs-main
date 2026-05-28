@@ -3,6 +3,7 @@
 import { forwardRef, useEffect, useRef, useState } from "react"
 import gsap from "gsap"
 import { ScrollTrigger } from "gsap/ScrollTrigger"
+import { useT } from "@/lib/i18n/context"
 import {
   createBookScene,
   type BookProject,
@@ -364,16 +365,12 @@ export default function ProjectBook({
 }
 
 // ── Hero (top of page) ─────────────────────────────────────────────
-const HERO_TITLE = "Works"
-const HERO_LINES = [
-  "A book of our craft.",
-  "Each project a chapter —",
-  "each scroll, a page turned.",
-]
-
 const Hero = forwardRef<HTMLDivElement>(function Hero(_props, ref) {
+    const t = useT()
     const titleRef = useRef<HTMLHeadingElement>(null)
     const bodyRef = useRef<HTMLDivElement>(null)
+    const heroTitle = t("works_hero_title")
+    const heroLines = [t("works_hero_line1"), t("works_hero_line2"), t("works_hero_line3")]
 
     // One-shot entrance animation on mount.
     useEffect(() => {
@@ -390,14 +387,14 @@ const Hero = forwardRef<HTMLDivElement>(function Hero(_props, ref) {
     return (
       <div ref={ref} className="hero" aria-hidden="false">
         <div className="hero__inner">
-          <div className="hero__eyebrow">— A collection by Pokyh Labs —</div>
-          <h1 ref={titleRef} className="hero__title" aria-label={HERO_TITLE}>
-            {HERO_TITLE.split("").map((ch, i) => (
+          <div className="hero__eyebrow">{t("works_hero_eyebrow")}</div>
+          <h1 ref={titleRef} className="hero__title" aria-label={heroTitle}>
+            {heroTitle.split("").map((ch, i) => (
               <span key={i} className="hero__ch" aria-hidden="true">{ch}</span>
             ))}
           </h1>
           <div ref={bodyRef} className="hero__body">
-            {HERO_LINES.map((line, i) => (
+            {heroLines.map((line, i) => (
               <div key={i} className="hero__line">{line}</div>
             ))}
           </div>
@@ -410,7 +407,7 @@ const Hero = forwardRef<HTMLDivElement>(function Hero(_props, ref) {
               <line x1="7" y1="5" x2="7" y2="8.5" strokeWidth={1.6} />
             </svg>
           </span>
-          Scroll to open the book
+          {t("works_scroll_cue")}
         </div>
 
         <style jsx>{`
@@ -578,6 +575,7 @@ function ProgressRail({ pageInfo, hidden }: { pageInfo: PageInfo; hidden: boolea
 
 // ── Project overlay (shown when a page is clicked) ─────────────────
 function ProjectOverlay({ zoom, onClose }: { zoom: ZoomPayload | null; onClose: () => void }) {
+  const t = useT()
   const show = !!zoom
   const scrollRef = useRef<HTMLDivElement>(null)
   const [lightbox, setLightbox] = useState<number | null>(null)
@@ -673,14 +671,14 @@ function ProjectOverlay({ zoom, onClose }: { zoom: ZoomPayload | null; onClose: 
                 />
                 <figcaption className="detail__featureCaption">
                   <span className="detail__featureCaptionDot" />
-                  Cover image
+                  {t("works_cover_image")}
                 </figcaption>
               </figure>
             )}
 
             <div className="detail__featureBody">
               <div className="detail__sectionHead">
-                <span className="detail__sectionLabel">— The story —</span>
+                <span className="detail__sectionLabel">— {t("works_the_story")} —</span>
                 <span className="detail__sectionRule" />
               </div>
 
@@ -691,7 +689,7 @@ function ProjectOverlay({ zoom, onClose }: { zoom: ZoomPayload | null; onClose: 
 
               {zoom?.tags && zoom.tags.length > 0 && (
                 <div className="detail__tags">
-                  <span className="detail__tagsLabel">Tags</span>
+                  <span className="detail__tagsLabel">{t("works_tags")}</span>
                   <div className="detail__tagsRow">
                     {zoom.tags.map((tag) => (
                       <span key={tag} className="detail__tag">{tag}</span>
@@ -702,7 +700,7 @@ function ProjectOverlay({ zoom, onClose }: { zoom: ZoomPayload | null; onClose: 
 
               {zoom?.url && (
                 <a href={zoom.url} target="_blank" rel="noopener noreferrer" className="detail__cta">
-                  <span>Visit project</span>
+                  <span>{t("works_visit_project")}</span>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <path d="M7 17 17 7M9 7h8v8" />
                   </svg>
@@ -716,7 +714,7 @@ function ProjectOverlay({ zoom, onClose }: { zoom: ZoomPayload | null; onClose: 
             <section className="detail__gallery">
               <div className="detail__sectionHead detail__sectionHead--center">
                 <span className="detail__sectionRule" />
-                <span className="detail__sectionLabel">— Gallery · {String(gallery.length).padStart(2, "0")} —</span>
+                <span className="detail__sectionLabel">— {t("works_gallery_label")} · {String(gallery.length).padStart(2, "0")} —</span>
                 <span className="detail__sectionRule" />
               </div>
 
@@ -727,7 +725,7 @@ function ProjectOverlay({ zoom, onClose }: { zoom: ZoomPayload | null; onClose: 
                     type="button"
                     className="detail__galleryItem"
                     onClick={() => setLightbox(i)}
-                    aria-label={item.alt || `Image ${i + 1}`}
+                    aria-label={item.alt || t("works_image_aria").replace("{n}", String(i + 1))}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={item.url} alt={item.alt || ""} loading="lazy" decoding="async" />
@@ -740,7 +738,7 @@ function ProjectOverlay({ zoom, onClose }: { zoom: ZoomPayload | null; onClose: 
 
           <div className="detail__footnote" aria-hidden="true">
             <span className="detail__footnoteRule" />
-            <span>— End of chapter —</span>
+            <span>— {t("works_end_chapter")} —</span>
             <span className="detail__footnoteRule" />
           </div>
         </div>
@@ -748,7 +746,7 @@ function ProjectOverlay({ zoom, onClose }: { zoom: ZoomPayload | null; onClose: 
         {/* Lightbox — fullscreen image viewer for the gallery. */}
         {lightbox !== null && gallery[lightbox] && (
           <div className="lb" role="dialog" aria-modal="true" onClick={() => setLightbox(null)}>
-            <button type="button" className="lb__close" onClick={(e) => { e.stopPropagation(); setLightbox(null) }} aria-label="Close">
+            <button type="button" className="lb__close" onClick={(e) => { e.stopPropagation(); setLightbox(null) }} aria-label={t("works_close")}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true">
                 <path d="M6 6l12 12M18 6L6 18" />
               </svg>
@@ -760,7 +758,7 @@ function ProjectOverlay({ zoom, onClose }: { zoom: ZoomPayload | null; onClose: 
                   type="button"
                   className="lb__nav lb__nav--prev"
                   onClick={(e) => { e.stopPropagation(); setLightbox((i) => i === null ? null : (i - 1 + gallery.length) % gallery.length) }}
-                  aria-label="Previous"
+                  aria-label={t("works_prev")}
                 >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
                 </button>
@@ -768,7 +766,7 @@ function ProjectOverlay({ zoom, onClose }: { zoom: ZoomPayload | null; onClose: 
                   type="button"
                   className="lb__nav lb__nav--next"
                   onClick={(e) => { e.stopPropagation(); setLightbox((i) => i === null ? null : (i + 1) % gallery.length) }}
-                  aria-label="Next"
+                  aria-label={t("works_next")}
                 >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg>
                 </button>
@@ -785,11 +783,11 @@ function ProjectOverlay({ zoom, onClose }: { zoom: ZoomPayload | null; onClose: 
         )}
       </div>
 
-      <button type="button" className={`back${show ? " back--show" : ""}`} onClick={onClose} aria-label="Close project">
+      <button type="button" className={`back${show ? " back--show" : ""}`} onClick={onClose} aria-label={t("works_close")}>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M19 12H5M12 19l-7-7 7-7" />
         </svg>
-        Back
+        {t("works_back")}
       </button>
 
       <style jsx>{`
