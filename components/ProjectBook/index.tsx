@@ -580,42 +580,52 @@ function ProgressRail({ pageInfo, hidden }: { pageInfo: PageInfo; hidden: boolea
 function ProjectOverlay({ zoom, onClose }: { zoom: ZoomPayload | null; onClose: () => void }) {
   const show = !!zoom
   const scrollRef = useRef<HTMLDivElement>(null)
-  const heroRef = useRef<HTMLDivElement>(null)
-  const [readProgress, setReadProgress] = useState(0)
-  const [scrolled, setScrolled] = useState(false)
+  const [lightbox, setLightbox] = useState<number | null>(null)
 
-  // Reset scroll + progress when a new project opens.
+  // Reset scroll + progress + lightbox when a new project opens. Progress is
+  // tracked via CSS var (no React state on every scroll event).
   useEffect(() => {
     if (!show) return
     const el = scrollRef.current
-    if (el) el.scrollTop = 0
-    setReadProgress(0)
-    setScrolled(false)
+    if (el) {
+      el.scrollTop = 0
+      el.style.setProperty("--read-progress", "0")
+    }
+    setLightbox(null)
   }, [show, zoom?.title])
 
-  // Track scroll inside the overlay → drives the reading-progress bar and a
-  // gentle parallax on the hero image. Cheap math, no rAF needed.
+  // Scroll → drive the progress bar via CSS var so we avoid per-frame
+  // React re-renders. Listener uses passive scroll, no rAF needed.
   useEffect(() => {
     const el = scrollRef.current
     if (!el) return
     const onScroll = () => {
       const max = el.scrollHeight - el.clientHeight
       const p = max > 0 ? el.scrollTop / max : 0
-      setReadProgress(p)
-      setScrolled(el.scrollTop > 12)
-      if (heroRef.current) {
-        heroRef.current.style.setProperty("--parallax", `${Math.min(el.scrollTop * 0.18, 120)}px`)
-      }
+      el.style.setProperty("--read-progress", String(p))
     }
     el.addEventListener("scroll", onScroll, { passive: true })
     return () => el.removeEventListener("scroll", onScroll)
   }, [show])
 
   const hasImage = !!zoom?.imageUrl
+  const gallery = zoom?.gallery ?? []
   const body = zoom?.body ?? ""
   // First "real" character gets dropcap treatment; rest of the paragraph follows.
   const dropChar = body.trimStart().charAt(0)
   const rest = dropChar ? body.trimStart().slice(1) : ""
+
+  // Lightbox keyboard nav — wraps around, Esc closes.
+  useEffect(() => {
+    if (lightbox === null) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { e.preventDefault(); setLightbox(null) }
+      else if (e.key === "ArrowRight") { e.preventDefault(); setLightbox(i => i === null ? null : (i + 1) % gallery.length) }
+      else if (e.key === "ArrowLeft")  { e.preventDefault(); setLightbox(i => i === null ? null : (i - 1 + gallery.length) % gallery.length) }
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [lightbox, gallery.length])
 
   return (
     <>
@@ -626,24 +636,12 @@ function ProjectOverlay({ zoom, onClose }: { zoom: ZoomPayload | null; onClose: 
         data-lenis-prevent
         style={{ backgroundColor: DETAIL_BG }}
       >
-        {/* Reading progress bar across the top — only meaningful when content scrolls. */}
-        <div className="detail__progress" aria-hidden="true">
-          <div className="detail__progressFill" style={{ transform: `scaleX(${readProgress})` }} />
-        </div>
+        {/* Reading progress sliver. CSS var driven so scroll events don't cause React renders. */}
+        <div className="detail__progress" aria-hidden="true"><div className="detail__progressFill" /></div>
 
         <div className="detail__scroll" ref={scrollRef}>
-          <header
-            ref={heroRef}
-            className={`detail__hero${hasImage ? "" : " detail__hero--text"}`}
-          >
-            {hasImage && (
-              <div className="detail__media">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={zoom!.imageUrl!} alt={zoom?.title ?? ""} />
-                <div className="detail__mediaShade" />
-              </div>
-            )}
-
+          {/* Hero band — pure typographic, sets the stage. */}
+          <header className="detail__hero">
             <div className="detail__heroBody">
               <div className="detail__eyebrow">{zoom?.eyebrow ?? ""}</div>
               <h2 className="detail__title">{zoom?.title ?? ""}</h2>
@@ -655,55 +653,136 @@ function ProjectOverlay({ zoom, onClose }: { zoom: ZoomPayload | null; onClose: 
                     {zoom.status.toUpperCase()}
                   </span>
                 )}
+                {gallery.length > 0 && (
+                  <span className="detail__metaItem">{gallery.length} image{gallery.length === 1 ? "" : "s"}</span>
+                )}
               </div>
             </div>
-
-            {hasImage && (
-              <div className={`detail__readOn${scrolled ? " detail__readOn--hidden" : ""}`} aria-hidden="true">
-                <span className="detail__readOnLine" />
-                Read on
-              </div>
-            )}
           </header>
 
-          <article className="detail__article">
-            <div className="detail__articleHead">
-              <span className="detail__articleLabel">— The story —</span>
-              <span className="detail__articleRule" />
-            </div>
+          {/* Feature band — image NEXT TO text on desktop, stacked on mobile. */}
+          <section className={`detail__feature${hasImage ? "" : " detail__feature--noimg"}`}>
+            {hasImage && (
+              <figure className="detail__featureMedia">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={zoom!.imageUrl!}
+                  alt={zoom?.imageAlt || zoom?.title || ""}
+                  loading="eager"
+                  decoding="async"
+                />
+                <figcaption className="detail__featureCaption">
+                  <span className="detail__featureCaptionDot" />
+                  Cover image
+                </figcaption>
+              </figure>
+            )}
 
-            <p className="detail__body">
-              {dropChar && <span className="detail__dropcap" aria-hidden="true">{dropChar}</span>}
-              {dropChar ? rest : body}
-            </p>
-
-            {zoom?.tags && zoom.tags.length > 0 && (
-              <div className="detail__tags">
-                <span className="detail__tagsLabel">Tags</span>
-                <div className="detail__tagsRow">
-                  {zoom.tags.map((tag) => (
-                    <span key={tag} className="detail__tag">{tag}</span>
-                  ))}
-                </div>
+            <div className="detail__featureBody">
+              <div className="detail__sectionHead">
+                <span className="detail__sectionLabel">— The story —</span>
+                <span className="detail__sectionRule" />
               </div>
-            )}
 
-            {zoom?.url && (
-              <a href={zoom.url} target="_blank" rel="noopener noreferrer" className="detail__cta">
-                <span>Visit project</span>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M7 17 17 7M9 7h8v8" />
-                </svg>
-              </a>
-            )}
+              <p className="detail__body">
+                {dropChar && <span className="detail__dropcap" aria-hidden="true">{dropChar}</span>}
+                {dropChar ? rest : body}
+              </p>
 
-            <div className="detail__footnote" aria-hidden="true">
-              <span className="detail__footnoteRule" />
-              <span>— End of chapter —</span>
-              <span className="detail__footnoteRule" />
+              {zoom?.tags && zoom.tags.length > 0 && (
+                <div className="detail__tags">
+                  <span className="detail__tagsLabel">Tags</span>
+                  <div className="detail__tagsRow">
+                    {zoom.tags.map((tag) => (
+                      <span key={tag} className="detail__tag">{tag}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {zoom?.url && (
+                <a href={zoom.url} target="_blank" rel="noopener noreferrer" className="detail__cta">
+                  <span>Visit project</span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M7 17 17 7M9 7h8v8" />
+                  </svg>
+                </a>
+              )}
             </div>
-          </article>
+          </section>
+
+          {/* Gallery band — only renders when there are extra images. */}
+          {gallery.length > 0 && (
+            <section className="detail__gallery">
+              <div className="detail__sectionHead detail__sectionHead--center">
+                <span className="detail__sectionRule" />
+                <span className="detail__sectionLabel">— Gallery · {String(gallery.length).padStart(2, "0")} —</span>
+                <span className="detail__sectionRule" />
+              </div>
+
+              <div className="detail__galleryGrid">
+                {gallery.map((item, i) => (
+                  <button
+                    key={item.url + i}
+                    type="button"
+                    className="detail__galleryItem"
+                    onClick={() => setLightbox(i)}
+                    aria-label={item.alt || `Image ${i + 1}`}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={item.url} alt={item.alt || ""} loading="lazy" decoding="async" />
+                    <span className="detail__galleryNum">{String(i + 1).padStart(2, "0")}</span>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <div className="detail__footnote" aria-hidden="true">
+            <span className="detail__footnoteRule" />
+            <span>— End of chapter —</span>
+            <span className="detail__footnoteRule" />
+          </div>
         </div>
+
+        {/* Lightbox — fullscreen image viewer for the gallery. */}
+        {lightbox !== null && gallery[lightbox] && (
+          <div className="lb" role="dialog" aria-modal="true" onClick={() => setLightbox(null)}>
+            <button type="button" className="lb__close" onClick={(e) => { e.stopPropagation(); setLightbox(null) }} aria-label="Close">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true">
+                <path d="M6 6l12 12M18 6L6 18" />
+              </svg>
+            </button>
+
+            {gallery.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  className="lb__nav lb__nav--prev"
+                  onClick={(e) => { e.stopPropagation(); setLightbox((i) => i === null ? null : (i - 1 + gallery.length) % gallery.length) }}
+                  aria-label="Previous"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+                </button>
+                <button
+                  type="button"
+                  className="lb__nav lb__nav--next"
+                  onClick={(e) => { e.stopPropagation(); setLightbox((i) => i === null ? null : (i + 1) % gallery.length) }}
+                  aria-label="Next"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg>
+                </button>
+              </>
+            )}
+
+            <figure className="lb__stage" onClick={(e) => e.stopPropagation()}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={gallery[lightbox].url} alt={gallery[lightbox].alt || ""} decoding="async" />
+              {gallery[lightbox].alt && <figcaption>{gallery[lightbox].alt}</figcaption>}
+              <div className="lb__counter">{String(lightbox + 1).padStart(2, "0")} / {String(gallery.length).padStart(2, "0")}</div>
+            </figure>
+          </div>
+        )}
       </div>
 
       <button type="button" className={`back${show ? " back--show" : ""}`} onClick={onClose} aria-label="Close project">
@@ -720,25 +799,26 @@ function ProjectOverlay({ zoom, onClose }: { zoom: ZoomPayload | null; onClose: 
           z-index: 20;
           opacity: 0;
           pointer-events: none;
-          transition: opacity 0.55s cubic-bezier(.4,0,.2,1);
+          transition: opacity 0.5s cubic-bezier(.4,0,.2,1);
         }
         .detail--show { opacity: 1; pointer-events: auto; }
 
-        /* Reading-progress sliver across the top of the overlay. */
+        /* Reading-progress sliver (CSS-var driven, no React work per frame). */
         .detail__progress {
           position: absolute;
           top: 0; left: 0; right: 0;
           height: 2px;
           background: rgba(28, 20, 10, 0.08);
           z-index: 5;
+          pointer-events: none;
         }
         .detail__progressFill {
           width: 100%;
           height: 100%;
           background: #644BFF;
           transform-origin: 0 50%;
-          transform: scaleX(0);
-          transition: transform 0.15s linear;
+          transform: scaleX(var(--read-progress, 0));
+          will-change: transform;
         }
 
         .detail__scroll {
@@ -746,118 +826,63 @@ function ProjectOverlay({ zoom, onClose }: { zoom: ZoomPayload | null; onClose: 
           height: 100%;
           overflow-y: auto;
           overflow-x: hidden;
-          scroll-behavior: smooth;
+          -webkit-overflow-scrolling: touch;
+          /* CSS var set inline by scroll handler (see useEffect). */
+          --read-progress: 0;
         }
 
-        /* ── Hero ─────────────────────────────────────────────── */
+        /* ── Hero (typographic only) ─────────────────────────── */
         .detail__hero {
-          position: relative;
           width: 100%;
-          min-height: clamp(440px, 72vh, 760px);
-          display: flex;
-          align-items: flex-end;
-          justify-content: flex-start;
-          padding: clamp(60px, 9vh, 110px) clamp(32px, 7vw, 110px) clamp(48px, 7vh, 90px);
+          padding: clamp(72px, 13vh, 150px) clamp(24px, 6vw, 100px) clamp(36px, 5vh, 60px);
           box-sizing: border-box;
-          overflow: hidden;
           opacity: 0;
-          transform: translateY(18px);
+          transform: translateY(16px);
           transition:
-            opacity 0.7s cubic-bezier(.4,0,.2,1),
-            transform 0.85s cubic-bezier(.2,.8,.2,1);
+            opacity 0.65s cubic-bezier(.4,0,.2,1),
+            transform 0.75s cubic-bezier(.2,.8,.2,1);
         }
         .detail--show .detail__hero {
           opacity: 1;
           transform: translateY(0);
-          transition-delay: 0.12s;
+          transition-delay: 0.1s;
         }
-        .detail__hero--text {
-          min-height: clamp(280px, 42vh, 460px);
-          align-items: flex-end;
-          padding-bottom: clamp(36px, 5vh, 64px);
-        }
-
-        .detail__media {
-          position: absolute;
-          inset: 0;
-          z-index: 0;
-          overflow: hidden;
-        }
-        .detail__media img {
-          display: block;
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          transform: translate3d(0, calc(var(--parallax, 0px) * -0.5), 0) scale(1.06);
-          will-change: transform;
-          transition: transform 0.6s cubic-bezier(.2,.8,.2,1);
-        }
-        .detail--show .detail__media img {
-          animation: heroZoom 1.6s cubic-bezier(.2,.8,.2,1) both;
-        }
-        @keyframes heroZoom {
-          from { transform: scale(1.14); }
-          to   { transform: translate3d(0, calc(var(--parallax, 0px) * -0.5), 0) scale(1.06); }
-        }
-        .detail__mediaShade {
-          position: absolute;
-          inset: 0;
-          background:
-            linear-gradient(180deg, rgba(20,15,8,0.05) 0%, rgba(20,15,8,0.0) 35%, rgba(20,15,8,0.55) 78%, rgba(20,15,8,0.82) 100%),
-            linear-gradient(90deg, rgba(20,15,8,0.45) 0%, rgba(20,15,8,0) 55%);
-        }
-
         .detail__heroBody {
-          position: relative;
-          z-index: 2;
-          max-width: 880px;
-          color: #fff;
-          text-shadow: 0 1px 24px rgba(0,0,0,0.25);
-        }
-        .detail__hero--text .detail__heroBody {
-          color: #1c140a;
-          text-shadow: none;
+          max-width: 1080px;
           margin: 0 auto;
-          text-align: center;
-          max-width: 720px;
         }
-
         .detail__eyebrow {
           font-family: var(--font-inter), sans-serif;
-          font-size: 11px;
+          font-size: clamp(10px, 1vw, 12px);
           letter-spacing: 0.42em;
           text-transform: uppercase;
-          color: rgba(255, 255, 255, 0.78);
-          margin-bottom: 24px;
+          color: rgba(40, 28, 8, 0.5);
+          margin-bottom: clamp(16px, 2.4vh, 28px);
           font-weight: 600;
         }
-        .detail__hero--text .detail__eyebrow { color: rgba(40, 28, 8, 0.5); }
-
         .detail__title {
           font-family: var(--font-inter), sans-serif;
           font-weight: 600;
-          font-size: clamp(38px, 6.4vw, 92px);
-          line-height: 0.98;
+          font-size: clamp(40px, 7vw, 104px);
+          line-height: 0.96;
           letter-spacing: -0.04em;
+          color: #1c140a;
           margin: 0;
+          /* Long titles get a soft wrap, not horizontal scroll. */
+          overflow-wrap: anywhere;
         }
-
         .detail__metaStrip {
-          margin-top: clamp(20px, 3vh, 32px);
+          margin-top: clamp(18px, 2.6vh, 30px);
           display: flex;
           flex-wrap: wrap;
           align-items: center;
-          gap: 10px 22px;
+          gap: 8px 22px;
           font-family: var(--font-inter), sans-serif;
-          font-size: 11px;
+          font-size: clamp(10px, 0.95vw, 12px);
           letter-spacing: 0.22em;
           text-transform: uppercase;
-          color: rgba(255, 255, 255, 0.78);
+          color: rgba(28, 20, 10, 0.5);
           font-weight: 500;
-        }
-        .detail__hero--text .detail__metaStrip {
-          justify-content: center;
-          color: rgba(28, 20, 10, 0.55);
         }
         .detail__metaItem { position: relative; display: inline-flex; align-items: center; gap: 8px; }
         .detail__metaItem + .detail__metaItem::before {
@@ -881,102 +906,134 @@ function ProjectOverlay({ zoom, onClose }: { zoom: ZoomPayload | null; onClose: 
         .detail__statusDot--wip     { background: #ffd76e; box-shadow: 0 0 0 3px rgba(255,215,110,0.18); }
         .detail__statusDot--concept { background: #644BFF; box-shadow: 0 0 0 3px rgba(100,75,255,0.22); }
 
-        .detail__readOn {
-          position: absolute;
-          left: 50%;
-          bottom: 22px;
-          transform: translateX(-50%);
-          z-index: 3;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 10px;
-          font-family: var(--font-inter), sans-serif;
-          font-size: 9px;
-          letter-spacing: 4px;
-          text-transform: uppercase;
-          color: rgba(255, 255, 255, 0.7);
-          font-weight: 500;
-          transition: opacity 0.35s ease;
-          pointer-events: none;
-        }
-        .detail__readOn--hidden { opacity: 0; }
-        .detail__readOnLine {
-          width: 1px; height: 26px;
-          background: rgba(255, 255, 255, 0.5);
-          animation: readOnLine 1.8s ease-in-out infinite;
-        }
-        @keyframes readOnLine {
-          0%   { transform: scaleY(0.2); transform-origin: 0 0; opacity: 0.3; }
-          50%  { transform: scaleY(1);   transform-origin: 0 0; opacity: 0.9; }
-          51%  { transform: scaleY(1);   transform-origin: 0 100%; }
-          100% { transform: scaleY(0.2); transform-origin: 0 100%; opacity: 0.3; }
-        }
-
-        /* ── Article ──────────────────────────────────────────── */
-        .detail__article {
-          max-width: 720px;
+        /* ── Feature band — image NEXT TO text on desktop ────── */
+        .detail__feature {
+          max-width: 1180px;
           margin: 0 auto;
-          padding: clamp(56px, 9vh, 110px) clamp(28px, 6vw, 40px) clamp(110px, 15vh, 180px);
-          color: #1c140a;
+          padding: clamp(20px, 3vh, 36px) clamp(24px, 6vw, 100px) clamp(40px, 6vh, 72px);
+          display: grid;
+          grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+          gap: clamp(28px, 5vw, 72px);
+          align-items: start;
           opacity: 0;
-          transform: translateY(22px);
+          transform: translateY(20px);
           transition:
             opacity 0.7s cubic-bezier(.4,0,.2,1),
             transform 0.85s cubic-bezier(.2,.8,.2,1);
         }
-        .detail--show .detail__article {
+        .detail--show .detail__feature {
           opacity: 1;
           transform: translateY(0);
-          transition-delay: 0.32s;
+          transition-delay: 0.22s;
+        }
+        .detail__feature--noimg {
+          grid-template-columns: minmax(0, 720px);
+          justify-content: center;
         }
 
-        .detail__articleHead {
+        /* Sticky media so long text reads beside a steady image. */
+        .detail__featureMedia {
+          position: sticky;
+          top: clamp(28px, 4vh, 56px);
+          margin: 0;
+          border-radius: 12px;
+          overflow: hidden;
+          background: #e7dfcd;
+          box-shadow:
+            0 1px 0 rgba(255,255,255,0.6) inset,
+            0 32px 64px -28px rgba(40, 28, 8, 0.45);
+          border: 1px solid rgba(40, 28, 8, 0.1);
+          aspect-ratio: 4 / 3;
+        }
+        .detail__featureMedia img {
+          display: block;
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+        .detail__featureCaption {
+          position: absolute;
+          left: 14px; bottom: 14px;
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          font-family: var(--font-inter), sans-serif;
+          font-size: 10px;
+          letter-spacing: 0.3em;
+          text-transform: uppercase;
+          color: #fff;
+          background: rgba(20, 15, 8, 0.55);
+          backdrop-filter: blur(6px);
+          -webkit-backdrop-filter: blur(6px);
+          padding: 6px 12px;
+          border-radius: 999px;
+          font-weight: 500;
+        }
+        .detail__featureCaptionDot {
+          width: 5px; height: 5px;
+          background: #ffd76e;
+          border-radius: 50%;
+        }
+
+        .detail__featureBody { min-width: 0; }
+
+        /* Reusable section header (with leading rule). */
+        .detail__sectionHead {
           display: flex;
           align-items: center;
           gap: 18px;
-          margin-bottom: clamp(28px, 4vh, 44px);
+          margin-bottom: clamp(22px, 3.4vh, 38px);
         }
-        .detail__articleLabel {
+        .detail__sectionHead--center {
+          justify-content: center;
+          max-width: 720px;
+          margin-left: auto;
+          margin-right: auto;
+        }
+        .detail__sectionLabel {
           font-family: var(--font-inter), sans-serif;
-          font-size: 10px;
+          font-size: clamp(9px, 0.85vw, 11px);
           letter-spacing: 0.4em;
           text-transform: uppercase;
-          color: rgba(28, 20, 10, 0.45);
+          color: rgba(28, 20, 10, 0.5);
           font-weight: 600;
           white-space: nowrap;
         }
-        .detail__articleRule {
+        .detail__sectionRule {
           flex: 1;
           height: 1px;
           background: linear-gradient(90deg, rgba(28,20,10,0.25), rgba(28,20,10,0));
         }
+        .detail__sectionHead--center .detail__sectionRule:first-child {
+          background: linear-gradient(90deg, rgba(28,20,10,0), rgba(28,20,10,0.25));
+        }
 
         .detail__body {
           font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-          font-size: clamp(16px, 1.25vw, 19px);
+          font-size: clamp(15px, 1.1vw, 18px);
           color: rgba(28, 20, 10, 0.82);
           line-height: 1.75;
           margin: 0;
-          letter-spacing: 0.005em;
+          letter-spacing: 0.003em;
+          overflow-wrap: break-word;
         }
         .detail__dropcap {
           float: left;
           font-family: var(--font-inter), sans-serif;
-          font-size: clamp(72px, 8vw, 108px);
+          font-size: clamp(56px, 7vw, 92px);
           line-height: 0.82;
-          padding: 6px 14px 0 0;
+          padding: 4px 12px 0 0;
           font-weight: 600;
           color: #644BFF;
           letter-spacing: -0.04em;
         }
 
         .detail__tags {
-          margin-top: clamp(40px, 6vh, 64px);
+          margin-top: clamp(32px, 5vh, 52px);
           display: flex;
           align-items: flex-start;
-          gap: 18px;
-          padding-top: 22px;
+          gap: 16px;
+          padding-top: 20px;
           border-top: 1px solid rgba(28, 20, 10, 0.12);
         }
         .detail__tagsLabel {
@@ -987,12 +1044,13 @@ function ProjectOverlay({ zoom, onClose }: { zoom: ZoomPayload | null; onClose: 
           color: rgba(28, 20, 10, 0.45);
           font-weight: 600;
           padding-top: 7px;
-          min-width: 36px;
+          flex-shrink: 0;
         }
         .detail__tagsRow {
           display: flex;
           flex-wrap: wrap;
           gap: 8px;
+          min-width: 0;
         }
         .detail__tag {
           font-family: var(--font-inter), sans-serif;
@@ -1013,14 +1071,14 @@ function ProjectOverlay({ zoom, onClose }: { zoom: ZoomPayload | null; onClose: 
         }
 
         .detail__cta {
-          margin-top: clamp(40px, 6vh, 60px);
+          margin-top: clamp(32px, 5vh, 52px);
           display: inline-flex;
           align-items: center;
           gap: 12px;
           background: #1c140a;
           color: #fff;
           text-decoration: none;
-          padding: 16px 26px;
+          padding: 14px 24px;
           border-radius: 999px;
           font-family: var(--font-inter), sans-serif;
           font-size: 13px;
@@ -1028,7 +1086,7 @@ function ProjectOverlay({ zoom, onClose }: { zoom: ZoomPayload | null; onClose: 
           letter-spacing: 0.04em;
           position: relative;
           overflow: hidden;
-          transition: transform 0.25s cubic-bezier(.2,.8,.2,1), background 0.25s ease, box-shadow 0.25s ease;
+          transition: transform 0.25s cubic-bezier(.2,.8,.2,1), box-shadow 0.25s ease;
           box-shadow: 0 10px 30px -16px rgba(100, 75, 255, 0.5);
         }
         .detail__cta::before {
@@ -1048,8 +1106,72 @@ function ProjectOverlay({ zoom, onClose }: { zoom: ZoomPayload | null; onClose: 
         .detail__cta svg { width: 15px; height: 15px; transition: transform 0.25s ease; }
         .detail__cta:hover svg { transform: translate(2px, -2px); }
 
+        /* ── Gallery band ────────────────────────────────────── */
+        .detail__gallery {
+          max-width: 1280px;
+          margin: 0 auto;
+          padding: clamp(40px, 6vh, 80px) clamp(20px, 5vw, 80px) clamp(24px, 4vh, 48px);
+          opacity: 0;
+          transform: translateY(20px);
+          transition:
+            opacity 0.7s cubic-bezier(.4,0,.2,1),
+            transform 0.85s cubic-bezier(.2,.8,.2,1);
+        }
+        .detail--show .detail__gallery {
+          opacity: 1;
+          transform: translateY(0);
+          transition-delay: 0.36s;
+        }
+        .detail__galleryGrid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
+          gap: clamp(10px, 1.6vw, 18px);
+        }
+        .detail__galleryItem {
+          position: relative;
+          appearance: none;
+          background: #e7dfcd;
+          border: 1px solid rgba(40, 28, 8, 0.1);
+          border-radius: 10px;
+          overflow: hidden;
+          padding: 0;
+          margin: 0;
+          cursor: zoom-in;
+          aspect-ratio: 4 / 3;
+          box-shadow: 0 12px 30px -22px rgba(40, 28, 8, 0.4);
+          transition: transform 0.3s cubic-bezier(.2,.8,.2,1), box-shadow 0.3s ease;
+        }
+        .detail__galleryItem:hover {
+          transform: translateY(-3px);
+          box-shadow: 0 22px 40px -24px rgba(40, 28, 8, 0.45);
+        }
+        .detail__galleryItem img {
+          display: block;
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          transition: transform 0.6s cubic-bezier(.2,.8,.2,1);
+        }
+        .detail__galleryItem:hover img { transform: scale(1.04); }
+        .detail__galleryNum {
+          position: absolute;
+          top: 10px; right: 10px;
+          font-family: var(--font-inter), sans-serif;
+          font-size: 10px;
+          letter-spacing: 0.2em;
+          font-weight: 600;
+          padding: 4px 8px;
+          border-radius: 999px;
+          color: #fff;
+          background: rgba(20, 15, 8, 0.5);
+          backdrop-filter: blur(4px);
+          -webkit-backdrop-filter: blur(4px);
+        }
+
         .detail__footnote {
-          margin-top: clamp(60px, 9vh, 100px);
+          margin: clamp(40px, 7vh, 80px) auto clamp(80px, 12vh, 140px);
+          max-width: 720px;
+          padding: 0 clamp(24px, 6vw, 40px);
           display: flex;
           align-items: center;
           gap: 16px;
@@ -1068,23 +1190,140 @@ function ProjectOverlay({ zoom, onClose }: { zoom: ZoomPayload | null; onClose: 
           background: rgba(28, 20, 10, 0.18);
         }
 
-        @media (max-width: 720px) {
-          .detail__hero { padding: clamp(56px, 8vh, 90px) 24px clamp(40px, 6vh, 64px); min-height: clamp(380px, 60vh, 540px); }
-          .detail__article { padding: 56px 24px 120px; }
-          .detail__title { font-size: clamp(36px, 9vw, 56px); }
-          .detail__dropcap { font-size: clamp(60px, 14vw, 84px); padding-right: 10px; }
-          .detail__tags { flex-direction: column; gap: 12px; }
+        /* ── Responsive: stack feature + smaller type on mobile ─ */
+        @media (max-width: 860px) {
+          .detail__feature {
+            grid-template-columns: 1fr;
+            gap: clamp(20px, 4vh, 32px);
+            padding-left: clamp(20px, 5vw, 36px);
+            padding-right: clamp(20px, 5vw, 36px);
+          }
+          .detail__featureMedia {
+            position: static;
+            aspect-ratio: 16 / 11;
+          }
+        }
+        @media (max-width: 640px) {
+          .detail__hero { padding: clamp(56px, 10vh, 88px) 20px clamp(20px, 3vh, 32px); }
+          .detail__title { font-size: clamp(36px, 11vw, 56px); letter-spacing: -0.035em; }
+          .detail__metaStrip { gap: 8px 16px; font-size: 10px; }
+          .detail__feature { padding: 16px 20px 32px; }
+          .detail__featureCaption { left: 10px; bottom: 10px; font-size: 9px; padding: 5px 10px; }
+          .detail__sectionLabel { letter-spacing: 0.3em; }
+          .detail__body { font-size: 15px; line-height: 1.7; }
+          .detail__dropcap { font-size: clamp(54px, 14vw, 72px); padding-right: 10px; }
+          .detail__tags { flex-direction: column; gap: 10px; padding-top: 18px; }
+          .detail__gallery { padding: 32px 16px 24px; }
+          .detail__galleryGrid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+          }
+          .detail__galleryItem { border-radius: 8px; aspect-ratio: 1 / 1; }
+          .detail__galleryNum { font-size: 9px; padding: 3px 6px; }
+          .detail__cta { padding: 13px 22px; font-size: 12px; }
+          .detail__footnote { font-size: 9px; letter-spacing: 0.3em; margin-bottom: 96px; }
+        }
+        @media (max-width: 380px) {
+          .detail__galleryGrid { grid-template-columns: 1fr; }
         }
 
+        /* ── Lightbox ────────────────────────────────────────── */
+        .lb {
+          position: absolute;
+          inset: 0;
+          z-index: 40;
+          background: rgba(8, 6, 4, 0.94);
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: clamp(24px, 5vh, 60px) clamp(60px, 7vw, 100px);
+          animation: lbIn 0.28s ease-out;
+        }
+        @keyframes lbIn { from { opacity: 0; } to { opacity: 1; } }
+        .lb__stage {
+          position: relative;
+          margin: 0;
+          max-width: 100%;
+          max-height: 100%;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 14px;
+        }
+        .lb__stage img {
+          display: block;
+          max-width: 100%;
+          max-height: 78vh;
+          object-fit: contain;
+          border-radius: 6px;
+          box-shadow: 0 30px 80px -20px rgba(0,0,0,0.7);
+        }
+        .lb__stage figcaption {
+          color: rgba(255,255,255,0.78);
+          font-family: var(--font-inter), sans-serif;
+          font-size: 13px;
+          font-weight: 400;
+          text-align: center;
+          max-width: 640px;
+        }
+        .lb__counter {
+          font-family: var(--font-inter), sans-serif;
+          font-size: 10px;
+          letter-spacing: 0.3em;
+          color: rgba(255, 255, 255, 0.5);
+          font-weight: 500;
+        }
+        .lb__close,
+        .lb__nav {
+          position: absolute;
+          top: 50%;
+          background: rgba(255, 255, 255, 0.08);
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          color: #fff;
+          width: 44px; height: 44px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transform: translateY(-50%);
+          transition: background 0.2s ease, transform 0.2s ease;
+        }
+        .lb__close { top: clamp(16px, 3vh, 28px); transform: none; }
+        .lb__close:hover,
+        .lb__nav:hover { background: rgba(255, 255, 255, 0.18); }
+        .lb__close { right: clamp(16px, 3vw, 28px); }
+        .lb__nav--prev { left: clamp(12px, 2vw, 24px); }
+        .lb__nav--next { right: clamp(12px, 2vw, 24px); }
+        .lb__close svg,
+        .lb__nav svg { width: 18px; height: 18px; }
+
+        @media (max-width: 640px) {
+          .lb { padding: 16px 16px 60px; }
+          .lb__stage img { max-height: 70vh; }
+          .lb__close { width: 38px; height: 38px; right: 12px; top: 12px; }
+          .lb__nav {
+            top: auto;
+            bottom: 14px;
+            transform: none;
+            width: 40px; height: 40px;
+          }
+          .lb__nav--prev { left: 30%; }
+          .lb__nav--next { right: 30%; }
+        }
+
+        /* ── Back button (fixed bottom-right) ────────────────── */
         .back {
           position: absolute;
-          bottom: clamp(24px, 4vh, 40px);
-          right: clamp(24px, 4vw, 44px);
+          bottom: clamp(20px, 4vh, 40px);
+          right: clamp(16px, 4vw, 44px);
           z-index: 30;
           background: #1c140a;
           color: #fff;
           border: none;
-          padding: 14px 24px 14px 18px;
+          padding: 12px 22px 12px 16px;
           border-radius: 999px;
           font: 600 11px/1 var(--font-inter), system-ui, sans-serif;
           letter-spacing: 2px;
@@ -1110,6 +1349,10 @@ function ProjectOverlay({ zoom, onClose }: { zoom: ZoomPayload | null; onClose: 
         }
         .back:hover { background: #000; transform: translateY(-1px); }
         .back svg { width: 14px; height: 14px; }
+        @media (max-width: 640px) {
+          .back { font-size: 10px; padding: 10px 18px 10px 14px; letter-spacing: 1.6px; }
+          .back svg { width: 12px; height: 12px; }
+        }
       `}</style>
     </>
   )

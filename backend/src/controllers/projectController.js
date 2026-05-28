@@ -9,20 +9,62 @@ const logger = require('../utils/logger');
 const VALID_STATUSES = ['live', 'wip', 'concept'];
 const MAX_TAGS = 15;
 const MAX_TAG_LEN = 50;
+const MAX_GALLERY = 12;
 const UPLOAD_DIR = path.resolve(process.env.UPLOAD_PATH || './uploads');
 
 const SAFE_UPLOAD_URL = /^\/uploads\/[a-zA-Z0-9_-]+\.(jpg|jpeg|png|gif|webp)$/;
 
+const LANGS = ['de', 'en', 'it'];
+const DEFAULT_LANG = 'de';
+const pickLang = (q) => LANGS.includes(q) ? q : DEFAULT_LANG;
+
+// Flatten a full Project row to the public API shape for a given language.
+function flattenProjectForLang(project, lang) {
+  const t = project.translations || {};
+  const slot = (t[lang] && t[lang].title) ? t[lang] : (t[DEFAULT_LANG] || {});
+  return {
+    id: project.id,
+    title: slot.title || '',
+    description: slot.description || '',
+    image_alt: slot.image_alt || null,
+    tags: project.tags,
+    url: project.url,
+    image_url: project.image_url,
+    gallery: project.gallery,
+    year: project.year,
+    status: project.status,
+  };
+}
+
+// Each gallery item is { url: string (must match SAFE_UPLOAD_URL), alt?: string<=255 }.
+function isValidGalleryItem(it) {
+  if (!it || typeof it !== 'object') return false;
+  if (typeof it.url !== 'string' || !SAFE_UPLOAD_URL.test(it.url)) return false;
+  if (it.alt != null && (typeof it.alt !== 'string' || it.alt.length > 255)) return false;
+  return true;
+}
+
 const projectValidators = [
-  body('title').trim().notEmpty().withMessage('Titel darf nicht leer sein').isLength({ max: 255 }),
-  body('description').trim().notEmpty().withMessage('Beschreibung darf nicht leer sein').isLength({ max: 2000 }),
+  body('translations').custom(t => {
+    if (!t || typeof t !== 'object') throw new Error('translations ist erforderlich');
+    for (const l of LANGS) {
+      const s = t[l];
+      if (!s || !String(s.title || '').trim()) throw new Error(`translations.${l}.title ist erforderlich`);
+      if (!s || !String(s.description || '').trim()) throw new Error(`translations.${l}.description ist erforderlich`);
+      if (String(s.description || '').length > 2000) throw new Error(`translations.${l}.description max. 2000 Zeichen`);
+    }
+    return true;
+  }),
   body('tags').optional({ checkFalsy: true })
     .isArray({ max: MAX_TAGS }).withMessage(`Maximal ${MAX_TAGS} Tags`)
     .custom(tags => tags.every(t => typeof t === 'string' && t.length <= MAX_TAG_LEN))
     .withMessage(`Jeder Tag darf max. ${MAX_TAG_LEN} Zeichen haben`),
   body('url').optional({ checkFalsy: true }).trim().isLength({ max: 500 }),
   body('image_url').optional({ nullable: true }).custom(v => !v || SAFE_UPLOAD_URL.test(v)).withMessage('Ungültige Bild-URL'),
-  body('image_alt').optional({ checkFalsy: true }).trim().isLength({ max: 255 }),
+  body('gallery').optional({ nullable: true })
+    .isArray({ max: MAX_GALLERY }).withMessage(`Maximal ${MAX_GALLERY} Galerie-Bilder`)
+    .custom(arr => arr.every(isValidGalleryItem))
+    .withMessage('Ungültiges Galerie-Element'),
   body('year').isInt({ min: 1900, max: new Date().getFullYear() + 5 }),
   body('status').optional().isIn(VALID_STATUSES),
   body('sort_order').optional().isInt({ min: 0, max: 9999 }),
@@ -38,9 +80,36 @@ function deleteImage(imageUrl) {
   } catch {}
 }
 
-// Public: list all live projects
+// Normalise an incoming gallery payload: drop invalid entries, trim alt text,
+// and dedupe by url so the same file can't appear twice.
+function normaliseGallery(input) {
+  if (!Array.isArray(input)) return [];
+  const seen = new Set();
+  const out = [];
+  for (const raw of input) {
+    if (!isValidGalleryItem(raw)) continue;
+    if (seen.has(raw.url)) continue;
+    seen.add(raw.url);
+    out.push({
+      url: raw.url,
+      alt: raw.alt ? sanitizeText(String(raw.alt).trim()) : null,
+    });
+    if (out.length >= MAX_GALLERY) break;
+  }
+  return out;
+}
+
+// Files referenced by `previous` but not `next` — these are safe to delete.
+function galleryImagesToRemove(previous, next) {
+  const keep = new Set(next.map(it => it.url));
+  return previous.filter(it => !keep.has(it.url)).map(it => it.url);
+}
+
+// Public: list all live projects (language-aware)
 async function getPublic(req, res) {
-  const cached = cache.get(KEYS.PROJECT_LIST);
+  const lang = pickLang(req.query.lang);
+  const cacheKey = `${KEYS.PROJECT_LIST}:${lang}`;
+  const cached = cache.get(cacheKey);
   if (cached) {
     res.setHeader('X-Cache', 'HIT');
     return res.json(cached);
@@ -49,11 +118,10 @@ async function getPublic(req, res) {
   const projects = await Project.findAll({
     where: { status: 'live' },
     order: [['sort_order', 'ASC'], ['year', 'DESC']],
-    attributes: ['id', 'title', 'description', 'tags', 'url', 'image_url', 'image_alt', 'year', 'status'],
   });
 
-  const result = { projects };
-  cache.set(KEYS.PROJECT_LIST, result, PROJECT_LIST_TTL);
+  const result = { projects: projects.map(p => flattenProjectForLang(p, lang)) };
+  cache.set(cacheKey, result, PROJECT_LIST_TTL);
   res.setHeader('X-Cache', 'MISS');
   res.json(result);
 }
@@ -80,18 +148,27 @@ async function create(req, res) {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
-  const { title, description, tags, url, image_url, image_alt, year, status, sort_order } = req.body;
+  const { translations, tags, url, image_url, gallery, year, status, sort_order } = req.body;
+
+  const sanitizedTranslations = {};
+  for (const l of LANGS) {
+    const slot = translations[l] || {};
+    sanitizedTranslations[l] = {
+      title: sanitizeText(slot.title || ''),
+      description: sanitizeText(slot.description || ''),
+      image_alt: slot.image_alt ? sanitizeText(slot.image_alt) : '',
+    };
+  }
 
   const project = await Project.create({
-    title:       sanitizeText(title),
-    description: sanitizeText(description),
-    tags:        Array.isArray(tags) ? tags.map(t => sanitizeText(String(t).trim())).filter(Boolean) : [],
-    url:         url ? url.trim() : null,
-    image_url:   image_url || null,
-    image_alt:   image_alt ? sanitizeText(image_alt) : null,
-    year:        parseInt(year, 10),
-    status:      status || 'live',
-    sort_order:  sort_order !== undefined ? parseInt(sort_order, 10) : 0,
+    translations: sanitizedTranslations,
+    tags:         Array.isArray(tags) ? tags.map(t => sanitizeText(String(t).trim())).filter(Boolean) : [],
+    url:          url ? url.trim() : null,
+    image_url:    image_url || null,
+    gallery:      normaliseGallery(gallery),
+    year:         parseInt(year, 10),
+    status:       status || 'live',
+    sort_order:   sort_order !== undefined ? parseInt(sort_order, 10) : 0,
   });
 
   invalidateProjectCache();
@@ -107,14 +184,23 @@ async function update(req, res) {
   const project = await Project.findByPk(req.params.id);
   if (!project) return fail(res, 404, 'Projekt nicht gefunden');
 
-  const { title, description, tags, url, image_url, image_alt, year, status, sort_order, remove_image } = req.body;
+  const { translations, tags, url, image_url, gallery, year, status, sort_order, remove_image } = req.body;
   const updates = {};
 
-  if (title !== undefined)       updates.title       = sanitizeText(title);
-  if (description !== undefined) updates.description = sanitizeText(description);
+  if (translations !== undefined) {
+    const sanitizedTranslations = {};
+    for (const l of LANGS) {
+      const slot = (translations[l] || project.translations?.[l] || {});
+      sanitizedTranslations[l] = {
+        title: sanitizeText(slot.title || ''),
+        description: sanitizeText(slot.description || ''),
+        image_alt: slot.image_alt ? sanitizeText(slot.image_alt) : '',
+      };
+    }
+    updates.translations = sanitizedTranslations;
+  }
   if (tags !== undefined)        updates.tags        = Array.isArray(tags) ? tags.map(t => sanitizeText(String(t).trim())).filter(Boolean) : [];
   if (url !== undefined)         updates.url         = url ? url.trim() : null;
-  if (image_alt !== undefined)   updates.image_alt   = image_alt ? sanitizeText(image_alt) : null;
   if (year !== undefined)        updates.year        = parseInt(year, 10);
   if (status !== undefined)      updates.status      = status;
   if (sort_order !== undefined)  updates.sort_order  = parseInt(sort_order, 10);
@@ -129,6 +215,15 @@ async function update(req, res) {
     updates.image_alt = null;
   }
 
+  if (gallery !== undefined) {
+    const nextGallery = normaliseGallery(gallery);
+    // Delete files for items dropped from the gallery in this update.
+    for (const removedUrl of galleryImagesToRemove(project.gallery, nextGallery)) {
+      deleteImage(removedUrl);
+    }
+    updates.gallery = nextGallery;
+  }
+
   await project.update(updates);
   invalidateProjectCache();
   logger.info('Project updated', { event: 'project_update', projectId: project.id, userId: req.user.id });
@@ -141,6 +236,7 @@ async function deleteProject(req, res) {
   if (!project) return fail(res, 404, 'Projekt nicht gefunden');
 
   deleteImage(project.image_url);
+  for (const item of (project.gallery || [])) deleteImage(item.url);
   await project.destroy();
   invalidateProjectCache();
   logger.info('Project deleted', { event: 'project_delete', projectId: req.params.id, userId: req.user.id });

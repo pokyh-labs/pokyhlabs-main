@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
+import { useLanguage, useT } from "@/lib/i18n/context"
 
 interface BlogPost {
   id: number
@@ -14,10 +15,11 @@ interface BlogPost {
   published_at: string
   views: number
   author: { username: string } | null
+  alternates?: { de: string | null; en: string | null; it: string | null }
 }
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-GB", {
+function formatDate(iso: string, locale: string) {
+  return new Date(iso).toLocaleDateString(locale, {
     day: "2-digit",
     month: "long",
     year: "numeric",
@@ -25,7 +27,24 @@ function formatDate(iso: string) {
 }
 
 export default function BlogPostClient({ blog }: { blog: BlogPost }) {
+  const { lang, setAlternates } = useLanguage()
+  const t = useT()
   const [views, setViews] = useState(blog.views)
+
+  const dateLocale = ({ DE: "de-DE", EN: "en-GB", IT: "it-IT" } as const)[lang]
+
+  useEffect(() => {
+    if (blog.alternates) {
+      const alts: Record<string, string> = {}
+      if (blog.alternates.de) alts.de = blog.alternates.de
+      if (blog.alternates.en) alts.en = blog.alternates.en
+      if (blog.alternates.it) alts.it = blog.alternates.it
+      setAlternates(alts)
+    }
+    return () => {
+      setAlternates(null)
+    }
+  }, [blog.alternates, setAlternates])
 
   useEffect(() => {
     fetch(`/api/blogs/${blog.slug}/view`, { method: 'POST' })
@@ -60,7 +79,7 @@ export default function BlogPostClient({ blog }: { blog: BlogPost }) {
           }}
         >
           <Link
-            href="/blog"
+            href={`/${lang.toLowerCase()}/blog`}
             style={{
               display: "inline-flex",
               alignItems: "center",
@@ -81,7 +100,7 @@ export default function BlogPostClient({ blog }: { blog: BlogPost }) {
             <svg viewBox="0 0 24 24" style={{ width: 14, height: 14, stroke: "currentColor", fill: "none", strokeWidth: 2 }}>
               <path d="M19 12H5M12 5l-7 7 7 7" />
             </svg>
-            Back to Blog
+            {t("blog_back_to_list")}
           </Link>
 
           <div
@@ -94,7 +113,7 @@ export default function BlogPostClient({ blog }: { blog: BlogPost }) {
               marginBottom: "1.5rem",
             }}
           >
-            {formatDate(blog.published_at)}
+            {formatDate(blog.published_at, dateLocale)}
             {blog.author && (
               <span style={{ color: "var(--black)", opacity: 0.4, marginLeft: "1rem" }}>
                 / {blog.author.username}
@@ -185,11 +204,11 @@ export default function BlogPostClient({ blog }: { blog: BlogPost }) {
               opacity: 0.4,
             }}
           >
-            {views} views
+            {views} {t("blog_views_suffix")}
           </span>
 
           <Link
-            href="/blog"
+            href={`/${lang.toLowerCase()}/blog`}
             style={{
               display: "inline-flex",
               alignItems: "center",
@@ -205,7 +224,7 @@ export default function BlogPostClient({ blog }: { blog: BlogPost }) {
             onMouseEnter={(e) => { e.currentTarget.style.opacity = "0.7" }}
             onMouseLeave={(e) => { e.currentTarget.style.opacity = "1" }}
           >
-            More articles
+            {t("blog_more_articles")}
             <svg viewBox="0 0 24 24" style={{ width: 14, height: 14, stroke: "currentColor", fill: "none", strokeWidth: 2 }}>
               <path d="M5 12h14M12 5l7 7-7 7" />
             </svg>

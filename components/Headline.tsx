@@ -1,14 +1,16 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-
-const lines = [
-  { text: "We build the web.", bold: false },
-  { text: "Properly.", bold: true },
-];
+import { useT } from "@/lib/i18n/context";
 
 export default function Headline() {
   const ref = useRef<HTMLHeadingElement>(null);
+  const t = useT();
+
+  const lines = [
+    { text: t("hero_line1"), bold: false },
+    { text: t("hero_line2"), bold: true },
+  ];
 
   useEffect(() => {
     const el = ref.current;
@@ -35,7 +37,7 @@ export default function Headline() {
         idx++;
       }
     });
-  }, []);
+  }, [lines[0].text, lines[1].text]);
 
   return (
     <div className="headline-wrapper">
@@ -83,7 +85,7 @@ export default function Headline() {
             animation: "chIn 0.6s cubic-bezier(0.22, 0.61, 0.36, 1) 900ms both",
           }}
         >
-          Software, made in Südtirol.
+          {t("hero_subline")}
         </p>
       </div>
     </div>

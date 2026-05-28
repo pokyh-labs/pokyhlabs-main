@@ -26,6 +26,7 @@ const de = {
   // ── Home — hero ───────────────────────────────────────────────────────────
   hero_line1: "Wir bauen das Web.",
   hero_line2: "Richtig.",
+  hero_subline: "Software, made in Südtirol.",
 
   // ── Home — dark section ───────────────────────────────────────────────────
   dark_h2_1: "Websites, Apps, Hosting.",
@@ -68,6 +69,9 @@ const de = {
   blog_subtitle: "Gedanken, Updates & Einblicke.",
   blog_latest: "Neueste Artikel",
   blog_error: "Blog-Beiträge konnten nicht geladen werden.",
+  blog_back_to_list: "Zurück zum Blog",
+  blog_more_articles: "Weitere Artikel",
+  blog_views_suffix: "Aufrufe",
 
   // ── Works ─────────────────────────────────────────────────────────────────
   works_heading: "Our Work.",
@@ -234,6 +238,8 @@ const de = {
   contact_svc_app_desc: "Eine App für iPhone und/oder Android",
   contact_svc_hosting_label: "Hosting",
   contact_svc_hosting_desc: "Verwaltetes Hosting mit SSL und Uptime-Monitoring",
+  contact_svc_software_label: "Software & Automatisierung",
+  contact_svc_software_desc: "Maßgeschneiderte Tools, Integrationen & Workflows — vom internen Dashboard bis zur API-Anbindung.",
   contact_platform_both: "Beide",
   contact_platform_ios: "iPhone (iOS)",
   contact_platform_android: "Android",
@@ -333,6 +339,7 @@ const en: typeof de = {
 
   hero_line1: "We build the web.",
   hero_line2: "Properly.",
+  hero_subline: "Software, made in South Tyrol.",
 
   dark_h2_1: "Websites, apps, hosting.",
   dark_h2_2: "Whatever the idea needs,",
@@ -369,6 +376,9 @@ const en: typeof de = {
   blog_subtitle: "Thoughts, updates & insights.",
   blog_latest: "Latest Articles",
   blog_error: "Could not load blog posts.",
+  blog_back_to_list: "Back to Blog",
+  blog_more_articles: "More articles",
+  blog_views_suffix: "views",
 
   works_heading: "Our Work.",
   works_subtitle: "Digital experiences built to perform.",
@@ -525,6 +535,8 @@ const en: typeof de = {
   contact_svc_app_desc: "An app for iPhone and / or Android",
   contact_svc_hosting_label: "Hosting",
   contact_svc_hosting_desc: "Managed hosting with SSL and uptime monitoring",
+  contact_svc_software_label: "Software & Automation",
+  contact_svc_software_desc: "Custom tools, integrations & workflows — from internal dashboards to API plumbing.",
   contact_platform_both: "Both",
   contact_platform_ios: "iPhone (iOS)",
   contact_platform_android: "Android",
@@ -623,6 +635,7 @@ const it: typeof de = {
 
   hero_line1: "Costruiamo il web.",
   hero_line2: "Come si deve.",
+  hero_subline: "Software, fatto in Alto Adige.",
 
   dark_h2_1: "Siti web, app, hosting.",
   dark_h2_2: "Quello che l'idea richiede,",
@@ -659,6 +672,9 @@ const it: typeof de = {
   blog_subtitle: "Pensieri, aggiornamenti & spunti.",
   blog_latest: "Articoli recenti",
   blog_error: "Impossibile caricare i post del blog.",
+  blog_back_to_list: "Torna al blog",
+  blog_more_articles: "Altri articoli",
+  blog_views_suffix: "visualizzazioni",
 
   works_heading: "I nostri lavori.",
   works_subtitle: "Esperienze digitali costruite per performare.",
@@ -815,6 +831,8 @@ const it: typeof de = {
   contact_svc_app_desc: "Un'app per iPhone e/o Android",
   contact_svc_hosting_label: "Hosting",
   contact_svc_hosting_desc: "Hosting gestito con SSL e monitoraggio dell'uptime",
+  contact_svc_software_label: "Software & Automazione",
+  contact_svc_software_desc: "Strumenti, integrazioni e flussi su misura — da dashboard interne a integrazioni API.",
   contact_platform_both: "Entrambe",
   contact_platform_ios: "iPhone (iOS)",
   contact_platform_android: "Android",

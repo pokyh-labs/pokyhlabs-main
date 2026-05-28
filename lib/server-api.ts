@@ -4,6 +4,11 @@
 
 const BACKEND = (process.env.BACKEND_URL ?? `http://127.0.0.1:${process.env.PORT ?? 3000}`).replace(/\/$/, '')
 
+export interface GalleryItem {
+  url: string
+  alt?: string | null
+}
+
 export interface Project {
   id: number
   title: string
@@ -12,9 +17,12 @@ export interface Project {
   url?: string | null
   image_url?: string | null
   image_alt?: string | null
+  gallery?: GalleryItem[]
   year: number
   status: 'live' | 'wip' | 'concept'
 }
+
+export type Lang = 'de' | 'en' | 'it'
 
 export interface BlogSummary {
   id: number
@@ -26,6 +34,13 @@ export interface BlogSummary {
   published_at: string
   views: number
   author: { username: string } | null
+}
+
+export interface BlogDetail extends BlogSummary {
+  content: string
+  content_format: string
+  updated_at?: string
+  alternates: { de: string | null; en: string | null; it: string | null }
 }
 
 async function fetchSSR(url: string, retries = 2): Promise<Response> {
@@ -45,9 +60,9 @@ async function fetchSSR(url: string, retries = 2): Promise<Response> {
   throw new Error('unreachable')
 }
 
-export async function fetchProjects(): Promise<Project[]> {
+export async function fetchProjects(lang: Lang): Promise<Project[]> {
   try {
-    const res = await fetchSSR(`${BACKEND}/api/projects`)
+    const res = await fetchSSR(`${BACKEND}/api/projects?lang=${encodeURIComponent(lang)}`)
     if (!res.ok) return []
     const data = await res.json()
     return data.projects ?? []
@@ -56,13 +71,24 @@ export async function fetchProjects(): Promise<Project[]> {
   }
 }
 
-export async function fetchBlogs(limit = 20): Promise<BlogSummary[]> {
+export async function fetchBlogs(lang: Lang, limit = 20): Promise<BlogSummary[]> {
   try {
-    const res = await fetchSSR(`${BACKEND}/api/blogs?limit=${encodeURIComponent(limit)}`)
+    const res = await fetchSSR(`${BACKEND}/api/blogs?lang=${encodeURIComponent(lang)}&limit=${encodeURIComponent(limit)}`)
     if (!res.ok) return []
     const data = await res.json()
     return data.blogs ?? []
   } catch {
     return []
+  }
+}
+
+export async function fetchBlog(slug: string, lang: Lang): Promise<BlogDetail | null> {
+  try {
+    const res = await fetchSSR(`${BACKEND}/api/blogs/${encodeURIComponent(slug)}?lang=${encodeURIComponent(lang)}`)
+    if (!res.ok) return null
+    const data = await res.json()
+    return data ?? null
+  } catch {
+    return null
   }
 }

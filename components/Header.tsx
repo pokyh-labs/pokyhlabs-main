@@ -21,20 +21,7 @@ const LANGS: { code: Lang; label: string }[] = [
   { code: "IT", label: "Italiano" },
 ];
 
-const NAV_HREFS = [
-  { href: "/", key: "nav_home" as const },
-  { href: "/#about", key: "nav_about" as const },
-  { href: "/works", key: "nav_works" as const },
-  { href: "/blog", key: "nav_blog" as const },
-];
-
-const MENU_HREFS = [
-  { href: "/", labelKey: "nav_home" as const, descKey: "menu_home_desc" as const, metaKey: "menu_home_meta" as const },
-  { href: "/#about", labelKey: "nav_about" as const, descKey: "menu_about_desc" as const, metaKey: "menu_about_meta" as const },
-  { href: "/works", labelKey: "nav_works" as const, descKey: "menu_works_desc" as const, metaKey: "menu_works_meta" as const },
-  { href: "/blog", labelKey: "nav_blog" as const, descKey: "menu_blog_desc" as const, metaKey: "menu_blog_meta" as const },
-  { href: "/contact", labelKey: "nav_contact" as const, descKey: "menu_contact_desc" as const, metaKey: "menu_contact_meta" as const },
-];
+// NAV_HREFS and MENU_HREFS are built inside the component so they can use lang.
 
 // Smooth filter swap for the header logo: stays neutral on the page surface,
 // turns to a pure black silhouette once the purple footer is behind it. Only
@@ -161,6 +148,23 @@ function snapToState(isMobile: boolean, scrolled: boolean, els: HeaderEls) {
 export default function Header() {
   const { lang, switchLanguage } = useLanguage();
   const t = useT();
+  const l = lang.toLowerCase();
+
+  const NAV_HREFS = [
+    { href: `/${l}`, key: "nav_home" as const },
+    { href: `/${l}#about`, key: "nav_about" as const },
+    { href: `/${l}/works`, key: "nav_works" as const },
+    { href: `/${l}/blog`, key: "nav_blog" as const },
+  ];
+
+  const MENU_HREFS = [
+    { href: `/${l}`, labelKey: "nav_home" as const, descKey: "menu_home_desc" as const, metaKey: "menu_home_meta" as const },
+    { href: `/${l}#about`, labelKey: "nav_about" as const, descKey: "menu_about_desc" as const, metaKey: "menu_about_meta" as const },
+    { href: `/${l}/works`, labelKey: "nav_works" as const, descKey: "menu_works_desc" as const, metaKey: "menu_works_meta" as const },
+    { href: `/${l}/blog`, labelKey: "nav_blog" as const, descKey: "menu_blog_desc" as const, metaKey: "menu_blog_meta" as const },
+    { href: `/${l}/contact`, labelKey: "nav_contact" as const, descKey: "menu_contact_desc" as const, metaKey: "menu_contact_meta" as const },
+  ];
+
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [logoBlack, setLogoBlack] = useState(false);
@@ -402,11 +406,12 @@ export default function Header() {
 
   const onLogoClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     if (typeof window === "undefined") return;
-    if (window.location.pathname === "/") {
+    const homePath = `/${lang.toLowerCase()}`;
+    if (window.location.pathname === homePath || window.location.pathname === "/") {
       e.preventDefault();
       smoothScrollToTop();
       if (window.location.hash) {
-        history.replaceState(null, "", "/");
+        history.replaceState(null, "", homePath);
       }
     }
   };
@@ -432,7 +437,7 @@ export default function Header() {
       >
         <a
           ref={logoRef}
-          href="/"
+          href={`/${lang.toLowerCase()}`}
           aria-label="pokyh.studio home"
           onClick={onLogoClick}
           className="site-header-logo"
@@ -528,7 +533,7 @@ export default function Header() {
             lang={lang}
             setLang={switchLanguage}
           />
-          <ContactPill contactRef={contactRef} t={t} />
+          <ContactPill contactRef={contactRef} t={t} href={`/${lang.toLowerCase()}/contact`} />
           <BurgerButton
             burgerRef={burgerRef}
             onClick={() => setMenuOpen(true)}
@@ -542,6 +547,7 @@ export default function Header() {
         lang={lang}
         setLang={switchLanguage}
         t={t}
+        menuHrefs={MENU_HREFS}
       />
     </>
   );
@@ -550,11 +556,16 @@ export default function Header() {
 function NavLink({ href, label }: { href: string; label: string }) {
   const onClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     if (typeof window === "undefined") return;
-    if (href.startsWith("/#") && window.location.pathname === "/") {
-      const hash = href.slice(1); // "#about"
-      if (smoothScrollToHash(hash)) {
-        e.preventDefault();
-        history.replaceState(null, "", href);
+    // href is like "/de#about" — extract just the hash part for smooth scroll
+    const hashIdx = href.indexOf("#");
+    if (hashIdx !== -1) {
+      const basePath = href.slice(0, hashIdx);
+      const hash = href.slice(hashIdx); // "#about"
+      if (window.location.pathname === basePath || window.location.pathname === "/") {
+        if (smoothScrollToHash(hash)) {
+          e.preventDefault();
+          history.replaceState(null, "", href);
+        }
       }
     }
   };
@@ -597,11 +608,11 @@ function NavLink({ href, label }: { href: string; label: string }) {
   );
 }
 
-function ContactPill({ contactRef, t }: { contactRef: React.RefObject<HTMLAnchorElement | null>; t: (k: import("@/lib/i18n/translations").TranslationKey) => string }) {
+function ContactPill({ contactRef, t, href }: { contactRef: React.RefObject<HTMLAnchorElement | null>; t: (k: import("@/lib/i18n/translations").TranslationKey) => string; href: string }) {
   return (
     <a
       ref={contactRef}
-      href="/contact"
+      href={href}
       className="site-header-contact"
       style={{
         background: "#0c0c0c",
@@ -888,12 +899,14 @@ function MenuOverlay({
   lang,
   setLang,
   t,
+  menuHrefs,
 }: {
   open: boolean;
   onClose: () => void;
   lang: Lang;
   setLang: (l: Lang) => void;
   t: (k: import("@/lib/i18n/translations").TranslationKey) => string;
+  menuHrefs: { href: string; labelKey: import("@/lib/i18n/translations").TranslationKey; descKey: import("@/lib/i18n/translations").TranslationKey; metaKey: import("@/lib/i18n/translations").TranslationKey }[];
 }) {
   const overlayRef = useRef<HTMLDivElement>(null);
   const backdropRef = useRef<HTMLDivElement>(null);
@@ -1017,15 +1030,20 @@ function MenuOverlay({
   ) => {
     onClose();
     if (typeof window === "undefined") return;
-    if (href === "/" && window.location.pathname === "/") {
+    const hashIdx = href.indexOf("#");
+    const basePath = hashIdx !== -1 ? href.slice(0, hashIdx) : href;
+    const isHome = basePath === `/${lang.toLowerCase()}` || basePath === "/";
+    // Clicking the home link while already on home → smooth scroll to top
+    if (hashIdx === -1 && isHome && window.location.pathname === basePath) {
       e.preventDefault();
       setTimeout(() => smoothScrollToTop(), 50);
-      if (window.location.hash) history.replaceState(null, "", "/");
+      if (window.location.hash) history.replaceState(null, "", basePath);
       return;
     }
-    if (href.startsWith("/#") && window.location.pathname === "/") {
+    // Hash links on the same page → smooth scroll to section
+    if (hashIdx !== -1 && (window.location.pathname === basePath || window.location.pathname === "/")) {
       e.preventDefault();
-      const hash = href.slice(1);
+      const hash = href.slice(hashIdx);
       setTimeout(() => {
         if (smoothScrollToHash(hash)) {
           history.replaceState(null, "", href);
@@ -1197,7 +1215,7 @@ function MenuOverlay({
             }}
             onMouseLeave={() => setHoveredIdx(null)}
           >
-            {MENU_HREFS.map(({ href, labelKey }, i) => (
+            {menuHrefs.map(({ href, labelKey }, i) => (
               <a
                 key={href}
                 href={href}
@@ -1267,7 +1285,7 @@ function MenuOverlay({
             >
               {hoveredIdx === null
                 ? "pokyh · studio"
-                : t(MENU_HREFS[hoveredIdx].metaKey)}
+                : t(menuHrefs[hoveredIdx].metaKey)}
             </span>
 
             {/* description */}
@@ -1285,7 +1303,7 @@ function MenuOverlay({
             >
               {hoveredIdx === null
                 ? t("menu_default_desc")
-                : t(MENU_HREFS[hoveredIdx].descKey)}
+                : t(menuHrefs[hoveredIdx].descKey)}
             </p>
 
             {/* arrow hint when hovering a link */}

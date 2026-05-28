@@ -47,6 +47,16 @@ const ALL_SERVICES_BASE: ServiceCardBase[] = [
     ),
   },
   {
+    id: "software-automation",
+    chip: null,
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} style={{ width: 22, height: 22 }}>
+        <circle cx="12" cy="12" r="3" />
+        <path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12" />
+      </svg>
+    ),
+  },
+  {
     id: "hosting",
     chip: "€20/mo",
     icon: HOSTING_ICON,
@@ -76,8 +86,8 @@ export default function ContactPage() {
 
   const ALL_SERVICES: ServiceCard[] = ALL_SERVICES_BASE.map(svc => ({
     ...svc,
-    label: t(svc.id === "website" ? "contact_svc_website_label" : svc.id === "app" ? "contact_svc_app_label" : "contact_svc_hosting_label"),
-    description: t(svc.id === "website" ? "contact_svc_website_desc" : svc.id === "app" ? "contact_svc_app_desc" : "contact_svc_hosting_desc"),
+    label: t(svc.id === "website" ? "contact_svc_website_label" : svc.id === "app" ? "contact_svc_app_label" : svc.id === "software-automation" ? "contact_svc_software_label" : "contact_svc_hosting_label"),
+    description: t(svc.id === "website" ? "contact_svc_website_desc" : svc.id === "app" ? "contact_svc_app_desc" : svc.id === "software-automation" ? "contact_svc_software_desc" : "contact_svc_hosting_desc"),
   }))
 
   const APP_PLATFORMS = [
@@ -508,8 +518,8 @@ function StepServices({ services, include3d, onToggle, onToggle3d, hostingCatego
 
   const ALL_SERVICES: ServiceCard[] = ALL_SERVICES_BASE.map(svc => ({
     ...svc,
-    label: t(svc.id === "website" ? "contact_svc_website_label" : svc.id === "app" ? "contact_svc_app_label" : "contact_svc_hosting_label"),
-    description: t(svc.id === "website" ? "contact_svc_website_desc" : svc.id === "app" ? "contact_svc_app_desc" : "contact_svc_hosting_desc"),
+    label: t(svc.id === "website" ? "contact_svc_website_label" : svc.id === "app" ? "contact_svc_app_label" : svc.id === "software-automation" ? "contact_svc_software_label" : "contact_svc_hosting_label"),
+    description: t(svc.id === "website" ? "contact_svc_website_desc" : svc.id === "app" ? "contact_svc_app_desc" : svc.id === "software-automation" ? "contact_svc_software_desc" : "contact_svc_hosting_desc"),
   }))
 
   const APP_PLATFORMS = [

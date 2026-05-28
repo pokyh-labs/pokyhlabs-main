@@ -1,5 +1,10 @@
 import * as THREE from "three"
 
+export interface GalleryItem {
+  url: string
+  alt?: string | null
+}
+
 export interface BookProject {
   id: number
   title: string
@@ -8,6 +13,7 @@ export interface BookProject {
   url?: string | null
   image_url?: string | null
   image_alt?: string | null
+  gallery?: GalleryItem[]
   year: number
   status: "live" | "wip" | "concept"
 }
@@ -21,6 +27,8 @@ export interface ZoomPayload {
   status: string
   url: string | null
   imageUrl: string | null
+  imageAlt: string | null
+  gallery: GalleryItem[]
 }
 
 export interface PageInfo {
@@ -743,8 +751,10 @@ export async function createBookScene({
       status: p.status,
       url: p.url ?? null,
       imageUrl: p.image_url ?? null,
+      imageAlt: p.image_alt ?? null,
+      gallery: Array.isArray(p.gallery) ? p.gallery.filter((g): g is GalleryItem => !!g && typeof g.url === "string") : [],
     })
-    targetPos.set(0, 0.3, 1.7)
+    targetPos.set(0, 0.3, 1.7 * camDist)
     targetLook.set(0, 0, 0)
   }
 
@@ -752,7 +762,9 @@ export async function createBookScene({
     if (zoomedProject === null) return
     zoomedProject = null
     onZoomChange?.(null)
+    // Hand back to applyEntrance — it owns targetPos.z and bakes in camDist.
     targetPos.copy(OVERVIEW_POS)
+    targetPos.z = OVERVIEW_POS.z * camDist
     targetLook.copy(overviewLookFor(page))
   }
 
@@ -816,12 +828,19 @@ export async function createBookScene({
   }
 
   // ── Resize ───────────────────────────────────────────────────────
+  // Frame factor — multiplies the camera-Z so narrow/portrait viewports back
+  // the camera up far enough to keep the whole spread visible without cropping.
+  // 1.0 = desktop reference (16:9), grows as the aspect ratio narrows.
+  let camDist = 1
   function resize() {
     const w = canvas.clientWidth || canvas.parentElement?.clientWidth || window.innerWidth
     const h = canvas.clientHeight || canvas.parentElement?.clientHeight || window.innerHeight
     renderer.setSize(w, h, false)
     camera.aspect = w / h
     camera.updateProjectionMatrix()
+    const refAspect = 16 / 9
+    const a = w / h
+    camDist = Math.max(1, refAspect / Math.max(a, 0.4))
   }
   const ro = new ResizeObserver(resize)
   ro.observe(canvas)
@@ -875,8 +894,9 @@ export async function createBookScene({
     coverAjar = (1 - e) * 0.5
 
     // Dolly in as it arrives (skip while zoomed so the close-up isn't disturbed).
+    // camDist (set by resize) keeps the spread fully framed on narrow screens.
     if (zoomedProject === null) {
-      targetPos.set(0, 0.1, THREE.MathUtils.lerp(DOLLY_FAR, DOLLY_NEAR, e))
+      targetPos.set(0, 0.1, THREE.MathUtils.lerp(DOLLY_FAR, DOLLY_NEAR, e) * camDist)
     }
   }
 

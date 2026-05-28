@@ -6,34 +6,62 @@ import Socials from "@/components/Socials"
 import ScrollIndicator from "@/components/ScrollIndicator"
 import HomeClientWrapper from "@/components/HomeClientWrapper"
 import { siteConfig, hostingSchema } from "@/lib/seo.config"
+import type { Lang } from "@/lib/server-api"
 
-export const metadata: Metadata = {
-  title: {
-    absolute: siteConfig.title.default,  // 50 chars — uses absolute to skip template
-  },
-  description: siteConfig.description,
-  keywords: siteConfig.keywords,
-  alternates: {
-    canonical: siteConfig.url,
-    languages: siteConfig.hreflang,
-  },
-  openGraph: {
-    url: siteConfig.url,
-    title: siteConfig.title.default,
-    description: siteConfig.description,
-    locale: "de_AT",
-    alternateLocale: ["en_US", "it_IT"],
-    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "pokyh.studio – Digital Studio Südtirol" }],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: siteConfig.title.default,
-    description: siteConfig.description,
-    images: ["/opengraph-image"],
-  },
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ lang: string }>
+}): Promise<Metadata> {
+  const { lang } = await params
+  const l = lang as Lang
+  const titleMap: Record<Lang, string> = {
+    de: siteConfig.title.default,
+    en: siteConfig.title.en,
+    it: siteConfig.title.it,
+  }
+  const descMap: Record<Lang, string> = {
+    de: siteConfig.descriptions.de,
+    en: siteConfig.descriptions.en,
+    it: siteConfig.descriptions.it,
+  }
+  return {
+    title: { absolute: titleMap[l] ?? siteConfig.title.default },
+    description: descMap[l] ?? siteConfig.description,
+    keywords: siteConfig.keywords,
+    alternates: {
+      canonical: `${siteConfig.url}/${lang}`,
+      languages: {
+        de: `${siteConfig.url}/de`,
+        en: `${siteConfig.url}/en`,
+        it: `${siteConfig.url}/it`,
+        "x-default": `${siteConfig.url}/de`,
+      },
+    },
+    openGraph: {
+      url: `${siteConfig.url}/${lang}`,
+      title: titleMap[l] ?? siteConfig.title.default,
+      description: descMap[l] ?? siteConfig.description,
+      locale: l === "en" ? "en_US" : l === "it" ? "it_IT" : "de_AT",
+      alternateLocale: l === "de" ? ["en_US", "it_IT"] : l === "en" ? ["de_AT", "it_IT"] : ["de_AT", "en_US"],
+      images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "pokyh.studio – Digital Studio Südtirol" }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: titleMap[l] ?? siteConfig.title.default,
+      description: descMap[l] ?? siteConfig.description,
+      images: ["/opengraph-image"],
+    },
+  }
 }
 
-export default function Home() {
+export default async function Home({
+  params,
+}: {
+  params: Promise<{ lang: string }>
+}) {
+  await params // consume params (lang validation handled in layout)
+
   return (
     <>
       {/* Hosting service with explicit €20/mo price — enables price snippets on home page */}

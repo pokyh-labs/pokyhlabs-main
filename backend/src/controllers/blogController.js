@@ -1,4 +1,4 @@
-const { body, param, query, validationResult } = require('express-validator');
+const { body, validationResult } = require('express-validator');
 const { Op } = require('sequelize');
 const path = require('path');
 const fs = require('fs');
@@ -37,33 +37,78 @@ const UPLOAD_DIR = path.isAbsolute(_rawUploadPath)
 const PDF_SCALE = 2.0;
 const PDF_MAX_PAGES = 30;
 
-// Configure marked for safe HTML rendering
 marked.setOptions({ breaks: true, gfm: true });
 
 const SAFE_UPLOAD_URL = /^\/uploads\/[a-zA-Z0-9_-]+\.(jpg|jpeg|png|gif|webp)$/;
 
+const LANGS = ['de', 'en', 'it'];
+const DEFAULT_LANG = 'de';
+const pickLang = (q) => LANGS.includes(q) ? q : DEFAULT_LANG;
+
+// Flatten a full Blog row to the public API shape for a given language.
+// Falls back to DE slot when the requested lang slot is empty (covers backfilled rows).
+function flattenForLang(blog, lang) {
+  const t = blog.translations || {};
+  const slot = (t[lang] && t[lang].title) ? t[lang] : (t[DEFAULT_LANG] || {});
+  return {
+    id: blog.id,
+    title: slot.title || '',
+    slug: slot.slug || blog[`slug_${lang}`] || blog[`slug_${DEFAULT_LANG}`] || '',
+    excerpt: slot.excerpt || null,
+    content: slot.content || '',
+    image_url: blog.image_url,
+    image_alt: slot.image_alt || null,
+    status: blog.status,
+    published_at: blog.published_at,
+    views: blog.views,
+    content_format: blog.content_format,
+    author_id: blog.author_id,
+  };
+}
+
 const blogValidators = [
-  body('title').trim().notEmpty().isLength({ min: 3, max: 255 }),
-  body('content').trim().notEmpty().isLength({ min: 10 }),
-  body('excerpt').optional().trim().isLength({ max: 500 }),
+  body('translations').custom(t => {
+    if (!t || typeof t !== 'object') throw new Error('translations ist erforderlich');
+    for (const l of LANGS) {
+      const s = t[l];
+      if (!s || !String(s.title || '').trim() || String(s.title).trim().length < 3) {
+        throw new Error(`translations.${l}.title erforderlich (min. 3 Zeichen)`);
+      }
+      if (!s || !String(s.content || '').trim() || String(s.content).trim().length < 10) {
+        throw new Error(`translations.${l}.content erforderlich (min. 10 Zeichen)`);
+      }
+    }
+    return true;
+  }),
   body('image_url').optional({ nullable: true }).custom(v => !v || SAFE_UPLOAD_URL.test(v)).withMessage('Ungültige Bild-URL'),
-  body('image_alt').optional().trim().isLength({ max: 255 }),
   body('status').optional().isIn(['draft', 'published']),
   body('content_format').optional().isIn(['html', 'markdown', 'blocks']),
-  body('content_markdown').optional().trim(),
   body('views').optional().isInt({ min: 0 }).withMessage('Views muss eine nicht-negative Ganzzahl sein'),
 ];
 
 function ok(res) { return (data) => res.json(data); }
 function err(res, status, msg) { return res.status(status).json({ error: msg }); }
 
-// Public: get published blogs (paginated, cached)
+function resolveContent(format, content, content_markdown) {
+  if (format === 'blocks') {
+    return { html: sanitizeBlogContent(content), raw: content_markdown || null };
+  }
+  if (format === 'markdown') {
+    const md = content_markdown || content;
+    return { html: sanitizeBlogContent(marked.parse(md)), raw: md };
+  }
+  return { html: sanitizeBlogContent(content), raw: null };
+}
+
+// Public: get published blogs (paginated, cached, language-aware)
 async function getPublished(req, res) {
   const page = Math.max(1, parseInt(req.query.page) || 1);
   const limit = Math.min(20, Math.max(1, parseInt(req.query.limit) || 10));
   const offset = (page - 1) * limit;
+  const lang = pickLang(req.query.lang);
+  const includeAlternates = req.query.include === 'alternates';
 
-  const cacheKey = `${KEYS.BLOG_LIST}:p${page}:l${limit}`;
+  const cacheKey = `${KEYS.BLOG_LIST}:p${page}:l${limit}:${lang}${includeAlternates ? ':alt' : ''}`;
   const cached = cache.get(cacheKey);
   if (cached) {
     res.setHeader('X-Cache', 'HIT');
@@ -78,10 +123,8 @@ async function getPublished(req, res) {
     subQuery: false,
     distinct: true,
     col: 'Blog.id',
-    attributes: ['id', 'title', 'slug', 'excerpt', 'image_url', 'image_alt', 'published_at', 'views', 'author_id'],
   });
 
-  // Fetch authors separately to avoid MySQL JOIN + LIMIT subquery issues
   const authorIds = [...new Set(rows.map(b => b.author_id).filter(Boolean))];
   const authorMap = {};
   if (authorIds.length) {
@@ -89,20 +132,28 @@ async function getPublished(req, res) {
     authors.forEach(u => { authorMap[u.id] = { username: u.username }; });
   }
 
-  const result = {
-    blogs: rows.map(b => ({ ...b.toJSON(), author: authorMap[b.author_id] || null })),
-    pagination: { page, limit, total: count, pages: Math.ceil(count / limit) },
-  };
+  const blogs = rows.map(b => {
+    const flat = flattenForLang(b, lang);
+    const out = { ...flat, author: authorMap[b.author_id] || null };
+    if (includeAlternates) {
+      out.slug_de = b.slug_de || null;
+      out.slug_en = b.slug_en || null;
+      out.slug_it = b.slug_it || null;
+    }
+    return out;
+  });
 
+  const result = { blogs, pagination: { page, limit, total: count, pages: Math.ceil(count / limit) } };
   cache.set(cacheKey, result, BLOG_LIST_TTL);
   res.setHeader('X-Cache', 'MISS');
   res.json(result);
 }
 
-// Public: get single blog by slug
+// Public: get single blog by slug + lang
 async function getBySlug(req, res) {
   const { slug } = req.params;
-  const cacheKey = KEYS.BLOG_SLUG(slug);
+  const lang = pickLang(req.query.lang);
+  const cacheKey = `blog:slug:${lang}:${slug}`;
 
   const cached = cache.get(cacheKey);
   if (cached) {
@@ -110,44 +161,54 @@ async function getBySlug(req, res) {
     return res.json(cached);
   }
 
-  const blog = await Blog.findOne({ where: { slug, status: 'published' } });
+  const blog = await Blog.findOne({
+    where: { [`slug_${lang}`]: slug, status: 'published' },
+  });
   if (!blog) return err(res, 404, 'Blog not found');
 
-  const plain = blog.toJSON();
-  if (plain.author_id) {
-    const author = await User.findByPk(plain.author_id, { attributes: ['username'] });
-    plain.author = author ? { username: author.username } : null;
+  const flat = flattenForLang(blog, lang);
+  flat.alternates = { de: blog.slug_de || null, en: blog.slug_en || null, it: blog.slug_it || null };
+
+  if (blog.author_id) {
+    const author = await User.findByPk(blog.author_id, { attributes: ['username'] });
+    flat.author = author ? { username: author.username } : null;
   } else {
-    plain.author = null;
+    flat.author = null;
   }
-  cache.set(cacheKey, plain, BLOG_SINGLE_TTL);
+
+  cache.set(cacheKey, flat, BLOG_SINGLE_TTL);
   res.setHeader('X-Cache', 'MISS');
-  res.json(plain);
+  res.json(flat);
 }
 
-// Public: increment view counter when a post is opened
+// Public: increment view counter
 async function incrementView(req, res) {
   const { slug } = req.params;
+  const lang = pickLang(req.query.lang);
 
   const blog = await Blog.findOne({
-    where: { slug, status: 'published' },
-    attributes: ['id', 'views'],
+    where: { [`slug_${lang}`]: slug, status: 'published' },
+    attributes: ['id', 'views', 'slug_de', 'slug_en', 'slug_it'],
   });
   if (!blog) return err(res, 404, 'Blog not found');
 
   await Blog.increment('views', { where: { id: blog.id } });
   const newViews = blog.views + 1;
 
-  const cacheKey = KEYS.BLOG_SLUG(slug);
-  const cached = cache.get(cacheKey);
-  if (cached) {
-    cache.set(cacheKey, { ...cached, views: newViews }, BLOG_SINGLE_TTL);
+  // Invalidate single-blog cache for all language variants of this post
+  for (const l of LANGS) {
+    const s = blog[`slug_${l}`];
+    if (s) {
+      const key = `blog:slug:${l}:${s}`;
+      const cached = cache.get(key);
+      if (cached) cache.set(key, { ...cached, views: newViews }, BLOG_SINGLE_TTL);
+    }
   }
 
   res.json({ views: newViews });
 }
 
-// Admin: get all blogs
+// Admin: get all blogs (full translations object for the form)
 async function getAll(req, res) {
   const cached = cache.get(KEYS.BLOG_ALL);
   if (cached) {
@@ -162,40 +223,38 @@ async function getAll(req, res) {
   res.json(plain);
 }
 
-function resolveContent(format, content, content_markdown) {
-  if (format === 'blocks') {
-    // content is already pre-built combined HTML from the frontend
-    return { html: sanitizeBlogContent(content), raw: content_markdown || null };
-  }
-  if (format === 'markdown') {
-    const md = content_markdown || content;
-    return { html: sanitizeBlogContent(marked.parse(md)), raw: md };
-  }
-  return { html: sanitizeBlogContent(content), raw: null };
-}
-
 // Admin: create blog
 async function create(req, res) {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
-  const { title, content, excerpt, status, image_alt, content_format, content_markdown, image_url } = req.body;
-
+  const { translations, status, image_url, content_format, views } = req.body;
   const format = ['blocks', 'markdown', 'html'].includes(content_format) ? content_format : 'html';
-  const { html: htmlContent, raw } = resolveContent(format, content, content_markdown);
+
+  // Sanitize content per language
+  const sanitizedTranslations = {};
+  for (const l of LANGS) {
+    const slot = translations[l];
+    const { html, raw } = resolveContent(format, slot.content || '', slot.content_markdown || '');
+    sanitizedTranslations[l] = {
+      title: sanitizeText(slot.title || ''),
+      slug: slot.slug ? sanitizeText(slot.slug) : '',
+      excerpt: slot.excerpt ? sanitizeText(slot.excerpt) : '',
+      content: html,
+      content_markdown: raw,
+      image_alt: slot.image_alt ? sanitizeText(slot.image_alt) : '',
+    };
+  }
 
   const finalStatus = status || 'published';
   const blog = await Blog.create({
-    title: sanitizeText(title),
-    content: htmlContent,
+    translations: sanitizedTranslations,
+    image_url: image_url || null,
     content_format: format,
-    content_markdown: raw,
-    excerpt: excerpt ? sanitizeText(excerpt) : null,
-    image_url,
-    image_alt: image_alt ? sanitizeText(image_alt) : null,
     status: finalStatus,
     published_at: finalStatus === 'published' ? new Date() : null,
     author_id: req.user.id,
+    views: views !== undefined ? parseInt(views, 10) : 0,
   });
 
   invalidateBlogCache();
@@ -211,26 +270,34 @@ async function update(req, res) {
   const blog = await Blog.findByPk(req.params.id);
   if (!blog) return err(res, 404, 'Blog not found');
 
-  const { title, content, excerpt, status, image_alt, content_format, content_markdown, views } = req.body;
+  const { translations, status, content_format, views } = req.body;
   const updates = {};
 
-  if (title !== undefined) updates.title = sanitizeText(title);
-  if (content !== undefined) {
+  if (translations !== undefined) {
     const format = ['blocks', 'markdown', 'html'].includes(content_format)
       ? content_format
       : (blog.content_format || 'html');
-    const { html, raw } = resolveContent(format, content, content_markdown);
+    const sanitizedTranslations = {};
+    for (const l of LANGS) {
+      const slot = translations[l] || {};
+      const { html, raw } = resolveContent(format, slot.content || '', slot.content_markdown || '');
+      sanitizedTranslations[l] = {
+        title: sanitizeText(slot.title || ''),
+        slug: slot.slug ? sanitizeText(slot.slug) : '',
+        excerpt: slot.excerpt ? sanitizeText(slot.excerpt) : '',
+        content: html,
+        content_markdown: raw,
+        image_alt: slot.image_alt ? sanitizeText(slot.image_alt) : '',
+      };
+    }
+    updates.translations = sanitizedTranslations;
     updates.content_format = format;
-    updates.content = html;
-    updates.content_markdown = raw;
   }
-  if (excerpt !== undefined) updates.excerpt = sanitizeText(excerpt);
+
   if (status !== undefined) updates.status = status;
-  if (image_alt !== undefined) updates.image_alt = sanitizeText(image_alt);
   if (views !== undefined) updates.views = parseInt(views, 10);
 
   if (req.body.image_url !== undefined) {
-    // New image was uploaded separately via presign token; delete old one if changed
     if (req.body.image_url && req.body.image_url !== blog.image_url && blog.image_url) {
       const oldPath = path.join(UPLOAD_DIR, path.basename(blog.image_url));
       fs.unlink(oldPath, () => {});
@@ -276,6 +343,20 @@ async function stats(req, res) {
   res.json(result);
 }
 
+// Admin: patch only views count
+async function patchViews(req, res) {
+  const v = parseInt(req.body.views, 10);
+  if (isNaN(v) || v < 0) return err(res, 400, 'views muss eine nicht-negative Ganzzahl sein');
+
+  const blog = await Blog.findByPk(req.params.id);
+  if (!blog) return err(res, 404, 'Blog not found');
+
+  await blog.update({ views: v });
+  invalidateBlogCache();
+  logger.info('Blog views patched', { event: 'blog_views_patch', blogId: blog.id, views: v, userId: req.user.id });
+  res.json({ id: blog.id, views: v });
+}
+
 // Render all pages of a PDF as PNG images
 async function renderPdfToImages(buffer) {
   if (!pdfjsLib || !createCanvas) throw new Error('PDF rendering not available');
@@ -293,8 +374,6 @@ async function renderPdfToImages(buffer) {
 
     const canvas = createCanvas(w, h);
     const ctx = canvas.getContext('2d');
-
-    // White background so text is readable
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, w, h);
 
@@ -328,14 +407,12 @@ async function importPdf(req, res) {
     const buffer = fs.readFileSync(filePath);
     cleanup();
 
-    // Validate PDF magic bytes: %PDF
     if (buffer[0] !== 0x25 || buffer[1] !== 0x50 || buffer[2] !== 0x44 || buffer[3] !== 0x46) {
       return err(res, 400, 'Invalid PDF file');
     }
 
     const { total, rendered, pages } = await renderPdfToImages(buffer);
 
-    // Build HTML: one <figure> per page, image is the full rendered page
     const html = pages.map(({ page, url }) =>
       `<figure><img src="${url}" alt="Seite ${page}"></figure>`
     ).join('\n');
@@ -370,9 +447,7 @@ async function importHtml(req, res) {
     const raw = fs.readFileSync(filePath, 'utf8');
     cleanup();
 
-    // Inline CSS from <style> blocks into element style attributes
     const inlined = juice(raw, { removeStyleTags: true, preserveImportant: true });
-
     const $ = cheerio.load(inlined, { decodeEntities: false });
 
     const EMBED_MIME_TO_EXT = {
@@ -381,7 +456,6 @@ async function importHtml(req, res) {
     };
     const MAX_EMBED_BYTES = 5 * 1024 * 1024;
 
-    // Extract base64-embedded images → save to uploads → swap src
     $('img').each((_, el) => {
       const src = $(el).attr('src') || '';
       const m = src.match(/^data:(image\/[\w+-]+);base64,([A-Za-z0-9+/=]+)$/i);
@@ -411,20 +485,6 @@ async function importHtml(req, res) {
     logger.error('HTML parse error', { err: parseErr.message });
     return err(res, 500, 'Failed to parse HTML');
   }
-}
-
-// Admin: patch only views count
-async function patchViews(req, res) {
-  const v = parseInt(req.body.views, 10);
-  if (isNaN(v) || v < 0) return err(res, 400, 'views muss eine nicht-negative Ganzzahl sein');
-
-  const blog = await Blog.findByPk(req.params.id);
-  if (!blog) return err(res, 404, 'Blog not found');
-
-  await blog.update({ views: v });
-  invalidateBlogCache();
-  logger.info('Blog views patched', { event: 'blog_views_patch', blogId: blog.id, views: v, userId: req.user.id });
-  res.json({ id: blog.id, views: v });
 }
 
 module.exports = { getPublished, getBySlug, incrementView, getAll, create, update, deleteBlog, stats, patchViews, blogValidators, importPdf, importHtml };

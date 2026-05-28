@@ -6,10 +6,18 @@ import { toast } from '../hooks/useToast';
 const STATUSES = ['live', 'wip', 'concept'];
 const STATUS_COLOR = { live: '#22c55e', wip: '#f59e0b', concept: '#6b7280' };
 const CURRENT_YEAR = new Date().getFullYear();
+const MAX_GALLERY = 12;
+const PROJ_LANGS = ['de', 'en', 'it'];
+const PROJ_LANG_LABELS = { de: '🇩🇪 DE', en: '🇬🇧 EN', it: '🇮🇹 IT' };
+const EMPTY_PROJ_SLOT = { title: '', description: '', image_alt: '' };
 
 const emptyForm = () => ({
-  title: '', description: '', tags: '', url: '',
-  image_alt: '', year: CURRENT_YEAR, status: 'live', sort_order: 0,
+  translations: {
+    de: { ...EMPTY_PROJ_SLOT },
+    en: { ...EMPTY_PROJ_SLOT },
+    it: { ...EMPTY_PROJ_SLOT },
+  },
+  tags: '', url: '', year: CURRENT_YEAR, status: 'live', sort_order: 0,
 });
 
 export default function Projects() {
@@ -18,6 +26,8 @@ export default function Projects() {
   const [loading, setLoading]   = useState(false);
   const [modal, setModal]       = useState(false);
   const [form, setForm]         = useState(emptyForm());
+  const [activeTab, setActiveTab] = useState('de');
+  const [tabErrors, setTabErrors] = useState({});
   const [editId, setEditId]     = useState(null);
   const [saving, setSaving]     = useState(false);
   const [deleting, setDeleting] = useState(null);
@@ -26,6 +36,11 @@ export default function Projects() {
   const [imagePreview, setImagePreview] = useState(null);
   const [removeImage, setRemoveImage] = useState(false);
   const fileRef = useRef(null);
+  // Gallery: mix of already-uploaded {url, alt} items and pending local files
+  // {file, previewUrl, alt}. Pending files are uploaded on save.
+  const [gallery, setGallery] = useState([]);
+  const [galleryUploading, setGalleryUploading] = useState(false);
+  const galleryFileRef = useRef(null);
 
   const loadProjects = useCallback(async () => {
     setLoading(true);
@@ -43,30 +58,41 @@ export default function Projects() {
 
   function openCreate() {
     setForm(emptyForm());
+    setActiveTab('de');
+    setTabErrors({});
     setEditId(null);
     setFormError('');
     setImageFile(null);
     setImagePreview(null);
     setRemoveImage(false);
+    setGallery([]);
     setModal(true);
   }
 
   function openEdit(p) {
+    const t = p.translations && typeof p.translations === 'object' && p.translations.de
+      ? p.translations
+      : { de: { title: p.title || '', description: p.description || '', image_alt: p.image_alt || '' }, en: { ...EMPTY_PROJ_SLOT }, it: { ...EMPTY_PROJ_SLOT } };
     setForm({
-      title:       p.title || '',
-      description: p.description || '',
+      translations: {
+        de: { ...EMPTY_PROJ_SLOT, ...t.de },
+        en: { ...EMPTY_PROJ_SLOT, ...(t.en || {}) },
+        it: { ...EMPTY_PROJ_SLOT, ...(t.it || {}) },
+      },
       tags:        Array.isArray(p.tags) ? p.tags.join(', ') : '',
       url:         p.url || '',
-      image_alt:   p.image_alt || '',
       year:        p.year || CURRENT_YEAR,
       status:      p.status || 'live',
       sort_order:  p.sort_order ?? 0,
     });
+    setActiveTab('de');
+    setTabErrors({});
     setEditId(p.id);
     setFormError('');
     setImageFile(null);
     setImagePreview(p.image_url || null);
     setRemoveImage(false);
+    setGallery(Array.isArray(p.gallery) ? p.gallery.map(it => ({ url: it.url, alt: it.alt || '' })) : []);
     setModal(true);
   }
 
@@ -74,13 +100,23 @@ export default function Projects() {
     setModal(false);
     setEditId(null);
     setFormError('');
+    setTabErrors({});
     setImageFile(null);
     setImagePreview(null);
     setRemoveImage(false);
+    // Revoke any pending local previews so we don't leak object URLs.
+    setGallery(prev => {
+      for (const it of prev) if (it.previewUrl) URL.revokeObjectURL(it.previewUrl);
+      return [];
+    });
   }
 
   function setField(key) {
     return e => setForm(f => ({ ...f, [key]: e.target.value }));
+  }
+
+  function setSlotField(lang, key, val) {
+    setForm(f => ({ ...f, translations: { ...f.translations, [lang]: { ...f.translations[lang], [key]: val } } }));
   }
 
   function handleImageChange(e) {
@@ -100,9 +136,65 @@ export default function Projects() {
     if (fileRef.current) fileRef.current.value = '';
   }
 
+  // Gallery handlers — pending files are uploaded only on save, so the user can
+  // pick → reorder → remove without burning storage on canceled edits.
+  function handleAddGallery(e) {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    setGallery(prev => {
+      const room = Math.max(0, MAX_GALLERY - prev.length);
+      const taken = files.slice(0, room).map(file => ({
+        file,
+        previewUrl: URL.createObjectURL(file),
+        alt: '',
+      }));
+      return [...prev, ...taken];
+    });
+    if (galleryFileRef.current) galleryFileRef.current.value = '';
+  }
+
+  function removeGalleryItem(idx) {
+    setGallery(prev => {
+      const next = prev.slice();
+      const [removed] = next.splice(idx, 1);
+      if (removed?.previewUrl) URL.revokeObjectURL(removed.previewUrl);
+      return next;
+    });
+  }
+
+  function moveGalleryItem(idx, dir) {
+    setGallery(prev => {
+      const target = idx + dir;
+      if (target < 0 || target >= prev.length) return prev;
+      const next = prev.slice();
+      [next[idx], next[target]] = [next[target], next[idx]];
+      return next;
+    });
+  }
+
+  function setGalleryAlt(idx, alt) {
+    setGallery(prev => prev.map((it, i) => (i === idx ? { ...it, alt } : it)));
+  }
+
   async function handleSave(e) {
     e.preventDefault();
     setFormError('');
+
+    // Validate all 3 language slots
+    const errs = {};
+    for (const l of PROJ_LANGS) {
+      const slot = form.translations[l];
+      if (!slot.title?.trim()) errs[l] = 'Titel fehlt';
+      else if (!slot.description?.trim()) errs[l] = 'Beschreibung fehlt';
+    }
+    if (Object.keys(errs).length) {
+      setTabErrors(errs);
+      const firstBad = PROJ_LANGS.find(l => errs[l]);
+      setActiveTab(firstBad);
+      setFormError(`Bitte ${PROJ_LANG_LABELS[firstBad]}-Felder ausfüllen: ${errs[firstBad]}`);
+      return;
+    }
+    setTabErrors({});
     setSaving(true);
 
     try {
@@ -114,14 +206,40 @@ export default function Projects() {
         finalImageUrl = null;
       }
 
+      // Step 1b: upload any pending gallery files (in current order).
+      let resolvedGallery = gallery;
+      if (gallery.some(it => it.file)) {
+        setGalleryUploading(true);
+        try {
+          resolvedGallery = await Promise.all(
+            gallery.map(async (it) => {
+              if (it.file) {
+                const url = await uploadImage(it.file);
+                return { url, alt: (it.alt || '').trim() };
+              }
+              return { url: it.url, alt: (it.alt || '').trim() };
+            })
+          );
+        } finally {
+          setGalleryUploading(false);
+        }
+      }
+
       // Step 2: send the rest as JSON
       const tagArray = form.tags.split(',').map(t => t.trim()).filter(Boolean);
+      const builtTranslations = {};
+      for (const l of PROJ_LANGS) {
+        builtTranslations[l] = {
+          title:       form.translations[l].title.trim(),
+          description: form.translations[l].description.trim(),
+          image_alt:   form.translations[l].image_alt.trim() || '',
+        };
+      }
       const payload = {
-        title:       form.title.trim(),
-        description: form.description.trim(),
+        translations: builtTranslations,
         tags:        tagArray,
         url:         form.url.trim() || undefined,
-        image_alt:   form.image_alt.trim() || undefined,
+        gallery:     resolvedGallery.map(it => ({ url: it.url, alt: it.alt || null })),
         year:        parseInt(form.year, 10) || CURRENT_YEAR,
         status:      form.status,
         sort_order:  parseInt(form.sort_order, 10) || 0,
@@ -222,12 +340,39 @@ export default function Projects() {
               </div>
             )}
 
-            <Field label="Titel *">
-              <input className="input" value={form.title} onChange={setField('title')} required maxLength={255} placeholder="z.B. pokyh.studio Website" />
+            {/* Language tab strip */}
+            <div style={{ display: 'flex', gap: 4 }}>
+              {PROJ_LANGS.map(l => (
+                <button
+                  key={l}
+                  type="button"
+                  onClick={() => setActiveTab(l)}
+                  style={{
+                    padding: '5px 12px',
+                    borderRadius: 7,
+                    border: activeTab === l ? '1.5px solid var(--accent)' : '1.5px solid var(--border)',
+                    background: activeTab === l ? 'rgba(89,61,248,0.08)' : 'var(--bg2)',
+                    color: activeTab === l ? 'var(--accent)' : tabErrors[l] ? 'var(--danger)' : 'var(--text2)',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4,
+                  }}
+                >
+                  {PROJ_LANG_LABELS[l]}
+                  {tabErrors[l] && <i className="bi bi-exclamation-circle-fill" style={{ fontSize: '0.62rem', color: 'var(--danger)' }} />}
+                </button>
+              ))}
+            </div>
+
+            <Field label={`Titel * (${PROJ_LANG_LABELS[activeTab]})`}>
+              <input className="input" value={form.translations[activeTab].title} onChange={e => setSlotField(activeTab, 'title', e.target.value)} maxLength={255} placeholder="z.B. pokyh.studio Website" />
             </Field>
 
-            <Field label="Beschreibung *">
-              <textarea className="input" value={form.description} onChange={setField('description')} required rows={3} maxLength={2000} placeholder="Kurze Projektbeschreibung…" style={{ resize: 'vertical' }} />
+            <Field label={`Beschreibung * (${PROJ_LANG_LABELS[activeTab]})`}>
+              <textarea className="input" value={form.translations[activeTab].description} onChange={e => setSlotField(activeTab, 'description', e.target.value)} rows={3} maxLength={2000} placeholder="Kurze Projektbeschreibung…" style={{ resize: 'vertical' }} />
             </Field>
 
             <Field label="Tags (kommagetrennt)">
@@ -277,10 +422,22 @@ export default function Projects() {
             </Field>
 
             {imagePreview && (
-              <Field label="Bild-Beschreibung (Alt-Text)">
-                <input className="input" value={form.image_alt} onChange={setField('image_alt')} maxLength={255} placeholder="Screenshot der Website" />
+              <Field label={`Bild-Beschreibung (${PROJ_LANG_LABELS[activeTab]})`}>
+                <input className="input" value={form.translations[activeTab].image_alt} onChange={e => setSlotField(activeTab, 'image_alt', e.target.value)} maxLength={255} placeholder="Screenshot der Website" />
               </Field>
             )}
+
+            <Field label={`Galerie (optional, max ${MAX_GALLERY})`}>
+              <GallerySection
+                items={gallery}
+                onAdd={handleAddGallery}
+                onRemove={removeGalleryItem}
+                onMove={moveGalleryItem}
+                onAlt={setGalleryAlt}
+                inputRef={galleryFileRef}
+                uploading={galleryUploading}
+              />
+            </Field>
 
             <div className="grid-3-form" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
               <Field label="Jahr *">
@@ -311,13 +468,17 @@ export default function Projects() {
 
 function ProjectRow({ project, onEdit, onDelete, deleting }) {
   const tags = Array.isArray(project.tags) ? project.tags : [];
+  const deSlot = project.translations?.de || {};
+  const displayTitle = deSlot.title || project.title || '—';
+  const displayDesc = deSlot.description || project.description || '';
+  const displayAlt = deSlot.image_alt || project.image_alt || '';
   return (
     <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
       {/* Thumbnail */}
       {project.image_url ? (
         <img
           src={project.image_url}
-          alt={project.image_alt || project.title}
+          alt={displayAlt}
           style={{ width: 64, height: 44, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--border)', flexShrink: 0 }}
         />
       ) : (
@@ -328,14 +489,14 @@ function ProjectRow({ project, onEdit, onDelete, deleting }) {
 
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>{project.title}</span>
+          <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>{displayTitle}</span>
           <span style={{ fontSize: '0.72rem', fontWeight: 600, padding: '2px 8px', borderRadius: 999, background: (STATUS_COLOR[project.status] || '#6b7280') + '22', color: STATUS_COLOR[project.status] || '#6b7280' }}>
             {project.status}
           </span>
           <span style={{ fontSize: '0.72rem', color: 'var(--text3)' }}>{project.year}</span>
         </div>
         <p style={{ margin: '3px 0 5px', fontSize: '0.8rem', color: 'var(--text3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 500 }}>
-          {project.description}
+          {displayDesc}
         </p>
         {tags.length > 0 && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
@@ -389,6 +550,81 @@ function Field({ label, children }) {
     <div>
       <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 500, color: 'var(--text3)', marginBottom: 5 }}>{label}</label>
       {children}
+    </div>
+  );
+}
+
+function GallerySection({ items, onAdd, onRemove, onMove, onAlt, inputRef, uploading }) {
+  const full = items.length >= MAX_GALLERY;
+  return (
+    <div>
+      {items.length > 0 && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 10, marginBottom: items.length ? 10 : 0 }}>
+          {items.map((it, idx) => {
+            const src = it.previewUrl || it.url;
+            return (
+              <div key={(it.url || it.previewUrl) + idx} style={{ position: 'relative', border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden', background: 'var(--bg3)' }}>
+                <div style={{ position: 'relative', paddingBottom: '66%' }}>
+                  <img src={src} alt={it.alt || ''} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                  {it.file && (
+                    <span style={{ position: 'absolute', top: 6, left: 6, background: 'rgba(0,0,0,0.7)', color: '#fff', borderRadius: 4, padding: '2px 6px', fontSize: '0.65rem', letterSpacing: '0.5px' }}>
+                      NEU
+                    </span>
+                  )}
+                </div>
+                <div style={{ padding: 6, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <input
+                    className="input"
+                    value={it.alt || ''}
+                    onChange={(e) => onAlt(idx, e.target.value)}
+                    maxLength={255}
+                    placeholder="Alt-Text"
+                    style={{ fontSize: '0.72rem', padding: '4px 6px' }}
+                  />
+                  <div style={{ display: 'flex', gap: 4, justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      <button type="button" onClick={() => onMove(idx, -1)} disabled={idx === 0} className="btn-outline btn-icon" style={{ padding: '3px 7px', opacity: idx === 0 ? 0.4 : 1 }} title="Nach oben">
+                        <i className="bi bi-arrow-left" />
+                      </button>
+                      <button type="button" onClick={() => onMove(idx, 1)} disabled={idx === items.length - 1} className="btn-outline btn-icon" style={{ padding: '3px 7px', opacity: idx === items.length - 1 ? 0.4 : 1 }} title="Nach unten">
+                        <i className="bi bi-arrow-right" />
+                      </button>
+                    </div>
+                    <button type="button" onClick={() => onRemove(idx)} className="btn-danger btn-icon" style={{ padding: '3px 7px' }} title="Entfernen">
+                      <i className="bi bi-trash3" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {!full && (
+        <label style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          gap: 6, padding: '1rem', border: '2px dashed var(--border)', borderRadius: 8,
+          cursor: uploading ? 'wait' : 'pointer', color: 'var(--text3)', transition: 'border-color 150ms',
+        }}
+          onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--accent)'}
+          onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
+        >
+          <i className="bi bi-images" style={{ fontSize: '1.25rem' }} />
+          <span style={{ fontSize: '0.75rem', textAlign: 'center' }}>
+            {uploading ? 'Lade Galerie hoch…' : `Bilder hinzufügen (${items.length}/${MAX_GALLERY})`}
+          </span>
+          <input
+            ref={inputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            multiple
+            onChange={onAdd}
+            disabled={uploading}
+            style={{ display: 'none' }}
+          />
+        </label>
+      )}
     </div>
   );
 }

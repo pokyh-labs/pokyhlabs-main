@@ -527,25 +527,78 @@ function AddBlockBar({ onAdd, onImportPdf, onImportHtml, importing }) {
   );
 }
 
+const LANGS = ['de', 'en', 'it'];
+const LANG_LABELS = { de: '🇩🇪 DE', en: '🇬🇧 EN', it: '🇮🇹 IT' };
+const EMPTY_SLOT = { title: '', slug: '', excerpt: '', image_alt: '' };
+
+function autoSlug(title) {
+  return title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
 // ─── Load initial blocks from blog data ──────────────────────────────────────
 
-function initBlocks(blog) {
-  if (!blog) return [defaultBlock('markdown')];
-
-  if (blog.content_format === 'blocks' && blog.content_markdown) {
+function initBlocksFromSlot(slot) {
+  if (!slot?.content_markdown && !slot?.content) return [defaultBlock('markdown')];
+  if (slot.content_markdown) {
     try {
-      const parsed = JSON.parse(blog.content_markdown);
+      const parsed = JSON.parse(slot.content_markdown);
       if (Array.isArray(parsed) && parsed.length > 0) {
         return parsed.map(b => ({ ...b, id: genId() }));
       }
     } catch { /* fall through */ }
+    return [{ id: genId(), type: 'markdown', content: slot.content_markdown }];
+  }
+  return [{ id: genId(), type: 'html', content: slot.content || '' }];
+}
+
+function initAllBlocks(blog) {
+  if (!blog) return { de: [defaultBlock('markdown')], en: [defaultBlock('markdown')], it: [defaultBlock('markdown')] };
+
+  // New multi-lang format
+  if (blog.translations && typeof blog.translations === 'object' && blog.translations.de) {
+    return {
+      de: initBlocksFromSlot(blog.translations.de),
+      en: initBlocksFromSlot(blog.translations.en),
+      it: initBlocksFromSlot(blog.translations.it),
+    };
   }
 
-  if (blog.content_format === 'markdown') {
-    return [{ id: genId(), type: 'markdown', content: blog.content_markdown || blog.content || '' }];
+  // Legacy single-lang: put existing content in DE, blank for EN/IT
+  const deBlocks = (() => {
+    if (blog.content_format === 'blocks' && blog.content_markdown) {
+      try {
+        const parsed = JSON.parse(blog.content_markdown);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map(b => ({ ...b, id: genId() }));
+        }
+      } catch {}
+    }
+    if (blog.content_format === 'markdown') {
+      return [{ id: genId(), type: 'markdown', content: blog.content_markdown || blog.content || '' }];
+    }
+    return [{ id: genId(), type: 'html', content: blog.content || '' }];
+  })();
+
+  return { de: deBlocks, en: [defaultBlock('markdown')], it: [defaultBlock('markdown')] };
+}
+
+function initTranslations(blog) {
+  if (!blog) return { de: { ...EMPTY_SLOT }, en: { ...EMPTY_SLOT }, it: { ...EMPTY_SLOT } };
+
+  if (blog.translations && typeof blog.translations === 'object' && blog.translations.de) {
+    return {
+      de: { ...EMPTY_SLOT, ...blog.translations.de },
+      en: { ...EMPTY_SLOT, ...(blog.translations.en || {}) },
+      it: { ...EMPTY_SLOT, ...(blog.translations.it || {}) },
+    };
   }
 
-  return [{ id: genId(), type: 'html', content: blog.content || '' }];
+  // Legacy
+  return {
+    de: { title: blog.title || '', slug: blog.slug || '', excerpt: blog.excerpt || '', image_alt: blog.image_alt || '' },
+    en: { ...EMPTY_SLOT },
+    it: { ...EMPTY_SLOT },
+  };
 }
 
 // ─── View mode segment ────────────────────────────────────────────────────────
@@ -603,13 +656,11 @@ function ViewToggle({ viewMode, setViewMode }) {
 // ─── BlogEditor ───────────────────────────────────────────────────────────────
 
 function BlogEditor({ blog, onSave, onCancel }) {
-  const [form, setForm] = useState({
-    title: blog?.title || '',
-    excerpt: blog?.excerpt || '',
-    status: blog?.status || 'published',
-    image_alt: blog?.image_alt || '',
-  });
-  const [blocks, setBlocks] = useState(() => initBlocks(blog));
+  const [translations, setTranslations] = useState(() => initTranslations(blog));
+  const [blocksByLang, setBlocksByLang] = useState(() => initAllBlocks(blog));
+  const [activeTab, setActiveTab]       = useState('de');
+  const [tabErrors, setTabErrors]       = useState({});
+  const [status, setStatus]             = useState(blog?.status || 'published');
   const [imageFile, setImageFile]       = useState(null);
   const [imagePreview, setImagePreview] = useState(blog?.image_url || null);
   const [saving, setSaving]             = useState(false);
@@ -620,27 +671,43 @@ function BlogEditor({ blog, onSave, onCancel }) {
   const htmlImportRef = useRef();
   const pdfImportRef  = useRef();
 
-  function setField(k, v) { setForm(f => ({ ...f, [k]: v })); }
-
+  // Per-tab block helpers
   const updateBlock = useCallback((id, content) =>
-    setBlocks(bs => bs.map(b => b.id === id ? { ...b, content } : b)), []);
+    setBlocksByLang(prev => ({ ...prev, [activeTab]: prev[activeTab].map(b => b.id === id ? { ...b, content } : b) })),
+  [activeTab]);
 
   const deleteBlock = useCallback((id) =>
-    setBlocks(bs => bs.filter(b => b.id !== id)), []);
+    setBlocksByLang(prev => ({ ...prev, [activeTab]: prev[activeTab].filter(b => b.id !== id) })),
+  [activeTab]);
 
   const addBlock = useCallback((type) =>
-    setBlocks(bs => [...bs, defaultBlock(type)]), []);
+    setBlocksByLang(prev => ({ ...prev, [activeTab]: [...prev[activeTab], defaultBlock(type)] })),
+  [activeTab]);
 
   const moveBlock = useCallback((id, dir) =>
-    setBlocks(bs => {
+    setBlocksByLang(prev => {
+      const bs = prev[activeTab];
       const i = bs.findIndex(b => b.id === id);
       const j = i + dir;
-      if (j < 0 || j >= bs.length) return bs;
+      if (j < 0 || j >= bs.length) return prev;
       const next = [...bs];
       [next[i], next[j]] = [next[j], next[i]];
-      return next;
-    }), []);
+      return { ...prev, [activeTab]: next };
+    }),
+  [activeTab]);
 
+  function setSlotField(lang, key, val) {
+    setTranslations(t => ({ ...t, [lang]: { ...t[lang], [key]: val } }));
+  }
+
+  function handleTitleChange(val) {
+    const slot = translations[activeTab];
+    const slugWasAuto = !slot.slug || slot.slug === autoSlug(slot.title || '');
+    setSlotField(activeTab, 'title', val);
+    if (slugWasAuto) setSlotField(activeTab, 'slug', autoSlug(val));
+  }
+
+  const blocks = blocksByLang[activeTab] || [];
   const wc = wordCount(blocks);
   const readTime = Math.max(1, Math.ceil(wc / 200));
 
@@ -655,7 +722,7 @@ function BlogEditor({ blog, onSave, onCancel }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Import fehlgeschlagen');
       const newBlock = { id: genId(), type: 'html', content: data.content, label: `PDF (${data.pages} S.)` };
-      setBlocks(bs => [...bs, newBlock]);
+      setBlocksByLang(prev => ({ ...prev, [activeTab]: [...prev[activeTab], newBlock] }));
       toast(`PDF importiert — ${data.pages} Seite${data.pages !== 1 ? 'n' : ''} als neuer Block`);
     } catch (err) {
       toast(err.message, 'error');
@@ -676,8 +743,8 @@ function BlogEditor({ blog, onSave, onCancel }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Import fehlgeschlagen');
       const newBlock = { id: genId(), type: 'html', content: data.content, label: 'HTML-Datei' };
-      setBlocks(bs => [...bs, newBlock]);
-      if (!form.title && data.title) setField('title', data.title);
+      setBlocksByLang(prev => ({ ...prev, [activeTab]: [...prev[activeTab], newBlock] }));
+      if (!translations[activeTab].title && data.title) setSlotField(activeTab, 'title', data.title);
       toast('HTML importiert als neuer Block');
     } catch (err) {
       toast(err.message, 'error');
@@ -698,29 +765,46 @@ function BlogEditor({ blog, onSave, onCancel }) {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    const combinedHtml = buildHtml(blocks);
-    if (!combinedHtml.trim() || combinedHtml.trim().length < 10) {
-      setError('Inhalt zu kurz — mindestens 10 Zeichen benötigt.');
+    // Validate all 3 languages
+    const errs = {};
+    for (const l of LANGS) {
+      const slot = translations[l];
+      const html = buildHtml(blocksByLang[l]);
+      if (!slot.title?.trim() || slot.title.trim().length < 3) errs[l] = 'Titel fehlt';
+      else if (!html.trim() || html.trim().length < 10) errs[l] = 'Inhalt fehlt';
+    }
+    if (Object.keys(errs).length) {
+      setTabErrors(errs);
+      const firstBad = LANGS.find(l => errs[l]);
+      setActiveTab(firstBad);
+      setError(`Bitte ${LANG_LABELS[firstBad]}-Felder ausfüllen: ${errs[firstBad]}`);
       return;
     }
+    setTabErrors({});
     setSaving(true); setError('');
     try {
-      // Step 1: upload image via one-time presign token if a new file was selected
       let imageUrl = blog?.image_url || undefined;
-      if (imageFile) {
-        imageUrl = await uploadImage(imageFile);
+      if (imageFile) imageUrl = await uploadImage(imageFile);
+
+      const builtTranslations = {};
+      for (const l of LANGS) {
+        const slot = translations[l];
+        const langBlocks = blocksByLang[l];
+        builtTranslations[l] = {
+          title:            slot.title,
+          slug:             slot.slug || autoSlug(slot.title),
+          excerpt:          slot.excerpt || '',
+          image_alt:        slot.image_alt || '',
+          content:          buildHtml(langBlocks),
+          content_markdown: JSON.stringify(langBlocks),
+        };
       }
 
-      // Step 2: send blog data as JSON
       const payload = {
-        title:            form.title,
-        excerpt:          form.excerpt,
-        status:           form.status,
-        image_alt:        form.image_alt,
-        content:          combinedHtml,
-        content_format:   'blocks',
-        content_markdown: JSON.stringify(blocks),
-        image_url:        imageUrl || null,
+        translations:   builtTranslations,
+        status,
+        content_format: 'blocks',
+        image_url:      imageUrl || null,
       };
       if (!blog) payload.views = 0;
 
@@ -741,6 +825,7 @@ function BlogEditor({ blog, onSave, onCancel }) {
 
   const showBlockPreview = viewMode === 'split';
   const showOnlyPreview  = viewMode === 'preview';
+  const slot = translations[activeTab] || EMPTY_SLOT;
 
   return (
     <div>
@@ -759,19 +844,46 @@ function BlogEditor({ blog, onSave, onCancel }) {
         </button>
       </div>
 
+      {/* Language tab strip */}
+      <div style={{ display: 'flex', gap: 4, marginBottom: '1rem' }}>
+        {LANGS.map(l => (
+          <button
+            key={l}
+            type="button"
+            onClick={() => setActiveTab(l)}
+            style={{
+              padding: '6px 14px',
+              borderRadius: 8,
+              border: activeTab === l ? '1.5px solid var(--accent)' : '1.5px solid var(--border)',
+              background: activeTab === l ? 'var(--accent-dim, rgba(89,61,248,0.08))' : 'var(--bg2)',
+              color: activeTab === l ? 'var(--accent)' : tabErrors[l] ? 'var(--danger)' : 'var(--text2)',
+              fontSize: '0.78rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 5,
+              transition: 'all 120ms',
+            }}
+          >
+            {LANG_LABELS[l]}
+            {tabErrors[l] && <i className="bi bi-exclamation-circle-fill" style={{ fontSize: '0.65rem', color: 'var(--danger)' }} />}
+          </button>
+        ))}
+      </div>
+
       <form onSubmit={handleSubmit}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: '1rem', alignItems: 'start' }}>
 
           {/* ── Main editor area ── */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
 
-            {/* Title */}
-            <div className="card">
+            {/* Title + Slug for active language */}
+            <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <input
-                value={form.title}
-                onChange={e => setField('title', e.target.value)}
-                placeholder="Titel…"
-                required
+                value={slot.title}
+                onChange={e => handleTitleChange(e.target.value)}
+                placeholder={`Titel (${LANG_LABELS[activeTab]})…`}
                 style={{
                   fontSize: '1.1rem',
                   fontWeight: 600,
@@ -783,6 +895,24 @@ function BlogEditor({ blog, onSave, onCancel }) {
                   color: 'var(--text)',
                 }}
               />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text3)', flexShrink: 0 }}>Slug:</span>
+                <input
+                  value={slot.slug}
+                  onChange={e => setSlotField(activeTab, 'slug', e.target.value)}
+                  placeholder="url-slug"
+                  style={{
+                    fontSize: '0.72rem',
+                    fontFamily: 'monospace',
+                    color: 'var(--text2)',
+                    border: 'none',
+                    padding: '2px 0',
+                    background: 'transparent',
+                    boxShadow: 'none',
+                    flex: 1,
+                  }}
+                />
+              </div>
             </div>
 
             {/* View mode toggle */}
@@ -794,7 +924,7 @@ function BlogEditor({ blog, onSave, onCancel }) {
             {showOnlyPreview ? (
               <div className="card">
                 <p style={{ fontSize: '0.68rem', color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '1rem' }}>
-                  Vorschau
+                  Vorschau ({LANG_LABELS[activeTab]})
                 </p>
                 <CombinedPreview blocks={blocks} />
               </div>
@@ -825,13 +955,13 @@ function BlogEditor({ blog, onSave, onCancel }) {
               </>
             )}
 
-            {/* Excerpt */}
+            {/* Excerpt for active language */}
             <div className="card">
-              <label className="form-label">Kurztext <span style={{ color: 'var(--text3)', fontWeight: 400 }}>(optional)</span></label>
+              <label className="form-label">Kurztext ({LANG_LABELS[activeTab]}) <span style={{ color: 'var(--text3)', fontWeight: 400 }}>(optional)</span></label>
               <textarea
-                value={form.excerpt}
-                onChange={e => setField('excerpt', e.target.value)}
-                placeholder="Kurze Zusammenfassung, die in der Blog-Liste erscheint…"
+                value={slot.excerpt}
+                onChange={e => setSlotField(activeTab, 'excerpt', e.target.value)}
+                placeholder="Kurze Zusammenfassung…"
                 style={{ minHeight: 64, resize: 'vertical', marginTop: 2 }}
               />
             </div>
@@ -844,7 +974,7 @@ function BlogEditor({ blog, onSave, onCancel }) {
             <button type="submit" className="btn-primary w-full" disabled={saving}
               style={{ padding: '0.65rem', justifyContent: 'center', fontSize: '0.875rem' }}>
               {saving ? <span className="spinner" /> : <i className="bi bi-floppy2" />}
-              {saving ? 'Speichern…' : 'Speichern'}
+              {saving ? 'Speichern…' : 'Alle 3 Sprachen speichern'}
             </button>
 
             {error && (
@@ -853,15 +983,15 @@ function BlogEditor({ blog, onSave, onCancel }) {
               </div>
             )}
 
-            {/* Settings */}
+            {/* Settings — non-translatable */}
             <div className="card">
               <p style={{ fontSize: '0.68rem', color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.875rem' }}>
-                Einstellungen
+                Einstellungen (Global)
               </p>
 
               <div className="form-group">
                 <label className="form-label">Status</label>
-                <select value={form.status} onChange={e => setField('status', e.target.value)}>
+                <select value={status} onChange={e => setStatus(e.target.value)}>
                   <option value="draft">Entwurf</option>
                   <option value="published">Veröffentlicht</option>
                 </select>
@@ -916,10 +1046,10 @@ function BlogEditor({ blog, onSave, onCancel }) {
               </div>
 
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">Bild Alt-Text</label>
+                <label className="form-label">Bild Alt-Text ({LANG_LABELS[activeTab]})</label>
                 <input
-                  value={form.image_alt}
-                  onChange={e => setField('image_alt', e.target.value)}
+                  value={slot.image_alt}
+                  onChange={e => setSlotField(activeTab, 'image_alt', e.target.value)}
                   placeholder="Bildbeschreibung…"
                 />
               </div>
@@ -928,7 +1058,7 @@ function BlogEditor({ blog, onSave, onCancel }) {
             {/* Block summary */}
             <div className="card">
               <p style={{ fontSize: '0.68rem', color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.75rem' }}>
-                Inhalt ({blocks.length} Block{blocks.length !== 1 ? 'e' : ''})
+                Inhalt {LANG_LABELS[activeTab]} ({blocks.length} Block{blocks.length !== 1 ? 'e' : ''})
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                 {blocks.map((b, i) => {
@@ -1105,9 +1235,11 @@ export default function Blogs() {
                   </td>
                   <td style={{ maxWidth: 240 }}>
                     <div className="truncate" style={{ color: 'var(--text)', fontWeight: 500, fontSize: '0.8125rem' }}>
-                      {b.title}
+                      {b.translations?.de?.title || b.title || '—'}
                     </div>
-                    <div style={{ color: 'var(--text3)', fontSize: '0.7rem', marginTop: 1 }}>/{b.slug}</div>
+                    <div style={{ color: 'var(--text3)', fontSize: '0.7rem', marginTop: 1 }}>
+                      /de/{b.slug_de || b.translations?.de?.slug || b.slug || '—'}
+                    </div>
                   </td>
                   <td>
                     <span style={{

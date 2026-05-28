@@ -216,6 +216,13 @@ async function initDatabase() {
   await sequelize.query("ALTER TABLE projects ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0").catch(() => {});
   await sequelize.query("ALTER TABLE projects ADD COLUMN image_url TEXT").catch(() => {});
   await sequelize.query("ALTER TABLE projects ADD COLUMN image_alt TEXT").catch(() => {});
+  await sequelize.query("ALTER TABLE projects ADD COLUMN gallery TEXT NOT NULL DEFAULT '[]'").catch(() => {});
+  // Multi-language CMS columns
+  await sequelize.query("ALTER TABLE blogs ADD COLUMN translations TEXT NOT NULL DEFAULT '{}'").catch(() => {});
+  await sequelize.query("ALTER TABLE blogs ADD COLUMN slug_de TEXT").catch(() => {});
+  await sequelize.query("ALTER TABLE blogs ADD COLUMN slug_en TEXT").catch(() => {});
+  await sequelize.query("ALTER TABLE blogs ADD COLUMN slug_it TEXT").catch(() => {});
+  await sequelize.query("ALTER TABLE projects ADD COLUMN translations TEXT NOT NULL DEFAULT '{}'").catch(() => {});
   logger.info('Database synced');
 
   // Auto-create admin from .env if no users exist yet

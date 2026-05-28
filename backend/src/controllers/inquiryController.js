@@ -1,7 +1,7 @@
 const { Inquiry } = require('../models');
 
 const VALID_SERVICES = [
-  'website', 'app', 'hosting',
+  'website', 'app', 'hosting', 'software-automation',
   'frontend', 'backend', 'threejs', 'seo', 'wordpress', 'ecommerce', 'react-native', 'flutter',
 ];
 
