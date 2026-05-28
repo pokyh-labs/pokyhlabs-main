@@ -15,7 +15,6 @@ module.exports = (sequelize) => {
     indexes: [
       { fields: ['created_at'] },
       { fields: ['status_code'] },
-      { fields: ['endpoint'] },
     ],
   });
 };
