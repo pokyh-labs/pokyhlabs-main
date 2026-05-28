@@ -46,14 +46,34 @@ const DEFAULT_LANG = 'de';
 const pickLang = (q) => LANGS.includes(q) ? q : DEFAULT_LANG;
 
 // Flatten a full Blog row to the public API shape for a given language.
-// Falls back to DE slot when the requested lang slot is empty (covers backfilled rows).
+// Fallback chain: requested lang → DE → any available lang slot → legacy flat columns.
 function flattenForLang(blog, lang) {
   const t = blog.translations || {};
-  const slot = (t[lang] && t[lang].title) ? t[lang] : (t[DEFAULT_LANG] || {});
+  let slot = null;
+  if (t[lang] && t[lang].title) {
+    slot = t[lang];
+  } else if (t[DEFAULT_LANG] && t[DEFAULT_LANG].title) {
+    slot = t[DEFAULT_LANG];
+  } else {
+    for (const l of LANGS) {
+      if (t[l] && t[l].title) { slot = t[l]; break; }
+    }
+  }
+  // Legacy rows created before multi-lang: use flat columns
+  if (!slot) {
+    slot = {
+      title: blog.title || '',
+      slug: blog[`slug_${lang}`] || blog[`slug_${DEFAULT_LANG}`] || blog.slug || '',
+      excerpt: blog.excerpt || null,
+      content: blog.content || '',
+      image_alt: blog.image_alt || null,
+      content_markdown: blog.content_markdown || null,
+    };
+  }
   return {
     id: blog.id,
     title: slot.title || '',
-    slug: slot.slug || blog[`slug_${lang}`] || blog[`slug_${DEFAULT_LANG}`] || '',
+    slug: slot.slug || blog[`slug_${lang}`] || blog[`slug_${DEFAULT_LANG}`] || blog.slug || '',
     excerpt: slot.excerpt || null,
     content: slot.content || '',
     image_url: blog.image_url,
@@ -161,9 +181,13 @@ async function getBySlug(req, res) {
     return res.json(cached);
   }
 
-  const blog = await Blog.findOne({
+  let blog = await Blog.findOne({
     where: { [`slug_${lang}`]: slug, status: 'published' },
   });
+  // Fallback: old rows may only have the legacy `slug` column set
+  if (!blog) {
+    blog = await Blog.findOne({ where: { slug, status: 'published' } });
+  }
   if (!blog) return err(res, 404, 'Blog not found');
 
   const flat = flattenForLang(blog, lang);

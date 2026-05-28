@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Login from './components/Login';
 import Sidebar from './components/Sidebar';
 import Topbar from './components/Topbar';
@@ -12,6 +12,8 @@ import Seo from './pages/Seo';
 import Projects from './pages/Projects';
 import ToastContainer from './components/Toast';
 import { getAccessToken, apiFetch, clearTokens } from './hooks/useApi';
+
+const gsap = window.gsap;
 
 const PAGES = {
   dashboard: Dashboard,
@@ -29,6 +31,7 @@ export default function App() {
   const [page, setPage]               = useState('dashboard');
   const [checking, setChecking]       = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const mainRef = useRef(null);
 
   useEffect(() => {
     const token = getAccessToken();
@@ -56,9 +59,27 @@ export default function App() {
 
   function handleNavigate(newPage) {
     if (user?.role === 'editor' && ADMIN_ONLY.includes(newPage)) return;
-    setPage(newPage);
-    setSidebarOpen(false);
+    if (gsap && mainRef.current) {
+      gsap.to(mainRef.current, {
+        opacity: 0, y: 8, duration: 0.15, ease: 'power2.in',
+        onComplete: () => {
+          setPage(newPage);
+          setSidebarOpen(false);
+        },
+      });
+    } else {
+      setPage(newPage);
+      setSidebarOpen(false);
+    }
   }
+
+  useEffect(() => {
+    if (!mainRef.current || !gsap) return;
+    gsap.fromTo(mainRef.current,
+      { opacity: 0, y: 14, filter: 'blur(1.5px)' },
+      { opacity: 1, y: 0, filter: 'blur(0px)', duration: 0.38, ease: 'power2.out' }
+    );
+  }, [page]);
 
   if (checking) {
     return (
@@ -100,8 +121,8 @@ export default function App() {
             onMenuToggle={() => setSidebarOpen(s => !s)}
           />
           <main
-            key={page}
-            className="page-fade page-content"
+            ref={mainRef}
+            className="page-content"
           >
             <PageComponent onNavigate={handleNavigate} />
           </main>

@@ -1,9 +1,9 @@
 "use client"
 
-import { useEffect, useRef, useState, useCallback, forwardRef } from "react"
+import { useEffect, useRef, useState, useCallback } from "react"
 import gsap from "gsap"
 import { ScrollTrigger } from "gsap/ScrollTrigger"
-import { useT } from "@/lib/i18n/context"
+import { useT, useLanguage } from "@/lib/i18n/context"
 
 interface Blog {
   id: number
@@ -21,14 +21,16 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
 }
 
-function clientFetchBlogs(): Promise<Blog[]> {
-  return fetch("/api/blogs?limit=20")
+function clientFetchBlogs(lang: string): Promise<Blog[]> {
+  return fetch(`/api/blogs?limit=20&lang=${encodeURIComponent(lang)}`)
     .then((r) => { if (!r.ok) throw new Error("API error"); return r.json() })
     .then((data) => data.blogs ?? [])
 }
 
 export default function BlogsPage({ initialBlogs = [] }: { initialBlogs?: Blog[] }) {
   const t = useT()
+  const { lang } = useLanguage()
+  const langLc = lang.toLowerCase()
   const contentRef = useRef<HTMLDivElement>(null)
   const headlineRef = useRef<HTMLHeadingElement>(null)
   const [blogs, setBlogs] = useState<Blog[]>(initialBlogs)
@@ -38,10 +40,10 @@ export default function BlogsPage({ initialBlogs = [] }: { initialBlogs?: Blog[]
   const loadBlogs = useCallback(() => {
     setLoading(true)
     setError(null)
-    clientFetchBlogs()
+    clientFetchBlogs(langLc)
       .then((list) => { setBlogs(list); setLoading(false) })
       .catch(() => { setError(t("blog_error")); setLoading(false) })
-  }, [])
+  }, [langLc])
 
   useEffect(() => {
     if (initialBlogs.length > 0) return
@@ -74,26 +76,8 @@ export default function BlogsPage({ initialBlogs = [] }: { initialBlogs?: Blog[]
       })
     }
 
-    if (contentRef.current) {
-      gsap.fromTo(
-        contentRef.current,
-        { borderTopLeftRadius: "0%", borderTopRightRadius: "0%" },
-        {
-          borderTopLeftRadius: "50% 150px",
-          borderTopRightRadius: "50% 150px",
-          ease: "none",
-          scrollTrigger: {
-            trigger: contentRef.current,
-            start: "top bottom",
-            end: "top top",
-            scrub: true,
-          },
-        }
-      )
-    }
-
     return () => {
-      ScrollTrigger.getAll().forEach((t) => t.kill())
+      ScrollTrigger.getAll().forEach((trigger) => trigger.kill())
     }
   }, [])
 
@@ -118,7 +102,7 @@ export default function BlogsPage({ initialBlogs = [] }: { initialBlogs?: Blog[]
         </div>
       </div>
 
-      {/* Dark section */}
+      {/* Dark section — no border-radius arc */}
       <div
         ref={contentRef}
         style={{ position: "relative", zIndex: 2, backgroundColor: "#1a1a1a", minHeight: "100vh", padding: "10vh 5vw", color: "#fff", overflow: "hidden" }}
@@ -141,7 +125,7 @@ export default function BlogsPage({ initialBlogs = [] }: { initialBlogs?: Blog[]
           ) : (
             <>
               {blogs.map((blog, i) => (
-                <BlogCard key={blog.id} blog={blog} index={i} />
+                <BlogCard key={blog.id} blog={blog} index={i} lang={langLc} />
               ))}
               <div style={{ borderTop: "1px solid #2a2a2a" }} />
             </>
@@ -210,10 +194,13 @@ function ErrorState({ message, onRetry }: { message: string; onRetry?: () => voi
   )
 }
 
-function BlogCard({ blog, index }: { blog: Blog; index: number }) {
+function BlogCard({ blog, index, lang }: { blog: Blog; index: number; lang: string }) {
   return (
     <article style={{ borderTop: "1px solid #2a2a2a" }}>
-      <a href={`/blog/${blog.slug}`} style={{ display: "block", padding: "3.5rem 0", textDecoration: "none", cursor: "pointer" }}>
+      <a
+        href={`/${lang}/blog/${blog.slug}`}
+        style={{ display: "block", padding: "3.5rem 0", textDecoration: "none", cursor: "pointer" }}
+      >
         <div
           data-reveal
           style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "1.5rem" }}
@@ -227,7 +214,7 @@ function BlogCard({ blog, index }: { blog: Blog; index: number }) {
         </div>
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "2rem" }}>
-          <div style={{ flex: 1 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <h2
               data-reveal
               style={{ "--rd": "80ms", fontSize: "clamp(1.5rem, 3vw, 2.5rem)", fontWeight: 500, lineHeight: 1.1, letterSpacing: "-0.02em", marginBottom: "1rem", color: "#fff", fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' } as React.CSSProperties}
@@ -268,6 +255,13 @@ function BlogCard({ blog, index }: { blog: Blog; index: number }) {
           </div>
         </div>
       </a>
+
+      <style>{`
+        @media (max-width: 600px) {
+          article a { padding: 2.5rem 0 !important; }
+          article h2 { font-size: clamp(1.2rem, 6vw, 1.8rem) !important; }
+        }
+      `}</style>
     </article>
   )
 }

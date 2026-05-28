@@ -19,9 +19,27 @@ const DEFAULT_LANG = 'de';
 const pickLang = (q) => LANGS.includes(q) ? q : DEFAULT_LANG;
 
 // Flatten a full Project row to the public API shape for a given language.
+// Fallback chain: requested lang → DE → any available lang slot → legacy flat columns.
 function flattenProjectForLang(project, lang) {
   const t = project.translations || {};
-  const slot = (t[lang] && t[lang].title) ? t[lang] : (t[DEFAULT_LANG] || {});
+  let slot = null;
+  if (t[lang] && t[lang].title) {
+    slot = t[lang];
+  } else if (t[DEFAULT_LANG] && t[DEFAULT_LANG].title) {
+    slot = t[DEFAULT_LANG];
+  } else {
+    for (const l of LANGS) {
+      if (t[l] && t[l].title) { slot = t[l]; break; }
+    }
+  }
+  // Legacy rows with no translations at all — use flat columns
+  if (!slot) {
+    slot = {
+      title: project.title || '',
+      description: project.description || '',
+      image_alt: project.image_alt || null,
+    };
+  }
   return {
     id: project.id,
     title: slot.title || '',

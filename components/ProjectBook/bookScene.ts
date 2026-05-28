@@ -573,10 +573,9 @@ export async function createBookScene({
 
   const camera = new THREE.PerspectiveCamera(38, 1, 0.05, 100)
   // Overview camera dollies from DOLLY_FAR (entrance start) to DOLLY_NEAR
-  // (settled) — enough depth change that the book reads as a real 3D object
-  // arriving in space, not a flat image being slid up.
-  const DOLLY_FAR = 5.2
-  const DOLLY_NEAR = 4.0
+  // (settled). Halved from original (5.2/4.0) so the book appears twice as large.
+  const DOLLY_FAR = 2.6
+  const DOLLY_NEAR = 2.0
   const OVERVIEW_POS = new THREE.Vector3(0, 0.1, DOLLY_FAR)
   const COVER_LOOK = new THREE.Vector3(0, 0, 0)
   const OPEN_LOOK = new THREE.Vector3(0, 0, 0)
@@ -754,7 +753,7 @@ export async function createBookScene({
       imageAlt: p.image_alt ?? null,
       gallery: Array.isArray(p.gallery) ? p.gallery.filter((g): g is GalleryItem => !!g && typeof g.url === "string") : [],
     })
-    targetPos.set(0, 0.3, 1.7 * camDist)
+    targetPos.set(0, 0.3, 0.85 * camDist)
     targetLook.set(0, 0, 0)
   }
 

@@ -1138,10 +1138,11 @@ export default function Blogs() {
   useEffect(() => { load(); }, []);
 
   async function handleDelete(id, title) {
-    if (!confirm(`Blog "${title}" wirklich löschen?`)) return;
+    const label = typeof title === 'object' ? (title?.de?.title || title?.en?.title || 'Blog') : (title || 'Blog');
+    if (!confirm(`Blog "${label}" wirklich löschen?`)) return;
     try {
       await request(`/blogs/${id}`, { method: 'DELETE' });
-      toast('Blog gelöscht');
+      toast('Blog gelöscht', 'success');
       load();
     } catch (err) { toast(err.message, 'error'); }
   }
@@ -1337,7 +1338,7 @@ export default function Blogs() {
                       <button className="btn-outline btn-sm btn-icon" onClick={() => openEditor(b)} title="Bearbeiten">
                         <i className="bi bi-pencil" />
                       </button>
-                      <button className="btn-danger btn-sm btn-icon" onClick={() => handleDelete(b.id, b.title)} title="Löschen">
+                      <button className="btn-danger btn-sm btn-icon" onClick={() => handleDelete(b.id, b.translations || b.title)} title="Löschen">
                         <i className="bi bi-trash" />
                       </button>
                     </div>
