@@ -1,12 +1,14 @@
 const _path0 = require('path');
 const _fs0 = require('fs');
-require('dotenv').config({
-  path: (() => {
-    const root = _path0.resolve(__dirname, '../../.env');
-    const local = _path0.resolve(__dirname, '../.env');
-    return _fs0.existsSync(root) ? root : local;
-  })(),
-});
+if (process.env.NODE_ENV !== 'production') {
+  require('dotenv').config({
+    path: (() => {
+      const root = _path0.resolve(__dirname, '../../.env');
+      const local = _path0.resolve(__dirname, '../.env');
+      return _fs0.existsSync(root) ? root : local;
+    })(),
+  });
+}
 require('express-async-errors');
 
 const express = require('express');
