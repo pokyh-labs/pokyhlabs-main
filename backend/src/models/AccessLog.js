@@ -4,7 +4,7 @@ module.exports = (sequelize) => {
   return sequelize.define('AccessLog', {
     id:            { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
     method:        { type: DataTypes.STRING(10) },
-    url:           { type: DataTypes.STRING(1000) },
+    url:           { type: DataTypes.STRING(500) },
     status:        { type: DataTypes.INTEGER },
     response_time: { type: DataTypes.INTEGER },  // ms
     ip:            { type: DataTypes.STRING(45) },
