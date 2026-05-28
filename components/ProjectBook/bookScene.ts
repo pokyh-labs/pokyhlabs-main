@@ -831,7 +831,7 @@ export async function createBookScene({
   // the camera up far enough to keep the whole spread visible without cropping.
   // On wide desktop screens we pull the camera back slightly (1.3×) so the book
   // doesn't overwhelm the viewport — mobile keeps the closer view.
-  const DESKTOP_SCALE = 1.3   // extra pull-back on wide screens (>= 900 px)
+  const DESKTOP_SCALE = 1.7   // extra pull-back on wide screens (>= 900 px)
   let camDist = 1
   function resize() {
     const w = canvas.clientWidth || canvas.parentElement?.clientWidth || window.innerWidth
