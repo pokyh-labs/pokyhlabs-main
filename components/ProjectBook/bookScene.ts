@@ -32,6 +32,14 @@ export interface PageInfo {
 export interface BookSceneHandle {
   destroy(): void
   closeZoom(): void
+  /** Drive the scroll-based entrance (0 = off-screen, 1 = fully settled). */
+  setEntrance(t: number): void
+  /** Turn to a specific leaf index (0 = cover … MAX_PAGE = back cover). */
+  goToPage(index: number): void
+  /** Enable/disable pointer interaction (hover + click-to-zoom). */
+  setInteractive(on: boolean): void
+  /** Total number of turnable spreads (MAX_PAGE). */
+  readonly maxPage: number
 }
 
 interface CreateBookOptions {
@@ -517,7 +525,12 @@ export async function createBookScene({
   scene.background = null
 
   const camera = new THREE.PerspectiveCamera(38, 1, 0.05, 100)
-  const OVERVIEW_POS = new THREE.Vector3(0, 0.1, 4.0)
+  // Overview camera dollies from DOLLY_FAR (entrance start) to DOLLY_NEAR
+  // (settled) — enough depth change that the book reads as a real 3D object
+  // arriving in space, not a flat image being slid up.
+  const DOLLY_FAR = 5.2
+  const DOLLY_NEAR = 4.0
+  const OVERVIEW_POS = new THREE.Vector3(0, 0.1, DOLLY_FAR)
   const COVER_LOOK = new THREE.Vector3(0, 0, 0)
   const OPEN_LOOK = new THREE.Vector3(0, 0, 0)
   const overviewLookFor = (p: number) => (p === 0 ? COVER_LOOK : OPEN_LOOK)
@@ -547,12 +560,15 @@ export async function createBookScene({
   ground.receiveShadow = true
   scene.add(ground)
 
+  // tiltGroup carries the scroll-entrance transform (scale / rise / tilt).
+  // bookGroup carries the base orientation + entrance spin.
+  const TILT_REST_X = -Math.PI / 12
+  const BOOK_REST_Y = -Math.PI / 2
   const tiltGroup = new THREE.Group()
-  tiltGroup.rotation.x = -Math.PI / 12
-  tiltGroup.position.x = 0.3
+  tiltGroup.rotation.x = TILT_REST_X
   scene.add(tiltGroup)
   const bookGroup = new THREE.Group()
-  bookGroup.rotation.y = -Math.PI / 2
+  bookGroup.rotation.y = BOOK_REST_Y
   tiltGroup.add(bookGroup)
 
   const leaves: Leaf[] = leafSpecs.map((spec, i) => {
@@ -566,6 +582,10 @@ export async function createBookScene({
   let delayedPage = 0
   let pageStepTimer: ReturnType<typeof setTimeout> | null = null
   let zoomedProject: number | null = null
+  let entrance = 0          // current eased entrance value
+  let entranceTarget = 0    // target set from scroll progress
+  let coverAjar = 0         // front cover crack-open angle during the entrance
+  let interactive = false   // pointer hover/click only while the book is "live"
 
   function spreadLabel(p: number): string {
     if (N === 0) return p === 0 ? "Cover" : "Back Cover"
@@ -607,60 +627,11 @@ export async function createBookScene({
   }
 
   // ── Input ────────────────────────────────────────────────────────
-  let scrollAccum = 0
-  const SCROLL_THRESHOLD = 80
-
-  function canFlip(dir: number): boolean {
-    if (dir > 0) return page < MAX_PAGE
-    if (dir < 0) return page > 0
-    return false
-  }
-
-  const onWheel = (e: WheelEvent) => {
-    if (zoomedProject !== null) return
-    const dir = e.deltaY > 0 ? 1 : -1
-    if (!canFlip(dir)) {
-      // At boundary — let the page scroll naturally.
-      scrollAccum = 0
-      return
-    }
-    e.preventDefault()
-    scrollAccum += e.deltaY
-    if (Math.abs(scrollAccum) >= SCROLL_THRESHOLD) {
-      const d = scrollAccum > 0 ? 1 : -1
-      scrollAccum = 0
-      if (canFlip(d)) setPage(page + d)
-    }
-  }
-
-  let lastTouchY: number | null = null
-  const onTouchStart = (e: TouchEvent) => { if (e.touches.length) lastTouchY = e.touches[0].clientY }
-  const onTouchMove = (e: TouchEvent) => {
-    if (zoomedProject !== null) return
-    if (!e.touches.length || lastTouchY == null) return
-    const y = e.touches[0].clientY
-    const delta = (lastTouchY - y) * 2.2
-    const dir = delta > 0 ? 1 : -1
-    if (!canFlip(dir)) { lastTouchY = y; return }
-    scrollAccum += delta
-    lastTouchY = y
-    if (Math.abs(scrollAccum) >= SCROLL_THRESHOLD) {
-      const d = scrollAccum > 0 ? 1 : -1
-      scrollAccum = 0
-      if (canFlip(d)) setPage(page + d)
-    }
-  }
-
+  // Page turns + the entrance are driven from the page scroll position
+  // (see goToPage / setEntrance), so the scene no longer hijacks the wheel.
+  // Only Escape is handled here, to close an open project.
   const onKey = (e: KeyboardEvent) => {
-    if (zoomedProject !== null) {
-      if (e.key === "Escape") zoomOut()
-      return
-    }
-    if (e.key === "ArrowDown" || e.key === "ArrowRight" || e.key === "PageDown") {
-      if (canFlip(1)) { e.preventDefault(); setPage(page + 1) }
-    } else if (e.key === "ArrowUp" || e.key === "ArrowLeft" || e.key === "PageUp") {
-      if (canFlip(-1)) { e.preventDefault(); setPage(page - 1) }
-    }
+    if (zoomedProject !== null && e.key === "Escape") zoomOut()
   }
 
   // ── Picking ──────────────────────────────────────────────────────
@@ -695,7 +666,7 @@ export async function createBookScene({
   }
 
   const onMouseMove = (e: MouseEvent) => {
-    if (zoomedProject !== null) { canvas.style.cursor = "default"; return }
+    if (!interactive || zoomedProject !== null) { canvas.style.cursor = "default"; return }
     const hit = pickLeaf(e)
     for (const lf of leaves) lf.highlighted = false
     if (hit) hit.leaf.highlighted = true
@@ -703,7 +674,7 @@ export async function createBookScene({
   }
 
   const onClick = (e: MouseEvent) => {
-    if (zoomedProject !== null) return
+    if (!interactive || zoomedProject !== null) return
     const hit = pickLeaf(e)
     if (!hit) return
     const pIdx = (hit.meta as ImageMeta | TextMeta).projectIdx
@@ -789,8 +760,14 @@ export async function createBookScene({
       let foldRotationAngle = THREE.MathUtils.degToRad(Math.sign(targetRotation) * 2)
 
       if (bookClosed) {
-        if (i === 0) { rotationAngle = targetRotation; foldRotationAngle = 0 }
-        else { rotationAngle = 0; foldRotationAngle = 0 }
+        if (i === 0) {
+          rotationAngle = targetRotation
+          // Hold the front cover slightly ajar while the book rises, then let it
+          // click shut as it settles (and crack back open on scroll-up). Only at
+          // the front-closed state — driven by the scroll entrance via coverAjar.
+          if (leaf.number === 0 && delayedPage === 0) rotationAngle -= coverAjar
+          foldRotationAngle = 0
+        } else { rotationAngle = 0; foldRotationAngle = 0 }
       }
 
       dampAngle(target.rotation, "y", rotationAngle, easingFactor, delta)
@@ -812,9 +789,6 @@ export async function createBookScene({
   if (canvas.parentElement) ro.observe(canvas.parentElement)
   resize()
 
-  canvas.addEventListener("wheel", onWheel, { passive: false })
-  canvas.addEventListener("touchstart", onTouchStart, { passive: true })
-  canvas.addEventListener("touchmove", onTouchMove, { passive: true })
   window.addEventListener("keydown", onKey)
   canvas.addEventListener("mousemove", onMouseMove)
   canvas.addEventListener("click", onClick)
@@ -824,10 +798,55 @@ export async function createBookScene({
   let rafId = 0
   let stopped = false
 
+  // smootherstep — matches the hero text push curve so the rising book tracks
+  // the text it shoves off the top, instead of snapping into place early.
+  const smoother = (x: number) => x * x * x * (x * (x * 6 - 15) + 10)
+
+  // Horizontally centre whatever is currently visible. An open spread is
+  // symmetric about the spine (x=0), but a CLOSED cover fills only one half of
+  // a spread — front cover sits +PAGE_WIDTH/2 to the right of the spine, back
+  // cover the same to the left. Shift the book to cancel that so the cover
+  // arrives dead-centre, then glide back to 0 as it opens. Glides on a lerp so
+  // the recentre is synced with the cover-turn animation.
+  const HALF_PAGE = PAGE_WIDTH / 2
+  function recenterBook(dt: number) {
+    const openFront = THREE.MathUtils.clamp(delayedPage, 0, 1)
+    const openBack = THREE.MathUtils.clamp(TOTAL - delayedPage, 0, 1)
+    const targetX = -HALF_PAGE * (1 - openFront) + HALF_PAGE * (1 - openBack)
+    bookGroup.position.x += (targetX - bookGroup.position.x) * Math.min(1, dt * 6)
+  }
+
+  function applyEntrance(dt: number) {
+    // Smoothly chase the scroll-driven target so fast scrubbing still glides.
+    entrance += (entranceTarget - entrance) * Math.min(1, dt * 6)
+    const e = smoother(THREE.MathUtils.clamp(entrance, 0, 1))
+
+    // The book rises from below AND rotates upright as it arrives — it tips up
+    // from a reclined pose, turns toward the camera and dollies in, so it reads
+    // as a solid object moving through 3D space (not a PNG being slid). Reverses
+    // automatically on scroll-up because `e` is scroll-driven.
+    tiltGroup.position.y = THREE.MathUtils.lerp(-3.4, 0, e)
+    const s = THREE.MathUtils.lerp(0.78, 1, e)
+    tiltGroup.scale.setScalar(s)
+    tiltGroup.rotation.x = THREE.MathUtils.lerp(-Math.PI / 3, TILT_REST_X, e)
+    // Swings ~30° around its spine while settling — gives the arrival real depth.
+    bookGroup.rotation.y = BOOK_REST_Y - (1 - e) * 0.55
+
+    // Front cover sits ajar during the rise (~28°) and closes flush as it lands.
+    coverAjar = (1 - e) * 0.5
+
+    // Dolly in as it arrives (skip while zoomed so the close-up isn't disturbed).
+    if (zoomedProject === null) {
+      targetPos.set(0, 0.1, THREE.MathUtils.lerp(DOLLY_FAR, DOLLY_NEAR, e))
+    }
+  }
+
   function tick() {
     if (stopped) return
     const dt = Math.min(clock.getDelta(), 0.05)
+    applyEntrance(dt)
     for (const lf of leaves) updateLeaf(lf, dt)
+    recenterBook(dt)
     const camLerp = Math.min(1, dt * 2.8)
     camera.position.lerp(targetPos, camLerp)
     currentLook.lerp(targetLook, camLerp)
@@ -844,9 +863,6 @@ export async function createBookScene({
       cancelAnimationFrame(rafId)
       if (pageStepTimer) clearTimeout(pageStepTimer)
       ro.disconnect()
-      canvas.removeEventListener("wheel", onWheel)
-      canvas.removeEventListener("touchstart", onTouchStart)
-      canvas.removeEventListener("touchmove", onTouchMove)
       window.removeEventListener("keydown", onKey)
       canvas.removeEventListener("mousemove", onMouseMove)
       canvas.removeEventListener("click", onClick)
@@ -862,5 +878,19 @@ export async function createBookScene({
       }
     },
     closeZoom: zoomOut,
+    setEntrance(t: number) {
+      entranceTarget = THREE.MathUtils.clamp(t, 0, 1)
+    },
+    goToPage(index: number) {
+      setPage(THREE.MathUtils.clamp(Math.round(index), 0, MAX_PAGE))
+    },
+    setInteractive(on: boolean) {
+      interactive = on
+      if (!on) {
+        for (const lf of leaves) lf.highlighted = false
+        canvas.style.cursor = "default"
+      }
+    },
+    maxPage: MAX_PAGE,
   }
 }

@@ -35,6 +35,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "concurrently": "^8.2.2",
+    "playwright": "^1.60.0",
     "typescript": "^5"
   }
 }
