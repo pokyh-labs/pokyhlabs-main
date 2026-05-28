@@ -606,7 +606,7 @@ function BlogEditor({ blog, onSave, onCancel }) {
   const [form, setForm] = useState({
     title: blog?.title || '',
     excerpt: blog?.excerpt || '',
-    status: blog?.status || 'draft',
+    status: blog?.status || 'published',
     image_alt: blog?.image_alt || '',
   });
   const [blocks, setBlocks] = useState(() => initBlocks(blog));
