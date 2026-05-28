@@ -72,15 +72,25 @@ async function getPublished(req, res) {
 
   const { count, rows } = await Blog.findAndCountAll({
     where: { status: 'published' },
-    include: [{ model: User, as: 'author', attributes: ['username'] }],
     order: [['published_at', 'DESC']],
     limit,
     offset,
+    subQuery: false,
+    distinct: true,
+    col: 'Blog.id',
     attributes: ['id', 'title', 'slug', 'excerpt', 'image_url', 'image_alt', 'published_at', 'views', 'author_id'],
   });
 
+  // Fetch authors separately to avoid MySQL JOIN + LIMIT subquery issues
+  const authorIds = [...new Set(rows.map(b => b.author_id).filter(Boolean))];
+  const authorMap = {};
+  if (authorIds.length) {
+    const authors = await User.findAll({ where: { id: authorIds }, attributes: ['id', 'username'] });
+    authors.forEach(u => { authorMap[u.id] = { username: u.username }; });
+  }
+
   const result = {
-    blogs: rows,
+    blogs: rows.map(b => ({ ...b.toJSON(), author: authorMap[b.author_id] || null })),
     pagination: { page, limit, total: count, pages: Math.ceil(count / limit) },
   };
 
@@ -100,13 +110,16 @@ async function getBySlug(req, res) {
     return res.json(cached);
   }
 
-  const blog = await Blog.findOne({
-    where: { slug, status: 'published' },
-    include: [{ model: User, as: 'author', attributes: ['username'] }],
-  });
+  const blog = await Blog.findOne({ where: { slug, status: 'published' } });
   if (!blog) return err(res, 404, 'Blog not found');
 
   const plain = blog.toJSON();
+  if (plain.author_id) {
+    const author = await User.findByPk(plain.author_id, { attributes: ['username'] });
+    plain.author = author ? { username: author.username } : null;
+  } else {
+    plain.author = null;
+  }
   cache.set(cacheKey, plain, BLOG_SINGLE_TTL);
   res.setHeader('X-Cache', 'MISS');
   res.json(plain);
@@ -142,13 +155,11 @@ async function getAll(req, res) {
     return res.json(cached);
   }
 
-  const blogs = await Blog.findAll({
-    include: [{ model: User, as: 'author', attributes: ['username'] }],
-    order: [['created_at', 'DESC']],
-  });
-  cache.set(KEYS.BLOG_ALL, blogs, 30); // 30s for admin list
+  const blogs = await Blog.findAll({ order: [['created_at', 'DESC']] });
+  const plain = blogs.map(b => b.toJSON());
+  cache.set(KEYS.BLOG_ALL, plain, 30);
   res.setHeader('X-Cache', 'MISS');
-  res.json(blogs);
+  res.json(plain);
 }
 
 function resolveContent(format, content, content_markdown) {
