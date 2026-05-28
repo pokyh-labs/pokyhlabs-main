@@ -13,7 +13,7 @@ type BlogPost = {
 
 async function fetchPublishedBlogs(): Promise<BlogPost[]> {
   try {
-    const base = process.env.BACKEND_URL ?? "http://localhost:3001"
+    const base = (process.env.BACKEND_URL ?? `http://localhost:${process.env.PORT ?? 3000}`).replace(/\/$/, "")
     const res = await fetch(`${base}/api/blogs?limit=1000`, {
       next: { revalidate: 3600 },
     })

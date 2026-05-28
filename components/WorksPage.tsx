@@ -19,8 +19,7 @@ export default function WorksPage({ initialProjects = [] }: { initialProjects?: 
   // Client-side fallback if the server didn't have data (e.g. backend was warming up).
   useEffect(() => {
     if (initialProjects.length > 0) return
-    const base = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/api$/, "")
-    fetch(`${base}/api/projects`)
+    fetch("/api/projects")
       .then((r) => (r.ok ? r.json() : { projects: [] }))
       .then((d) => setProjects(d.projects || []))
       .catch(() => {})
