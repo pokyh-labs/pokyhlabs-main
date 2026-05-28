@@ -6,7 +6,7 @@ module.exports = (sequelize) => {
     id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
     title: { type: DataTypes.STRING(255), allowNull: false },
     slug: { type: DataTypes.STRING(300), allowNull: false, unique: true },
-    content: { type: DataTypes.TEXT, allowNull: false },
+    content: { type: DataTypes.TEXT('long'), allowNull: false },
     excerpt: { type: DataTypes.STRING(500), allowNull: true },
     image_url: { type: DataTypes.STRING(500), allowNull: true },
     image_alt: { type: DataTypes.STRING(255), allowNull: true },
@@ -15,7 +15,7 @@ module.exports = (sequelize) => {
     published_at: { type: DataTypes.DATE, allowNull: true },
     views: { type: DataTypes.INTEGER, defaultValue: 0 },
     content_format: { type: DataTypes.STRING(10), defaultValue: 'html', allowNull: false },
-    content_markdown: { type: DataTypes.TEXT, allowNull: true },
+    content_markdown: { type: DataTypes.TEXT('long'), allowNull: true },
   }, {
     tableName: 'blogs',
     hooks: {
