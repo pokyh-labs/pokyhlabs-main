@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
 # ── pokyhlabs setup / update script ──────────────────────────────────────────
-# Runs on macOS and Linux (Alpine / Debian).
+# Runs on macOS and Linux.
 # Usage:
 #   chmod +x setup.sh && ./setup.sh          # fresh install or update
-#   ./setup.sh --docker                      # build & start via Docker Compose
 #   ./setup.sh --update                      # pull latest code, rebuild, restart
 set -euo pipefail
 
@@ -17,11 +16,9 @@ warn() { echo -e "${YELLOW}⚠${NC}  $*"; }
 fail() { echo -e "${RED}✗  $*${NC}"; exit 1; }
 hr()   { echo -e "${CYAN}────────────────────────────────────────────────────${NC}"; }
 
-DOCKER_MODE=false
 UPDATE_MODE=false
 for arg in "$@"; do
   case "$arg" in
-    --docker) DOCKER_MODE=true ;;
     --update) UPDATE_MODE=true ;;
   esac
 done
@@ -36,22 +33,14 @@ hr
 # ── 1. Prerequisites ──────────────────────────────────────────────────────────
 info "Checking prerequisites..."
 
-if $DOCKER_MODE; then
-  command -v docker >/dev/null 2>&1 || fail "Docker is not installed. Install it from https://docs.docker.com/get-docker/"
-  docker compose version >/dev/null 2>&1 || \
-    docker-compose version >/dev/null 2>&1 || \
-    fail "docker compose (v2) not found. Update Docker Desktop or install the plugin."
-  ok "Docker found: $(docker --version | head -1)"
-else
-  command -v node >/dev/null 2>&1 || fail "Node.js not installed. Install v18+ from https://nodejs.org"
-  command -v npm  >/dev/null 2>&1 || fail "npm not installed. It ships with Node.js."
+command -v node >/dev/null 2>&1 || fail "Node.js not installed. Install v20+ from https://nodejs.org"
+command -v npm  >/dev/null 2>&1 || fail "npm not installed. It ships with Node.js."
 
-  NODE_MAJOR=$(node -e "process.stdout.write(String(process.version.split('.')[0].slice(1)))")
-  if [ "$NODE_MAJOR" -lt 18 ]; then
-    fail "Node.js v18+ required (found $(node --version)). Upgrade at https://nodejs.org"
-  fi
-  ok "Node.js $(node --version)  /  npm $(npm --version)"
+NODE_MAJOR=$(node -e "process.stdout.write(String(process.version.split('.')[0].slice(1)))")
+if [ "$NODE_MAJOR" -lt 20 ]; then
+  fail "Node.js v20+ required (found $(node --version)). Upgrade at https://nodejs.org"
 fi
+ok "Node.js $(node --version)  /  npm $(npm --version)"
 
 # ── 2. Pull latest code (update mode) ─────────────────────────────────────────
 if $UPDATE_MODE; then
@@ -79,29 +68,7 @@ if grep -q "CHANGE_ME" .env 2>/dev/null; then
   echo ""
 fi
 
-# ── 4. Docker path ─────────────────────────────────────────────────────────────
-if $DOCKER_MODE; then
-  info "Building Docker image..."
-  docker compose build --no-cache
-
-  info "Starting containers..."
-  docker compose up -d
-
-  hr
-  ok "Containers started!"
-  echo ""
-  info "Follow logs with:   docker compose logs -f"
-  info "Stop with:          docker compose down"
-  echo ""
-  PORT=$(grep -E "^PORT=" .env 2>/dev/null | cut -d= -f2 | tr -d ' ')
-  PORT="${PORT:-3000}"
-  info "App should be available at:  http://localhost:${PORT}"
-  info "Admin dashboard:             http://localhost:${PORT}/admin"
-  hr
-  exit 0
-fi
-
-# ── 5. Install dependencies ───────────────────────────────────────────────────
+# ── 4. Install dependencies ───────────────────────────────────────────────────
 info "Installing root dependencies..."
 npm install
 ok "Root dependencies installed"
@@ -113,17 +80,15 @@ if [ ! -d "backend/node_modules" ]; then
   ok "Backend dependencies installed"
 fi
 
-# ── 6. Build ──────────────────────────────────────────────────────────────────
+# ── 5. Build ──────────────────────────────────────────────────────────────────
 info "Building project (Next.js + admin panel)..."
 npm run build
 ok "Build complete"
 
-# ── 7. Database / first-run setup ────────────────────────────────────────────
-# Read PORT from .env for the health check
+# ── 6. Database / first-run setup ────────────────────────────────────────────
 PORT=$(grep -E "^PORT=" .env 2>/dev/null | cut -d= -f2 | tr -d ' ')
 PORT="${PORT:-3000}"
 
-# Only offer add-admin on a fresh SQLite database
 DB_PATH=$(grep -E "^SQLITE_PATH=" .env 2>/dev/null | cut -d= -f2 | tr -d ' ')
 DB_PATH="${DB_PATH:-./data/database.sqlite}"
 
@@ -141,12 +106,11 @@ if [ ! -f "$DB_PATH" ]; then
   fi
 fi
 
-# ── 8. Start ──────────────────────────────────────────────────────────────────
+# ── 7. Start ──────────────────────────────────────────────────────────────────
 hr
 ok "Setup complete!"
 echo ""
 
-# Offer pm2 if available, otherwise plain node
 if command -v pm2 >/dev/null 2>&1; then
   echo -e "  ${BOLD}Start options:${NC}"
   echo -e "    ${GREEN}pm2 start server.js --name pokyhlabs${NC}   (recommended — survives terminal close)"

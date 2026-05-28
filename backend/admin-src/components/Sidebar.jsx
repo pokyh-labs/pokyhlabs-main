@@ -23,7 +23,6 @@ const NAV_SECTIONS = [
       { id: 'users',   icon: 'bi-person-2-fill',   label: 'Benutzer',  roles: ['admin'] },
       { id: 'seo',     icon: 'bi-search',          label: 'SEO',       roles: ['admin'] },
       { id: 'logs',    icon: 'bi-chart-bar-fill',  label: 'Logs',      roles: ['admin'] },
-      { id: 'tunnel',  icon: 'bi-diagram-3-fill',  label: 'Tunnel',    roles: ['admin'] },
     ],
   },
 ];

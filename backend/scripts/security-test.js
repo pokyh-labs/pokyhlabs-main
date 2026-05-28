@@ -127,11 +127,6 @@ async function run() {
     assert(res.status === 401, `Expected 401, got ${res.status}`);
   });
 
-  await test('Tunnel route requires admin auth', async () => {
-    const res = await request('GET', '/api/tunnel/status');
-    assert(res.status === 401, `Expected 401, got ${res.status}`);
-  });
-
   await test('Blog creation requires auth', async () => {
     const res = await request('POST', '/api/blogs', { title: 'test', content: 'hello world test' });
     assert(res.status === 401, `Expected 401, got ${res.status}`);

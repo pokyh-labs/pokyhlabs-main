@@ -6,7 +6,6 @@ import BottomNav from './components/BottomNav';
 import Dashboard from './pages/Dashboard';
 import Blogs from './pages/Blogs';
 import Inquiries from './pages/Inquiries';
-import Tunnel from './pages/Tunnel';
 import Users from './pages/Users';
 import Logs from './pages/Logs';
 import Seo from './pages/Seo';
@@ -19,12 +18,11 @@ const PAGES = {
   blogs: Blogs,
   projects: Projects,
   inquiries: Inquiries,
-  tunnel: Tunnel,
   users: Users,
   logs: Logs,
   seo: Seo,
 };
-const ADMIN_ONLY = ['dashboard', 'projects', 'inquiries', 'tunnel', 'users', 'logs', 'seo'];
+const ADMIN_ONLY = ['dashboard', 'projects', 'inquiries', 'users', 'logs', 'seo'];
 
 export default function App() {
   const [user, setUser]               = useState(null);

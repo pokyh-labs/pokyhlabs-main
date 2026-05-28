@@ -41,29 +41,19 @@ export default function DatenschutzContent() {
       </Section>
 
       <Section heading={t("datenschutz_s5")}>
-        <p>
-          {t("datenschutz_s5_body").split("cloudflare.com/privacypolicy")[0]}
-          <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener noreferrer">
-            cloudflare.com/privacypolicy
-          </a>
-          {t("datenschutz_s5_body").split("cloudflare.com/privacypolicy")[1]}
-        </p>
+        <p>{t("datenschutz_s5_body")}</p>
       </Section>
 
       <Section heading={t("datenschutz_s6")}>
-        <p>{t("datenschutz_s6_body")}</p>
-      </Section>
-
-      <Section heading={t("datenschutz_s7")}>
         <p>
-          {t("datenschutz_s7_body").split("/cookie-richtlinie")[0]}
+          {t("datenschutz_s6_body").split("/cookie-richtlinie")[0]}
           <a href="/cookie-richtlinie">{t("cookie_richtlinie_title")}</a>
-          {t("datenschutz_s7_body").split("/cookie-richtlinie")[1]}
+          {t("datenschutz_s6_body").split("/cookie-richtlinie")[1]}
         </p>
       </Section>
 
-      <Section heading={t("datenschutz_s8")}>
-        <p>{t("datenschutz_s8_intro")}</p>
+      <Section heading={t("datenschutz_s7")}>
+        <p>{t("datenschutz_s7_intro")}</p>
         <ul>
           <li>{t("datenschutz_right1")}</li>
           <li>{t("datenschutz_right2")}</li>
@@ -79,13 +69,13 @@ export default function DatenschutzContent() {
         </p>
       </Section>
 
-      <Section heading={t("datenschutz_s9")}>
+      <Section heading={t("datenschutz_s8")}>
         <p>
-          {t("datenschutz_s9_body").split("Garante per la protezione dei dati personali")[0]}
+          {t("datenschutz_s8_body").split("Garante per la protezione dei dati personali")[0]}
           <a href="https://www.garanteprivacy.it" target="_blank" rel="noopener noreferrer">
             Garante per la protezione dei dati personali
           </a>
-          {t("datenschutz_s9_body").split("Garante per la protezione dei dati personali")[1]}
+          {t("datenschutz_s8_body").split("Garante per la protezione dei dati personali")[1]}
         </p>
       </Section>
     </LegalLayout>

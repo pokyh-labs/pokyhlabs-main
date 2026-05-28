@@ -5,7 +5,6 @@ const PAGE_META = {
   blogs:      { title: 'Blogs',              icon: 'bi-journal-text' },
   projects:   { title: 'Projekte',           icon: 'bi-grid-fill' },
   inquiries:  { title: 'Anfragen',           icon: 'bi-envelope-fill' },
-  tunnel:     { title: 'Cloudflare Tunnel',  icon: 'bi-diagram-3-fill' },
   users:      { title: 'Benutzer',           icon: 'bi-person-2-fill' },
   logs:       { title: 'Logs & Analysen',    icon: 'bi-chart-bar-fill' },
   seo:        { title: 'SEO Editor',         icon: 'bi-search' },

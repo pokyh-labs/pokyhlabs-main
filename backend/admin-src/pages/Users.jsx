@@ -331,7 +331,7 @@ export default function Users() {
         <span>
           <strong style={{ color: 'var(--text2)' }}>Sicherheitshinweis:</strong>{' '}
           Editoren haben nur Zugriff auf Blogs.
-          Dashboard, Tunnel und Benutzerverwaltung sind auch auf API-Ebene gesperrt.
+          Dashboard und Benutzerverwaltung sind auch auf API-Ebene gesperrt.
         </span>
       </div>
     </div>

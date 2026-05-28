@@ -22,21 +22,7 @@ async function main() {
   const { app: backendApp, initDatabase } = require('./backend/src/app');
   await initDatabase();
 
-  // 2. Auto-resume tunnel if configured (reads ~/.cloudflared/config.yml — reference-repo approach)
-  try {
-    const tunnelService = require('./backend/src/services/tunnelService');
-    if (tunnelService.isTunnelConfigured()) {
-      const name = tunnelService.getTunnelNameFromConfig();
-      if (name) {
-        await tunnelService.startByName(name);
-        console.log(`> Cloudflare tunnel '${name}' auto-resumed`);
-      }
-    }
-  } catch (err) {
-    console.warn('> Tunnel auto-resume failed (reconfigure in admin panel):', err.message);
-  }
-
-  // 3. Prepare Next.js
+  // 2. Prepare Next.js
   const next = require('next');
   const nextApp = next({ dev, hostname: HOST, port: PORT });
   const handle = nextApp.getRequestHandler();

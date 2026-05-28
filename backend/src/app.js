@@ -25,12 +25,10 @@ const { detectSuspiciousInput, detectSuspiciousUA } = require('./middleware/sani
 const { globalRateLimiter } = require('./middleware/rateLimiter');
 const authRoutes       = require('./routes/auth');
 const blogRoutes       = require('./routes/blogs');
-const tunnelRoutes     = require('./routes/tunnel');
 const userRoutes       = require('./routes/users');
 const logsRoutes       = require('./routes/logs');
 const systemRoutes     = require('./routes/system');
 const seoRoutes        = require('./routes/seo');
-const cloudflareRoutes = require('./routes/cloudflare');
 const inquiryRoutes    = require('./routes/inquiries');
 const projectRoutes    = require('./routes/projects');
 const uploadRoutes     = require('./routes/upload');
@@ -94,8 +92,7 @@ app.use(express.static(path.join(__dirname, '../public'), {
 // ── CORS ──────────────────────────────────────────────────────────────────────
 // Dynamic origin check: allows ALLOWED_ORIGINS env var, localhost, AND whatever
 // host/IP the client actually used to reach this server — so LAN access
-// (e.g. 192.168.x.x), custom domains, and Cloudflare tunnels all work without
-// hardcoding a single address.
+// (e.g. 192.168.x.x) and custom domains work without hardcoding a single address.
 app.use((req, res, next) => {
   const port = process.env.PORT || 3000;
   const fallback = `http://localhost:${port}`;
@@ -144,12 +141,10 @@ app.use('/api/', globalRateLimiter);
 // API routes
 app.use('/api/auth',        authRoutes);
 app.use('/api/blogs',       blogRoutes);
-app.use('/api/tunnel',      tunnelRoutes);
 app.use('/api/users',       userRoutes);
 app.use('/api/logs',        logsRoutes);
 app.use('/api/system',      systemRoutes);
 app.use('/api/seo',         seoRoutes);
-app.use('/api/cloudflare',  cloudflareRoutes);
 app.use('/api/inquiries',   inquiryRoutes);
 app.use('/api/projects',   projectRoutes);
 app.use('/api/upload',     uploadRoutes);

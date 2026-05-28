@@ -1,7 +1,7 @@
 {
   "name": "pokyhlabs-backend",
   "version": "1.0.0",
-  "description": "Secure Node.js Blog Backend with Admin Dashboard & Cloudflare Tunnel",
+  "description": "Secure Node.js Blog Backend with Admin Dashboard",
   "main": "src/app.js",
   "engines": {
     "node": ">=20.0.0",
