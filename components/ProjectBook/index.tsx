@@ -579,51 +579,128 @@ function ProgressRail({ pageInfo, hidden }: { pageInfo: PageInfo; hidden: boolea
 // ── Project overlay (shown when a page is clicked) ─────────────────
 function ProjectOverlay({ zoom, onClose }: { zoom: ZoomPayload | null; onClose: () => void }) {
   const show = !!zoom
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const heroRef = useRef<HTMLDivElement>(null)
+  const [readProgress, setReadProgress] = useState(0)
+  const [scrolled, setScrolled] = useState(false)
+
+  // Reset scroll + progress when a new project opens.
+  useEffect(() => {
+    if (!show) return
+    const el = scrollRef.current
+    if (el) el.scrollTop = 0
+    setReadProgress(0)
+    setScrolled(false)
+  }, [show, zoom?.title])
+
+  // Track scroll inside the overlay → drives the reading-progress bar and a
+  // gentle parallax on the hero image. Cheap math, no rAF needed.
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const onScroll = () => {
+      const max = el.scrollHeight - el.clientHeight
+      const p = max > 0 ? el.scrollTop / max : 0
+      setReadProgress(p)
+      setScrolled(el.scrollTop > 12)
+      if (heroRef.current) {
+        heroRef.current.style.setProperty("--parallax", `${Math.min(el.scrollTop * 0.18, 120)}px`)
+      }
+    }
+    el.addEventListener("scroll", onScroll, { passive: true })
+    return () => el.removeEventListener("scroll", onScroll)
+  }, [show])
+
+  const hasImage = !!zoom?.imageUrl
+  const body = zoom?.body ?? ""
+  // First "real" character gets dropcap treatment; rest of the paragraph follows.
+  const dropChar = body.trimStart().charAt(0)
+  const rest = dropChar ? body.trimStart().slice(1) : ""
+
   return (
     <>
       <div
-        className={`detail${show ? " detail--show" : ""}`}
+        className={`detail${show ? " detail--show" : ""}${hasImage ? "" : " detail--noimg"}`}
         role={show ? "dialog" : undefined}
         aria-modal={show || undefined}
         data-lenis-prevent
         style={{ backgroundColor: DETAIL_BG }}
       >
-        <div className="detail__scroll">
-          <article className={`detail__inner${zoom?.imageUrl ? "" : " detail__inner--noimg"}`}>
-            {zoom?.imageUrl && (
-              <figure className="detail__media">
+        {/* Reading progress bar across the top — only meaningful when content scrolls. */}
+        <div className="detail__progress" aria-hidden="true">
+          <div className="detail__progressFill" style={{ transform: `scaleX(${readProgress})` }} />
+        </div>
+
+        <div className="detail__scroll" ref={scrollRef}>
+          <header
+            ref={heroRef}
+            className={`detail__hero${hasImage ? "" : " detail__hero--text"}`}
+          >
+            {hasImage && (
+              <div className="detail__media">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={zoom.imageUrl} alt={zoom.title} />
-              </figure>
+                <img src={zoom!.imageUrl!} alt={zoom?.title ?? ""} />
+                <div className="detail__mediaShade" />
+              </div>
             )}
 
-            <div className="detail__content">
+            <div className="detail__heroBody">
               <div className="detail__eyebrow">{zoom?.eyebrow ?? ""}</div>
               <h2 className="detail__title">{zoom?.title ?? ""}</h2>
-              <div className="detail__rule" />
-              <p className="detail__body">{zoom?.body ?? ""}</p>
+              <div className="detail__metaStrip">
+                {zoom?.year && <span className="detail__metaItem">{zoom.year}</span>}
+                {zoom?.status && (
+                  <span className="detail__metaItem detail__status">
+                    <span className={`detail__statusDot detail__statusDot--${zoom.status.toLowerCase()}`} />
+                    {zoom.status.toUpperCase()}
+                  </span>
+                )}
+              </div>
+            </div>
 
-              {zoom?.tags && zoom.tags.length > 0 && (
-                <div className="detail__tags">
+            {hasImage && (
+              <div className={`detail__readOn${scrolled ? " detail__readOn--hidden" : ""}`} aria-hidden="true">
+                <span className="detail__readOnLine" />
+                Read on
+              </div>
+            )}
+          </header>
+
+          <article className="detail__article">
+            <div className="detail__articleHead">
+              <span className="detail__articleLabel">— The story —</span>
+              <span className="detail__articleRule" />
+            </div>
+
+            <p className="detail__body">
+              {dropChar && <span className="detail__dropcap" aria-hidden="true">{dropChar}</span>}
+              {dropChar ? rest : body}
+            </p>
+
+            {zoom?.tags && zoom.tags.length > 0 && (
+              <div className="detail__tags">
+                <span className="detail__tagsLabel">Tags</span>
+                <div className="detail__tagsRow">
                   {zoom.tags.map((tag) => (
                     <span key={tag} className="detail__tag">{tag}</span>
                   ))}
                 </div>
-              )}
-
-              <div className="detail__meta">
-                {zoom?.year && <span className="detail__metaItem">{zoom.year}</span>}
-                {zoom?.status && <span className="detail__metaItem">{zoom.status.toUpperCase()}</span>}
               </div>
+            )}
 
-              {zoom?.url && (
-                <a href={zoom.url} target="_blank" rel="noopener noreferrer" className="detail__cta">
-                  Visit project
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <path d="M7 17 17 7M9 7h8v8" />
-                  </svg>
-                </a>
-              )}
+            {zoom?.url && (
+              <a href={zoom.url} target="_blank" rel="noopener noreferrer" className="detail__cta">
+                <span>Visit project</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M7 17 17 7M9 7h8v8" />
+                </svg>
+              </a>
+            )}
+
+            <div className="detail__footnote" aria-hidden="true">
+              <span className="detail__footnoteRule" />
+              <span>— End of chapter —</span>
+              <span className="detail__footnoteRule" />
             </div>
           </article>
         </div>
@@ -645,94 +722,274 @@ function ProjectOverlay({ zoom, onClose }: { zoom: ZoomPayload | null; onClose: 
           pointer-events: none;
           transition: opacity 0.55s cubic-bezier(.4,0,.2,1);
         }
-        .detail--show {
-          opacity: 1;
-          pointer-events: auto;
+        .detail--show { opacity: 1; pointer-events: auto; }
+
+        /* Reading-progress sliver across the top of the overlay. */
+        .detail__progress {
+          position: absolute;
+          top: 0; left: 0; right: 0;
+          height: 2px;
+          background: rgba(28, 20, 10, 0.08);
+          z-index: 5;
         }
+        .detail__progressFill {
+          width: 100%;
+          height: 100%;
+          background: #644BFF;
+          transform-origin: 0 50%;
+          transform: scaleX(0);
+          transition: transform 0.15s linear;
+        }
+
         .detail__scroll {
           width: 100%;
           height: 100%;
           overflow-y: auto;
           overflow-x: hidden;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: clamp(96px, 12vh, 160px) clamp(28px, 6vw, 110px) clamp(120px, 16vh, 180px);
-          box-sizing: border-box;
+          scroll-behavior: smooth;
         }
-        .detail__inner {
+
+        /* ── Hero ─────────────────────────────────────────────── */
+        .detail__hero {
+          position: relative;
           width: 100%;
-          max-width: 1120px;
-          display: grid;
-          grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
-          align-items: center;
-          gap: clamp(36px, 5vw, 88px);
+          min-height: clamp(440px, 72vh, 760px);
+          display: flex;
+          align-items: flex-end;
+          justify-content: flex-start;
+          padding: clamp(60px, 9vh, 110px) clamp(32px, 7vw, 110px) clamp(48px, 7vh, 90px);
+          box-sizing: border-box;
+          overflow: hidden;
           opacity: 0;
-          transform: translateY(26px);
+          transform: translateY(18px);
           transition:
-            opacity 0.6s cubic-bezier(.4,0,.2,1),
-            transform 0.75s cubic-bezier(.2,.8,.2,1);
+            opacity 0.7s cubic-bezier(.4,0,.2,1),
+            transform 0.85s cubic-bezier(.2,.8,.2,1);
         }
-        .detail--show .detail__inner {
+        .detail--show .detail__hero {
           opacity: 1;
           transform: translateY(0);
-          transition-delay: 0.18s;
+          transition-delay: 0.12s;
+        }
+        .detail__hero--text {
+          min-height: clamp(280px, 42vh, 460px);
+          align-items: flex-end;
+          padding-bottom: clamp(36px, 5vh, 64px);
         }
 
         .detail__media {
-          margin: 0;
-          border-radius: 10px;
+          position: absolute;
+          inset: 0;
+          z-index: 0;
           overflow: hidden;
-          background: #e7dfcd;
-          box-shadow:
-            0 1px 0 rgba(255,255,255,0.6) inset,
-            0 30px 60px -28px rgba(40, 28, 8, 0.45);
-          border: 1px solid rgba(40, 28, 8, 0.1);
         }
         .detail__media img {
           display: block;
           width: 100%;
           height: 100%;
-          max-height: 70vh;
           object-fit: cover;
-          aspect-ratio: 4 / 3;
+          transform: translate3d(0, calc(var(--parallax, 0px) * -0.5), 0) scale(1.06);
+          will-change: transform;
+          transition: transform 0.6s cubic-bezier(.2,.8,.2,1);
+        }
+        .detail--show .detail__media img {
+          animation: heroZoom 1.6s cubic-bezier(.2,.8,.2,1) both;
+        }
+        @keyframes heroZoom {
+          from { transform: scale(1.14); }
+          to   { transform: translate3d(0, calc(var(--parallax, 0px) * -0.5), 0) scale(1.06); }
+        }
+        .detail__mediaShade {
+          position: absolute;
+          inset: 0;
+          background:
+            linear-gradient(180deg, rgba(20,15,8,0.05) 0%, rgba(20,15,8,0.0) 35%, rgba(20,15,8,0.55) 78%, rgba(20,15,8,0.82) 100%),
+            linear-gradient(90deg, rgba(20,15,8,0.45) 0%, rgba(20,15,8,0) 55%);
         }
 
-        .detail__content { min-width: 0; }
+        .detail__heroBody {
+          position: relative;
+          z-index: 2;
+          max-width: 880px;
+          color: #fff;
+          text-shadow: 0 1px 24px rgba(0,0,0,0.25);
+        }
+        .detail__hero--text .detail__heroBody {
+          color: #1c140a;
+          text-shadow: none;
+          margin: 0 auto;
+          text-align: center;
+          max-width: 720px;
+        }
+
         .detail__eyebrow {
           font-family: var(--font-inter), sans-serif;
           font-size: 11px;
-          letter-spacing: 0.32em;
+          letter-spacing: 0.42em;
           text-transform: uppercase;
-          color: rgba(40, 28, 8, 0.45);
-          margin-bottom: 18px;
+          color: rgba(255, 255, 255, 0.78);
+          margin-bottom: 24px;
           font-weight: 600;
         }
+        .detail__hero--text .detail__eyebrow { color: rgba(40, 28, 8, 0.5); }
+
         .detail__title {
           font-family: var(--font-inter), sans-serif;
           font-weight: 600;
-          font-size: clamp(34px, 4.6vw, 68px);
-          line-height: 1.02;
-          letter-spacing: -0.035em;
-          color: #1c140a;
+          font-size: clamp(38px, 6.4vw, 92px);
+          line-height: 0.98;
+          letter-spacing: -0.04em;
           margin: 0;
         }
-        .detail__rule {
-          width: 56px; height: 2px;
-          background: #644BFF;
-          margin: 24px 0 22px;
-          border-radius: 2px;
+
+        .detail__metaStrip {
+          margin-top: clamp(20px, 3vh, 32px);
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: 10px 22px;
+          font-family: var(--font-inter), sans-serif;
+          font-size: 11px;
+          letter-spacing: 0.22em;
+          text-transform: uppercase;
+          color: rgba(255, 255, 255, 0.78);
+          font-weight: 500;
         }
+        .detail__hero--text .detail__metaStrip {
+          justify-content: center;
+          color: rgba(28, 20, 10, 0.55);
+        }
+        .detail__metaItem { position: relative; display: inline-flex; align-items: center; gap: 8px; }
+        .detail__metaItem + .detail__metaItem::before {
+          content: "";
+          position: absolute;
+          left: -12px; top: 50%;
+          width: 3px; height: 3px;
+          border-radius: 50%;
+          background: currentColor;
+          opacity: 0.5;
+          transform: translateY(-50%);
+        }
+        .detail__statusDot {
+          display: inline-block;
+          width: 7px; height: 7px;
+          border-radius: 50%;
+          background: #ffd76e;
+          box-shadow: 0 0 0 3px rgba(255, 215, 110, 0.18);
+        }
+        .detail__statusDot--live    { background: #6bff9a; box-shadow: 0 0 0 3px rgba(107,255,154,0.18); }
+        .detail__statusDot--wip     { background: #ffd76e; box-shadow: 0 0 0 3px rgba(255,215,110,0.18); }
+        .detail__statusDot--concept { background: #644BFF; box-shadow: 0 0 0 3px rgba(100,75,255,0.22); }
+
+        .detail__readOn {
+          position: absolute;
+          left: 50%;
+          bottom: 22px;
+          transform: translateX(-50%);
+          z-index: 3;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 10px;
+          font-family: var(--font-inter), sans-serif;
+          font-size: 9px;
+          letter-spacing: 4px;
+          text-transform: uppercase;
+          color: rgba(255, 255, 255, 0.7);
+          font-weight: 500;
+          transition: opacity 0.35s ease;
+          pointer-events: none;
+        }
+        .detail__readOn--hidden { opacity: 0; }
+        .detail__readOnLine {
+          width: 1px; height: 26px;
+          background: rgba(255, 255, 255, 0.5);
+          animation: readOnLine 1.8s ease-in-out infinite;
+        }
+        @keyframes readOnLine {
+          0%   { transform: scaleY(0.2); transform-origin: 0 0; opacity: 0.3; }
+          50%  { transform: scaleY(1);   transform-origin: 0 0; opacity: 0.9; }
+          51%  { transform: scaleY(1);   transform-origin: 0 100%; }
+          100% { transform: scaleY(0.2); transform-origin: 0 100%; opacity: 0.3; }
+        }
+
+        /* ── Article ──────────────────────────────────────────── */
+        .detail__article {
+          max-width: 720px;
+          margin: 0 auto;
+          padding: clamp(56px, 9vh, 110px) clamp(28px, 6vw, 40px) clamp(110px, 15vh, 180px);
+          color: #1c140a;
+          opacity: 0;
+          transform: translateY(22px);
+          transition:
+            opacity 0.7s cubic-bezier(.4,0,.2,1),
+            transform 0.85s cubic-bezier(.2,.8,.2,1);
+        }
+        .detail--show .detail__article {
+          opacity: 1;
+          transform: translateY(0);
+          transition-delay: 0.32s;
+        }
+
+        .detail__articleHead {
+          display: flex;
+          align-items: center;
+          gap: 18px;
+          margin-bottom: clamp(28px, 4vh, 44px);
+        }
+        .detail__articleLabel {
+          font-family: var(--font-inter), sans-serif;
+          font-size: 10px;
+          letter-spacing: 0.4em;
+          text-transform: uppercase;
+          color: rgba(28, 20, 10, 0.45);
+          font-weight: 600;
+          white-space: nowrap;
+        }
+        .detail__articleRule {
+          flex: 1;
+          height: 1px;
+          background: linear-gradient(90deg, rgba(28,20,10,0.25), rgba(28,20,10,0));
+        }
+
         .detail__body {
           font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-          font-size: clamp(15px, 1.15vw, 18px);
-          color: rgba(28, 20, 10, 0.78);
-          line-height: 1.7;
+          font-size: clamp(16px, 1.25vw, 19px);
+          color: rgba(28, 20, 10, 0.82);
+          line-height: 1.75;
           margin: 0;
-          max-width: 52ch;
+          letter-spacing: 0.005em;
         }
+        .detail__dropcap {
+          float: left;
+          font-family: var(--font-inter), sans-serif;
+          font-size: clamp(72px, 8vw, 108px);
+          line-height: 0.82;
+          padding: 6px 14px 0 0;
+          font-weight: 600;
+          color: #644BFF;
+          letter-spacing: -0.04em;
+        }
+
         .detail__tags {
-          margin-top: 26px;
+          margin-top: clamp(40px, 6vh, 64px);
+          display: flex;
+          align-items: flex-start;
+          gap: 18px;
+          padding-top: 22px;
+          border-top: 1px solid rgba(28, 20, 10, 0.12);
+        }
+        .detail__tagsLabel {
+          font-family: var(--font-inter), sans-serif;
+          font-size: 10px;
+          letter-spacing: 0.32em;
+          text-transform: uppercase;
+          color: rgba(28, 20, 10, 0.45);
+          font-weight: 600;
+          padding-top: 7px;
+          min-width: 36px;
+        }
+        .detail__tagsRow {
           display: flex;
           flex-wrap: wrap;
           gap: 8px;
@@ -740,74 +997,83 @@ function ProjectOverlay({ zoom, onClose }: { zoom: ZoomPayload | null; onClose: 
         .detail__tag {
           font-family: var(--font-inter), sans-serif;
           font-size: 11px;
-          letter-spacing: 0.1em;
+          letter-spacing: 0.12em;
           padding: 7px 14px;
           border-radius: 999px;
           border: 1px solid rgba(40, 28, 8, 0.22);
-          color: rgba(28, 20, 10, 0.7);
+          color: rgba(28, 20, 10, 0.72);
           text-transform: uppercase;
-          background: rgba(255, 255, 255, 0.35);
+          background: rgba(255, 255, 255, 0.4);
+          transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
         }
-        .detail__meta {
-          margin-top: 28px;
-          display: flex;
-          flex-wrap: wrap;
-          align-items: center;
-          gap: 14px 22px;
-          font-family: var(--font-inter), sans-serif;
-          font-size: 11px;
-          letter-spacing: 0.18em;
-          text-transform: uppercase;
-          color: rgba(28, 20, 10, 0.5);
+        .detail__tag:hover {
+          background: rgba(100, 75, 255, 0.08);
+          border-color: rgba(100, 75, 255, 0.45);
+          color: #644BFF;
         }
-        .detail__metaItem { position: relative; }
-        .detail__metaItem + .detail__metaItem::before {
-          content: "";
-          position: absolute;
-          left: -12px; top: 50%;
-          width: 3px; height: 3px;
-          border-radius: 50%;
-          background: rgba(28, 20, 10, 0.35);
-          transform: translateY(-50%);
-        }
+
         .detail__cta {
-          margin-top: 30px;
+          margin-top: clamp(40px, 6vh, 60px);
           display: inline-flex;
           align-items: center;
-          gap: 9px;
-          background: #644BFF;
+          gap: 12px;
+          background: #1c140a;
           color: #fff;
           text-decoration: none;
-          padding: 14px 24px;
+          padding: 16px 26px;
           border-radius: 999px;
           font-family: var(--font-inter), sans-serif;
           font-size: 13px;
           font-weight: 600;
-          letter-spacing: 0.02em;
-          transition: transform 0.2s ease, background 0.2s ease;
+          letter-spacing: 0.04em;
+          position: relative;
+          overflow: hidden;
+          transition: transform 0.25s cubic-bezier(.2,.8,.2,1), background 0.25s ease, box-shadow 0.25s ease;
+          box-shadow: 0 10px 30px -16px rgba(100, 75, 255, 0.5);
         }
-        .detail__cta:hover { background: #5238f0; transform: translateY(-1px); }
-        .detail__cta svg { width: 15px; height: 15px; }
-
-        /* No image → single centred column */
-        .detail__inner--noimg {
-          grid-template-columns: 1fr;
-          max-width: 640px;
-          justify-items: center;
-          text-align: center;
+        .detail__cta::before {
+          content: "";
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(120deg, #644BFF 0%, #8a72ff 100%);
+          opacity: 0;
+          transition: opacity 0.3s ease;
         }
-        .detail__inner--noimg .detail__rule { margin-left: auto; margin-right: auto; }
-        .detail__inner--noimg .detail__body { margin-left: auto; margin-right: auto; }
-        .detail__inner--noimg .detail__tags,
-        .detail__inner--noimg .detail__meta { justify-content: center; }
+        .detail__cta > * { position: relative; z-index: 1; }
+        .detail__cta:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 18px 40px -16px rgba(100, 75, 255, 0.6);
+        }
+        .detail__cta:hover::before { opacity: 1; }
+        .detail__cta svg { width: 15px; height: 15px; transition: transform 0.25s ease; }
+        .detail__cta:hover svg { transform: translate(2px, -2px); }
 
-        @media (max-width: 820px) {
-          .detail__inner {
-            grid-template-columns: 1fr;
-            gap: clamp(24px, 5vw, 40px);
-            max-width: 560px;
-          }
-          .detail__media img { max-height: 38vh; aspect-ratio: 16 / 10; }
+        .detail__footnote {
+          margin-top: clamp(60px, 9vh, 100px);
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          font-family: var(--font-inter), sans-serif;
+          font-size: 10px;
+          letter-spacing: 0.36em;
+          text-transform: uppercase;
+          color: rgba(28, 20, 10, 0.32);
+          font-weight: 500;
+          justify-content: center;
+        }
+        .detail__footnoteRule {
+          flex: 1;
+          max-width: 80px;
+          height: 1px;
+          background: rgba(28, 20, 10, 0.18);
+        }
+
+        @media (max-width: 720px) {
+          .detail__hero { padding: clamp(56px, 8vh, 90px) 24px clamp(40px, 6vh, 64px); min-height: clamp(380px, 60vh, 540px); }
+          .detail__article { padding: 56px 24px 120px; }
+          .detail__title { font-size: clamp(36px, 9vw, 56px); }
+          .detail__dropcap { font-size: clamp(60px, 14vw, 84px); padding-right: 10px; }
+          .detail__tags { flex-direction: column; gap: 12px; }
         }
 
         .back {
@@ -834,14 +1100,15 @@ function ProjectOverlay({ zoom, onClose }: { zoom: ZoomPayload | null; onClose: 
             opacity 0.45s cubic-bezier(.4,0,.2,1),
             transform 0.55s cubic-bezier(.2,.8,.2,1),
             background 0.2s ease;
+          box-shadow: 0 12px 30px -14px rgba(0,0,0,0.5);
         }
         .back--show {
           opacity: 1;
           transform: translateY(0);
           pointer-events: auto;
-          transition-delay: 0.3s;
+          transition-delay: 0.4s;
         }
-        .back:hover { background: #000; }
+        .back:hover { background: #000; transform: translateY(-1px); }
         .back svg { width: 14px; height: 14px; }
       `}</style>
     </>

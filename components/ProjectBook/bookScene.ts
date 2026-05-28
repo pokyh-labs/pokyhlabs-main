@@ -159,6 +159,30 @@ function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number)
   return lines
 }
 
+// Wrap, then truncate to `maxLines` and append an ellipsis to the last line —
+// dropping words (and finally chars) from that line until "…" fits in the width.
+function wrapTextEllipsis(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  maxWidth: number,
+  maxLines: number,
+): string[] {
+  const all = wrapText(ctx, text, maxWidth)
+  if (all.length <= maxLines) return all
+  const out = all.slice(0, maxLines)
+  const ell = "…"
+  let last = out[maxLines - 1]
+  while (last.length > 0 && ctx.measureText(last + ell).width > maxWidth) {
+    if (last.includes(" ")) {
+      last = last.slice(0, last.lastIndexOf(" ")).trimEnd()
+    } else {
+      last = last.slice(0, -1)
+    }
+  }
+  out[maxLines - 1] = (last ? last + ell : ell)
+  return out
+}
+
 function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   ctx.beginPath()
   ctx.moveTo(x + r, y)
@@ -330,9 +354,9 @@ function makeTextPage(project: BookProject, projectIdx: number, total: number): 
   ctx.fillStyle = "#15110a"
   ctx.textAlign = "left"; ctx.textBaseline = "top"
   ctx.font = '700 96px "Inter", sans-serif'
-  const titleLines = wrapText(ctx, project.title, w - 240)
+  const titleLines = wrapTextEllipsis(ctx, project.title, w - 240, 3)
   let y = 260
-  for (const line of titleLines.slice(0, 3)) {
+  for (const line of titleLines) {
     ctx.fillText(line, 120, y)
     y += 108
   }
@@ -346,17 +370,20 @@ function makeTextPage(project: BookProject, projectIdx: number, total: number): 
   // Description
   ctx.fillStyle = "rgba(20,15,8,0.78)"
   ctx.font = '400 36px "Inter", sans-serif'
-  const descLines = wrapText(ctx, project.description, w - 240)
-  for (const line of descLines.slice(0, 9)) {
+  const descLines = wrapTextEllipsis(ctx, project.description, w - 240, 9)
+  for (const line of descLines) {
     ctx.fillText(line, 120, y)
     y += 52
   }
 
-  // Tags
+  // Tags — show up to 8, append "+N" pill if more exist
+  const MAX_TAGS = 8
+  const visibleTags = project.tags.slice(0, MAX_TAGS)
+  const overflow = project.tags.length - visibleTags.length
   let tagX = 120
   let tagY = h - 390
   ctx.font = '500 22px "Inter", sans-serif'
-  for (const tag of project.tags.slice(0, 8)) {
+  for (const tag of visibleTags) {
     const tw = ctx.measureText(tag).width + 36
     if (tagX + tw > w - 120) { tagX = 120; tagY += 52 }
     ctx.strokeStyle = "rgba(20,15,8,0.35)"; ctx.lineWidth = 1
@@ -367,6 +394,18 @@ function makeTextPage(project: BookProject, projectIdx: number, total: number): 
     ctx.textAlign = "left"
     ctx.fillText(tag, tagX + 18, tagY + 20)
     tagX += tw + 12
+  }
+  if (overflow > 0) {
+    const label = `+${overflow}`
+    const tw = ctx.measureText(label).width + 36
+    if (tagX + tw > w - 120) { tagX = 120; tagY += 52 }
+    ctx.fillStyle = BRAND
+    roundRect(ctx, tagX, tagY, tw, 38, 19)
+    ctx.fill()
+    ctx.fillStyle = "#fff"
+    ctx.textBaseline = "middle"
+    ctx.textAlign = "left"
+    ctx.fillText(label, tagX + 18, tagY + 20)
   }
 
   // Footer: year · status (left)
