@@ -77,7 +77,13 @@ export default function App() {
     if (!mainRef.current || !gsap) return;
     gsap.fromTo(mainRef.current,
       { opacity: 0, y: 14, filter: 'blur(1.5px)' },
-      { opacity: 1, y: 0, filter: 'blur(0px)', duration: 0.38, ease: 'power2.out' }
+      {
+        opacity: 1, y: 0, filter: 'blur(0px)', duration: 0.38, ease: 'power2.out',
+        // Leftover inline transform/filter would make <main> the containing block
+        // for position:fixed modals, trapping them inside the content area. Clear
+        // them once the entrance finishes so modals anchor to the viewport again.
+        onComplete: () => gsap.set(mainRef.current, { clearProps: 'transform,filter' }),
+      }
     );
   }, [page]);
 
