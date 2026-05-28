@@ -25,7 +25,7 @@ html {
   /* Lenis handles scrolling */
   overflow-x: clip;
   overscroll-behavior: none;
-  background: #593df8;
+  background: var(--bg, #e4e2dc);
 }
 
 body {

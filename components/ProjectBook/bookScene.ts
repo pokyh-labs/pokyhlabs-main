@@ -186,7 +186,7 @@ function makeFrontCover(logo: HTMLImageElement | null): THREE.CanvasTexture {
   }
 
   ctx.fillStyle = BRAND
-  ctx.font = 'italic 300 140px "Cormorant Garamond", serif'
+  ctx.font = '500 140px "Inter", sans-serif'
   ctx.fillText("Pokyh", w / 2, h / 2 - 30)
 
   const cx = w / 2, cy = h / 2 + 80
@@ -219,7 +219,7 @@ function makeBackCover(logo: HTMLImageElement | null): THREE.CanvasTexture {
   ctx.fillStyle = BRAND
   ctx.textAlign = "center"
   ctx.textBaseline = "middle"
-  ctx.font = 'italic 300 86px "Cormorant Garamond", serif'
+  ctx.font = '300 86px "Inter", sans-serif'
   ctx.fillText("hope you liked it.", w / 2, h / 2 + 20)
 
   ctx.strokeStyle = BRAND; ctx.lineWidth = 1
@@ -228,7 +228,7 @@ function makeBackCover(logo: HTMLImageElement | null): THREE.CanvasTexture {
 
   ctx.font = '500 22px "Inter", sans-serif'
   ctx.fillText("—  P O K Y H  —", w / 2, h / 2 + 160)
-  ctx.font = 'italic 300 44px "Cormorant Garamond", serif'
+  ctx.font = '300 44px "Inter", sans-serif'
   ctx.fillText("Emanuel & Felix", w / 2, h - 240)
 
   return makeTex(c)
@@ -277,7 +277,7 @@ function makeImagePage(project: BookProject, projectIdx: number, total: number, 
     ctx.fillRect(imgX, imgY, imgW, imgH)
     ctx.globalAlpha = 1
     ctx.fillStyle = BRAND
-    ctx.font = 'italic 300 72px "Cormorant Garamond", serif'
+    ctx.font = '700 72px "Inter", sans-serif'
     ctx.textAlign = "center"; ctx.textBaseline = "middle"
     ctx.fillText(project.title, imgX + imgW / 2, imgY + imgH / 2)
   }
@@ -289,12 +289,17 @@ function makeImagePage(project: BookProject, projectIdx: number, total: number, 
 
   // Folio
   ctx.fillStyle = "rgba(20,15,8,0.5)"
-  ctx.font = 'italic 300 28px "Cormorant Garamond", serif'
+  ctx.font = '400 28px "Inter", sans-serif'
   ctx.textAlign = "center"; ctx.textBaseline = "alphabetic"
   ctx.fillText(`— ${project.year} —`, w / 2, h - 100)
 
   return makeTex(c)
 }
+
+// Button bounds on the text page canvas (used for UV click detection in onClick).
+// Canvas coords → UV: uv.x = canvasX/TEX_W, uv.y = 1 - canvasY/TEX_H (flipY=true).
+// These values are intentionally generous to account for font measurement variance.
+export const TEXT_PAGE_BTN_UV = { xMin: 0.57, xMax: 0.93, yMin: 0.09, yMax: 0.16 }
 
 function makeTextPage(project: BookProject, projectIdx: number, total: number): THREE.CanvasTexture {
   const c = document.createElement("canvas")
@@ -303,7 +308,7 @@ function makeTextPage(project: BookProject, projectIdx: number, total: number): 
   const w = c.width, h = c.height
   drawPaperBg(ctx, w, h, false)
 
-  // Header
+  // Header rule + labels
   ctx.strokeStyle = "rgba(20,15,8,0.35)"; ctx.lineWidth = 1
   ctx.beginPath(); ctx.moveTo(120, 140); ctx.lineTo(w - 120, 140); ctx.stroke()
   ctx.fillStyle = "rgba(20,15,8,0.55)"
@@ -316,9 +321,9 @@ function makeTextPage(project: BookProject, projectIdx: number, total: number): 
   // Title
   ctx.fillStyle = "#15110a"
   ctx.textAlign = "left"; ctx.textBaseline = "top"
-  ctx.font = 'italic 300 96px "Cormorant Garamond", serif'
+  ctx.font = '700 96px "Inter", sans-serif'
   const titleLines = wrapText(ctx, project.title, w - 240)
-  let y = 280
+  let y = 260
   for (const line of titleLines.slice(0, 3)) {
     ctx.fillText(line, 120, y)
     y += 108
@@ -327,50 +332,68 @@ function makeTextPage(project: BookProject, projectIdx: number, total: number): 
   // Rule
   ctx.strokeStyle = "rgba(20,15,8,0.4)"; ctx.lineWidth = 1
   ctx.beginPath()
-  ctx.moveTo(120, y + 16); ctx.lineTo(200, y + 16); ctx.stroke()
-  y += 60
+  ctx.moveTo(120, y + 20); ctx.lineTo(240, y + 20); ctx.stroke()
+  y += 70
 
   // Description
   ctx.fillStyle = "rgba(20,15,8,0.78)"
-  ctx.font = '400 28px "Inter", sans-serif'
+  ctx.font = '400 36px "Inter", sans-serif'
   const descLines = wrapText(ctx, project.description, w - 240)
-  for (const line of descLines.slice(0, 14)) {
+  for (const line of descLines.slice(0, 9)) {
     ctx.fillText(line, 120, y)
-    y += 42
+    y += 52
   }
 
   // Tags
   let tagX = 120
-  let tagY = h - 340
-  ctx.font = '500 18px "Inter", sans-serif'
+  let tagY = h - 390
+  ctx.font = '500 22px "Inter", sans-serif'
   for (const tag of project.tags.slice(0, 8)) {
-    const tw = ctx.measureText(tag).width + 32
-    if (tagX + tw > w - 120) { tagX = 120; tagY += 44 }
+    const tw = ctx.measureText(tag).width + 36
+    if (tagX + tw > w - 120) { tagX = 120; tagY += 52 }
     ctx.strokeStyle = "rgba(20,15,8,0.35)"; ctx.lineWidth = 1
-    roundRect(ctx, tagX, tagY, tw, 32, 16)
+    roundRect(ctx, tagX, tagY, tw, 38, 19)
     ctx.stroke()
     ctx.fillStyle = "rgba(20,15,8,0.7)"
     ctx.textBaseline = "middle"
-    ctx.fillText(tag, tagX + 16, tagY + 17)
-    tagX += tw + 10
+    ctx.textAlign = "left"
+    ctx.fillText(tag, tagX + 18, tagY + 20)
+    tagX += tw + 12
   }
 
-  // Footer info
+  // Footer: year · status (left)
   ctx.fillStyle = "rgba(20,15,8,0.55)"
   ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"
-  ctx.font = '500 18px "Inter", sans-serif'
-  ctx.fillText(`${project.year}   ·   ${project.status.toUpperCase()}`, 120, h - 160)
+  ctx.font = '500 20px "Inter", sans-serif'
+  ctx.fillText(`${project.year}   ·   ${project.status.toUpperCase()}`, 120, h - 155)
+
+  // VIEW PROJECT pill button (right-aligned, bottom)
   if (project.url) {
-    ctx.textAlign = "right"
+    const btnLabel = "VIEW PROJECT  ↗"
+    ctx.font = '600 22px "Inter", sans-serif'
+    const textW = ctx.measureText(btnLabel).width
+    const padX = 34
+    const btnH = 54
+    const btnW = textW + padX * 2
+    const btnRight = w - 96
+    const btnLeft = btnRight - btnW
+    const btnCY = h - 170
+
     ctx.fillStyle = BRAND
-    ctx.fillText("VIEW PROJECT  ↗", w - 120, h - 160)
+    roundRect(ctx, btnLeft, btnCY - btnH / 2, btnW, btnH, 27)
+    ctx.fill()
+
+    ctx.fillStyle = "#fff"
+    ctx.textAlign = "center"
+    ctx.textBaseline = "middle"
+    ctx.fillText(btnLabel, btnLeft + btnW / 2, btnCY)
   }
 
   // Folio
   ctx.fillStyle = "rgba(20,15,8,0.5)"
-  ctx.font = 'italic 300 28px "Cormorant Garamond", serif'
+  ctx.font = '400 28px "Inter", sans-serif'
   ctx.textAlign = "center"; ctx.textBaseline = "alphabetic"
-  ctx.fillText(`— ${String(projectIdx + 1).padStart(2, "0")} —`, w / 2, h - 100)
+  ctx.fillText(`— ${String(projectIdx + 1).padStart(2, "0")} —`, w / 2, h - 96)
 
   return makeTex(c)
 }
@@ -382,12 +405,13 @@ export async function createBookScene({
   if (typeof document !== "undefined" && document.fonts) {
     try {
       await Promise.all([
-        document.fonts.load('500 22px "Inter"'),
-        document.fonts.load('500 28px "Inter"'),
+        document.fonts.load('300 44px "Inter"'),
         document.fonts.load('400 28px "Inter"'),
-        document.fonts.load('italic 300 28px "Cormorant Garamond"'),
-        document.fonts.load('italic 300 96px "Cormorant Garamond"'),
-        document.fonts.load('italic 300 140px "Cormorant Garamond"'),
+        document.fonts.load('500 22px "Inter"'),
+        document.fonts.load('500 140px "Inter"'),
+        document.fonts.load('600 22px "Inter"'),
+        document.fonts.load('700 72px "Inter"'),
+        document.fonts.load('700 96px "Inter"'),
       ])
       await document.fonts.ready
     } catch {}
@@ -494,10 +518,7 @@ export async function createBookScene({
 
   const camera = new THREE.PerspectiveCamera(38, 1, 0.05, 100)
   const OVERVIEW_POS = new THREE.Vector3(0, 0.1, 4.0)
-  // When the book is closed on the cover we look slightly to the left so the
-  // book sits on the right half of the viewport, leaving room for the intro
-  // panel. As soon as the book opens we recenter.
-  const COVER_LOOK = new THREE.Vector3(-0.55, 0, 0)
+  const COVER_LOOK = new THREE.Vector3(0, 0, 0)
   const OPEN_LOOK = new THREE.Vector3(0, 0, 0)
   const overviewLookFor = (p: number) => (p === 0 ? COVER_LOOK : OPEN_LOOK)
 
@@ -528,6 +549,7 @@ export async function createBookScene({
 
   const tiltGroup = new THREE.Group()
   tiltGroup.rotation.x = -Math.PI / 12
+  tiltGroup.position.x = 0.3
   scene.add(tiltGroup)
   const bookGroup = new THREE.Group()
   bookGroup.rotation.y = -Math.PI / 2
@@ -669,7 +691,7 @@ export async function createBookScene({
     const side: "front" | "back" = mi === 4 ? "front" : "back"
     const meta = side === "front" ? cand.leaf.spec.frontMeta : cand.leaf.spec.backMeta
     if (meta.kind !== "image" && meta.kind !== "text") return null
-    return { leaf: cand.leaf, side, meta }
+    return { leaf: cand.leaf, side, meta, uv: hit.uv ? hit.uv.clone() : null }
   }
 
   const onMouseMove = (e: MouseEvent) => {
@@ -685,6 +707,16 @@ export async function createBookScene({
     const hit = pickLeaf(e)
     if (!hit) return
     const pIdx = (hit.meta as ImageMeta | TextMeta).projectIdx
+
+    // If clicking the VIEW PROJECT pill button on a text page, navigate directly.
+    if (hit.meta.kind === "text" && hit.uv && projects[pIdx]?.url) {
+      const { xMin, xMax, yMin, yMax } = TEXT_PAGE_BTN_UV
+      if (hit.uv.x > xMin && hit.uv.x < xMax && hit.uv.y > yMin && hit.uv.y < yMax) {
+        window.open(projects[pIdx].url!, "_blank", "noopener,noreferrer")
+        return
+      }
+    }
+
     zoomIn(pIdx)
   }
 

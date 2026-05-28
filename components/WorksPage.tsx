@@ -1,9 +1,16 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import ProjectBook from "@/components/ProjectBook"
+import dynamic from "next/dynamic"
 import type { BookProject } from "@/components/ProjectBook/bookScene"
 import { useT } from "@/lib/i18n/context"
+
+const ProjectBook = dynamic(() => import("@/components/ProjectBook"), {
+  ssr: false,
+  loading: () => (
+    <div style={{ width: "100%", height: "100vh", background: "var(--bg, #e4e2dc)" }} />
+  ),
+})
 
 export default function WorksPage({ initialProjects = [] }: { initialProjects?: BookProject[] }) {
   const t = useT()
