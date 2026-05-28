@@ -173,6 +173,7 @@ async function create(req, res) {
   const format = ['blocks', 'markdown', 'html'].includes(content_format) ? content_format : 'html';
   const { html: htmlContent, raw } = resolveContent(format, content, content_markdown);
 
+  const finalStatus = status || 'draft';
   const blog = await Blog.create({
     title: sanitizeText(title),
     content: htmlContent,
@@ -181,7 +182,8 @@ async function create(req, res) {
     excerpt: excerpt ? sanitizeText(excerpt) : null,
     image_url,
     image_alt: image_alt ? sanitizeText(image_alt) : null,
-    status: status || 'draft',
+    status: finalStatus,
+    published_at: finalStatus === 'published' ? new Date() : null,
     author_id: req.user.id,
   });
 

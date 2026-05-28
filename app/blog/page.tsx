@@ -61,6 +61,8 @@ export const metadata: Metadata = {
   },
 }
 
+export const dynamic = 'force-dynamic'
+
 export default async function Blog() {
   const blogs = await fetchBlogs(20)
   return <BlogsPage initialBlogs={blogs} />

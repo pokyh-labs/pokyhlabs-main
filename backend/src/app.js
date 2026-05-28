@@ -39,6 +39,12 @@ const errorLogger      = require('./middleware/errorLogger');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// API responses must never be served from HTTP cache — prevents stale 304s in browsers
+app.use('/api/', (req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store');
+  next();
+});
+
 // Generate CSP nonce per request
 app.use((req, res, next) => {
   res.locals.nonce = crypto.randomBytes(16).toString('base64');
