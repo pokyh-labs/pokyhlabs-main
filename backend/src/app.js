@@ -206,8 +206,8 @@ app.use((err, req, res, next) => {
 async function initDatabase() {
   await sequelize.authenticate();
   logger.info('Database connected');
-  await sequelize.sync({ force: false });
-  // Add columns that may not exist in older DB instances
+  
+  // Add columns that may not exist in older DB instances before sync creates indexes based on them
   await sequelize.query("ALTER TABLE blogs ADD COLUMN content_format TEXT NOT NULL DEFAULT 'html'").catch(() => {});
   await sequelize.query("ALTER TABLE blogs ADD COLUMN content_markdown TEXT").catch(() => {});
   await sequelize.query("ALTER TABLE inquiries ADD COLUMN createdAt DATETIME").catch(() => {});
@@ -217,12 +217,15 @@ async function initDatabase() {
   await sequelize.query("ALTER TABLE projects ADD COLUMN image_url TEXT").catch(() => {});
   await sequelize.query("ALTER TABLE projects ADD COLUMN image_alt TEXT").catch(() => {});
   await sequelize.query("ALTER TABLE projects ADD COLUMN gallery TEXT NOT NULL DEFAULT '[]'").catch(() => {});
+  
   // Multi-language CMS columns
   await sequelize.query("ALTER TABLE blogs ADD COLUMN translations TEXT NOT NULL DEFAULT '{}'").catch(() => {});
-  await sequelize.query("ALTER TABLE blogs ADD COLUMN slug_de TEXT").catch(() => {});
-  await sequelize.query("ALTER TABLE blogs ADD COLUMN slug_en TEXT").catch(() => {});
-  await sequelize.query("ALTER TABLE blogs ADD COLUMN slug_it TEXT").catch(() => {});
+  await sequelize.query("ALTER TABLE blogs ADD COLUMN slug_de VARCHAR(300)").catch(() => {});
+  await sequelize.query("ALTER TABLE blogs ADD COLUMN slug_en VARCHAR(300)").catch(() => {});
+  await sequelize.query("ALTER TABLE blogs ADD COLUMN slug_it VARCHAR(300)").catch(() => {});
   await sequelize.query("ALTER TABLE projects ADD COLUMN translations TEXT NOT NULL DEFAULT '{}'").catch(() => {});
+  
+  await sequelize.sync({ force: false });
   logger.info('Database synced');
 
   // Auto-create admin from .env if no users exist yet
