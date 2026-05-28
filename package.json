@@ -9,7 +9,7 @@
     "dev:backend": "npm run dev --prefix backend",
     "build": "NODE_ENV=production next build && npm run build --prefix backend",
     "build:backend": "npm run build --prefix backend",
-    "start": "node server.js",
+    "start": "NODE_ENV=production node server.js",
     "start:backend": "npm run start --prefix backend",
     "add-admin": "npm run add-admin --prefix backend",
     "generate-secrets": "npm run generate-secrets --prefix backend",
