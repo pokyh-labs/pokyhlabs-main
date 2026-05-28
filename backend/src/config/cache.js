@@ -22,11 +22,11 @@ const KEYS = {
 };
 
 function invalidateBlogCache() {
-  cache.del(KEYS.BLOG_LIST);
-  cache.del(KEYS.BLOG_ALL);
-  cache.del(KEYS.STATS);
-  const keys = cache.keys().filter(k => k.startsWith('blog:slug:'));
+  const keys = cache.keys().filter(k =>
+    k.startsWith(KEYS.BLOG_LIST) || k.startsWith('blog:slug:')
+  );
   if (keys.length) cache.del(keys);
+  cache.del([KEYS.BLOG_ALL, KEYS.STATS]);
 }
 
 function invalidateProjectCache() {
