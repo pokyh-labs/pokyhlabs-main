@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import Image from "next/image";
 import gsap from "gsap";
 import { useLanguage, useT } from "@/lib/i18n/context";
 import type { Lang } from "@/lib/i18n/translations";
@@ -444,17 +445,16 @@ export default function Header() {
             pointerEvents: "auto",
           }}
         >
-          <img
+          <Image
             src="/assets/logo.png"
             alt="pokyh.studio logo"
             width={46}
             height={46}
+            priority
             className="site-header-logo-img"
             style={{
               display: "block",
               objectFit: "contain",
-              width: 46,
-              height: 46,
               filter: logoBlack ? "brightness(0)" : "none",
               transition: LOGO_FILTER_TRANSITION,
             }}

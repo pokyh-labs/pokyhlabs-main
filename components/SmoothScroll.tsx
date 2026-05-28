@@ -21,15 +21,12 @@ export default function SmoothScroll() {
 
     lenis.on("scroll", ScrollTrigger.update)
 
-    let rafId: number
-    function raf(time: number) {
-      lenis.raf(time)
-      rafId = requestAnimationFrame(raf)
-    }
-    rafId = requestAnimationFrame(raf)
+    const onTick = (time: number) => lenis.raf(time * 1000)
+    gsap.ticker.add(onTick)
+    gsap.ticker.lagSmoothing(0)
 
     return () => {
-      cancelAnimationFrame(rafId)
+      gsap.ticker.remove(onTick)
       lenis.destroy()
       delete (window as unknown as { __lenis?: unknown }).__lenis
     }

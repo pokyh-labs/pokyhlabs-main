@@ -1,6 +1,8 @@
 import type { Metadata } from "next"
-import ParticleCanvas from "@/components/ParticleCanvas"
+import dynamic from "next/dynamic"
 import Headline from "@/components/Headline"
+
+const ParticleCanvas = dynamic(() => import("@/components/ParticleCanvas"), { ssr: false })
 import RailLine from "@/components/RailLine"
 import Socials from "@/components/Socials"
 import ScrollIndicator from "@/components/ScrollIndicator"

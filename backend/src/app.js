@@ -209,6 +209,17 @@ async function initDatabase() {
   await sequelize.query("ALTER TABLE projects ADD COLUMN image_url TEXT").catch(() => {});
   await sequelize.query("ALTER TABLE projects ADD COLUMN image_alt TEXT").catch(() => {});
   logger.info('Database synced');
+
+  // Auto-create admin from .env if no users exist yet
+  const { User } = require('./models');
+  const { ADMIN_USERNAME, ADMIN_EMAIL, ADMIN_PASSWORD } = process.env;
+  if (ADMIN_USERNAME && ADMIN_EMAIL && ADMIN_PASSWORD) {
+    const count = await User.count();
+    if (count === 0) {
+      await User.create({ username: ADMIN_USERNAME, email: ADMIN_EMAIL, password_hash: ADMIN_PASSWORD, role: 'admin' });
+      logger.info(`Default admin "${ADMIN_USERNAME}" created from .env`);
+    }
+  }
 }
 
 // Only auto-start when this file is the entry point (e.g. npm run dev:backend)

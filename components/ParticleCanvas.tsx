@@ -327,7 +327,8 @@ export default function ParticleCanvas() {
     }
 
     function buildAll() {
-      N = Math.min(9000, Math.max(4500, Math.floor(W * H / 340)));
+      const mobile = W < 768;
+      N = Math.min(mobile ? 3000 : 8000, Math.max(mobile ? 1200 : 4000, Math.floor(W * H / 340)));
       shapes = [buildTorus(N), buildStar(N), buildHeart(N), buildFlower(N), buildInfinity(N)];
       if (particles.length !== N) {
         particles = new Array(N);
