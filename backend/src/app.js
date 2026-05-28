@@ -206,25 +206,57 @@ app.use((err, req, res, next) => {
 async function initDatabase() {
   await sequelize.authenticate();
   logger.info('Database connected');
-  
-  // Add columns that may not exist in older DB instances before sync creates indexes based on them
-  await sequelize.query("ALTER TABLE blogs ADD COLUMN content_format TEXT NOT NULL DEFAULT 'html'").catch(() => {});
-  await sequelize.query("ALTER TABLE blogs ADD COLUMN content_markdown TEXT").catch(() => {});
-  await sequelize.query("ALTER TABLE inquiries ADD COLUMN createdAt DATETIME").catch(() => {});
-  await sequelize.query("ALTER TABLE inquiries ADD COLUMN updatedAt DATETIME").catch(() => {});
-  await sequelize.query("ALTER TABLE inquiries ADD COLUMN deadline DATE").catch(() => {});
-  await sequelize.query("ALTER TABLE projects ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0").catch(() => {});
-  await sequelize.query("ALTER TABLE projects ADD COLUMN image_url TEXT").catch(() => {});
-  await sequelize.query("ALTER TABLE projects ADD COLUMN image_alt TEXT").catch(() => {});
-  await sequelize.query("ALTER TABLE projects ADD COLUMN gallery TEXT NOT NULL DEFAULT '[]'").catch(() => {});
-  
+
+  // Schema migrations for older DB instances.
+  // MySQL forbids DEFAULT values on TEXT/BLOB columns, so we:
+  //   1. Add the column as nullable, no DEFAULT (works on MySQL + SQLite)
+  //   2. Backfill existing NULL rows with the desired default
+  // New rows still receive the default via the model's defaultValue at INSERT time.
+  const qi = sequelize.getQueryInterface();
+  const isMySQL = sequelize.getDialect() === 'mysql';
+
+  async function tableExists(table) {
+    try {
+      await qi.describeTable(table);
+      return true;
+    } catch { return false; }
+  }
+
+  async function ensureColumn(table, column, sqlType, backfill) {
+    if (!(await tableExists(table))) return; // sync() will create it from the model
+    let desc;
+    try { desc = await qi.describeTable(table); } catch { return; }
+    if (desc[column]) return;
+    try {
+      await sequelize.query(`ALTER TABLE \`${table}\` ADD COLUMN \`${column}\` ${sqlType}`);
+      logger.info(`Migration: added column ${table}.${column}`);
+      if (backfill !== undefined) {
+        const quoted = typeof backfill === 'string' ? `'${backfill.replace(/'/g, "''")}'` : backfill;
+        await sequelize.query(`UPDATE \`${table}\` SET \`${column}\` = ${quoted} WHERE \`${column}\` IS NULL`);
+      }
+    } catch (err) {
+      logger.error(`Migration failed: ${table}.${column}`, { message: err.message });
+    }
+  }
+
+  // Generic single-language columns
+  await ensureColumn('blogs', 'content_format', 'VARCHAR(10) NULL', 'html');
+  await ensureColumn('blogs', 'content_markdown', isMySQL ? 'LONGTEXT NULL' : 'TEXT');
+  await ensureColumn('inquiries', 'createdAt', 'DATETIME NULL');
+  await ensureColumn('inquiries', 'updatedAt', 'DATETIME NULL');
+  await ensureColumn('inquiries', 'deadline', 'DATE NULL');
+  await ensureColumn('projects', 'sort_order', 'INTEGER NULL', 0);
+  await ensureColumn('projects', 'image_url', 'VARCHAR(500) NULL');
+  await ensureColumn('projects', 'image_alt', 'VARCHAR(255) NULL');
+  await ensureColumn('projects', 'gallery', isMySQL ? 'LONGTEXT NULL' : 'TEXT', '[]');
+
   // Multi-language CMS columns
-  await sequelize.query("ALTER TABLE blogs ADD COLUMN translations TEXT NOT NULL DEFAULT '{}'").catch(() => {});
-  await sequelize.query("ALTER TABLE blogs ADD COLUMN slug_de VARCHAR(300)").catch(() => {});
-  await sequelize.query("ALTER TABLE blogs ADD COLUMN slug_en VARCHAR(300)").catch(() => {});
-  await sequelize.query("ALTER TABLE blogs ADD COLUMN slug_it VARCHAR(300)").catch(() => {});
-  await sequelize.query("ALTER TABLE projects ADD COLUMN translations TEXT NOT NULL DEFAULT '{}'").catch(() => {});
-  
+  await ensureColumn('blogs',    'translations', isMySQL ? 'LONGTEXT NULL' : 'TEXT', '{}');
+  await ensureColumn('blogs',    'slug_de',      'VARCHAR(300) NULL');
+  await ensureColumn('blogs',    'slug_en',      'VARCHAR(300) NULL');
+  await ensureColumn('blogs',    'slug_it',      'VARCHAR(300) NULL');
+  await ensureColumn('projects', 'translations', isMySQL ? 'LONGTEXT NULL' : 'TEXT', '{}');
+
   await sequelize.sync({ force: false });
   logger.info('Database synced');
 
