@@ -829,7 +829,9 @@ export async function createBookScene({
   // ── Resize ───────────────────────────────────────────────────────
   // Frame factor — multiplies the camera-Z so narrow/portrait viewports back
   // the camera up far enough to keep the whole spread visible without cropping.
-  // 1.0 = desktop reference (16:9), grows as the aspect ratio narrows.
+  // On wide desktop screens we pull the camera back slightly (1.3×) so the book
+  // doesn't overwhelm the viewport — mobile keeps the closer view.
+  const DESKTOP_SCALE = 1.3   // extra pull-back on wide screens (>= 900 px)
   let camDist = 1
   function resize() {
     const w = canvas.clientWidth || canvas.parentElement?.clientWidth || window.innerWidth
@@ -839,7 +841,9 @@ export async function createBookScene({
     camera.updateProjectionMatrix()
     const refAspect = 16 / 9
     const a = w / h
-    camDist = Math.max(1, refAspect / Math.max(a, 0.4))
+    const base = Math.max(1, refAspect / Math.max(a, 0.4))
+    // On wide screens the book was doubled from original; pull back to ~1.3× instead.
+    camDist = w >= 900 ? base * DESKTOP_SCALE : base
   }
   const ro = new ResizeObserver(resize)
   ro.observe(canvas)

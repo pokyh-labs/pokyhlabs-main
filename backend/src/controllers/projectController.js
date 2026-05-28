@@ -62,13 +62,30 @@ function isValidGalleryItem(it) {
   return true;
 }
 
+// Auto-fill empty EN/IT slots from DE so admins can write German only.
+function fillMissingSlots(translations) {
+  const de = translations[DEFAULT_LANG] || {};
+  const result = {};
+  for (const l of LANGS) {
+    const slot = translations[l] || {};
+    result[l] = {
+      title:       (slot.title?.trim()       || de.title       || ''),
+      description: (slot.description?.trim() || de.description || ''),
+      image_alt:   (slot.image_alt?.trim()   || de.image_alt   || ''),
+    };
+  }
+  return result;
+}
+
 const projectValidators = [
   body('translations').custom(t => {
     if (!t || typeof t !== 'object') throw new Error('translations ist erforderlich');
+    const de = t[DEFAULT_LANG];
+    if (!de || !String(de.title || '').trim()) throw new Error('translations.de.title ist erforderlich');
+    if (!de || !String(de.description || '').trim()) throw new Error('translations.de.description ist erforderlich');
+    // EN/IT are optional — filled from DE if missing
     for (const l of LANGS) {
-      const s = t[l];
-      if (!s || !String(s.title || '').trim()) throw new Error(`translations.${l}.title ist erforderlich`);
-      if (!s || !String(s.description || '').trim()) throw new Error(`translations.${l}.description ist erforderlich`);
+      const s = t[l] || {};
       if (String(s.description || '').length > 2000) throw new Error(`translations.${l}.description max. 2000 Zeichen`);
     }
     return true;
@@ -168,13 +185,14 @@ async function create(req, res) {
 
   const { translations, tags, url, image_url, gallery, year, status, sort_order } = req.body;
 
+  const filled = fillMissingSlots(translations);
   const sanitizedTranslations = {};
   for (const l of LANGS) {
-    const slot = translations[l] || {};
+    const slot = filled[l];
     sanitizedTranslations[l] = {
-      title: sanitizeText(slot.title || ''),
-      description: sanitizeText(slot.description || ''),
-      image_alt: slot.image_alt ? sanitizeText(slot.image_alt) : '',
+      title:       sanitizeText(slot.title),
+      description: sanitizeText(slot.description),
+      image_alt:   slot.image_alt ? sanitizeText(slot.image_alt) : '',
     };
   }
 
@@ -206,13 +224,18 @@ async function update(req, res) {
   const updates = {};
 
   if (translations !== undefined) {
+    const merged = {};
+    for (const l of LANGS) {
+      merged[l] = { ...(project.translations?.[l] || {}), ...(translations[l] || {}) };
+    }
+    const filled = fillMissingSlots(merged);
     const sanitizedTranslations = {};
     for (const l of LANGS) {
-      const slot = (translations[l] || project.translations?.[l] || {});
+      const slot = filled[l];
       sanitizedTranslations[l] = {
-        title: sanitizeText(slot.title || ''),
-        description: sanitizeText(slot.description || ''),
-        image_alt: slot.image_alt ? sanitizeText(slot.image_alt) : '',
+        title:       sanitizeText(slot.title),
+        description: sanitizeText(slot.description),
+        image_alt:   slot.image_alt ? sanitizeText(slot.image_alt) : '',
       };
     }
     updates.translations = sanitizedTranslations;

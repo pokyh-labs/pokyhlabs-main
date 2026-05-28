@@ -2,6 +2,10 @@ import type { NextConfig } from "next"
 
 const nextConfig: NextConfig = {
   transpilePackages: ["gsap", "lenis", "three"],
+  // Tree-shake large packages so only used exports are bundled
+  experimental: {
+    optimizePackageImports: ["gsap", "three", "lenis"],
+  },
   allowedDevOrigins: ["pokyh.studio", "localhost:3000"],
   compress: true,
   poweredByHeader: false,
@@ -26,6 +30,12 @@ const nextConfig: NextConfig = {
       },
       {
         source: "/assets/(.*)",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+        ],
+      },
+      {
+        source: "/_next/static/(.*)",
         headers: [
           { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
         ],

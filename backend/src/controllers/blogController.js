@@ -86,17 +86,33 @@ function flattenForLang(blog, lang) {
   };
 }
 
+// Auto-fill empty EN/IT slots from DE so admins can write German only.
+function fillMissingBlogSlots(translations) {
+  const de = translations[DEFAULT_LANG] || {};
+  const result = {};
+  for (const l of LANGS) {
+    const slot = translations[l] || {};
+    result[l] = {
+      title:            (slot.title?.trim()            || de.title            || ''),
+      slug:             (slot.slug?.trim()             || de.slug             || ''),
+      excerpt:          (slot.excerpt?.trim()          || de.excerpt          || ''),
+      content:          (slot.content?.trim()          || de.content          || ''),
+      content_markdown: (slot.content_markdown?.trim() || de.content_markdown || null),
+      image_alt:        (slot.image_alt?.trim()        || de.image_alt        || ''),
+    };
+  }
+  return result;
+}
+
 const blogValidators = [
   body('translations').custom(t => {
     if (!t || typeof t !== 'object') throw new Error('translations ist erforderlich');
-    for (const l of LANGS) {
-      const s = t[l];
-      if (!s || !String(s.title || '').trim() || String(s.title).trim().length < 3) {
-        throw new Error(`translations.${l}.title erforderlich (min. 3 Zeichen)`);
-      }
-      if (!s || !String(s.content || '').trim() || String(s.content).trim().length < 10) {
-        throw new Error(`translations.${l}.content erforderlich (min. 10 Zeichen)`);
-      }
+    const de = t[DEFAULT_LANG];
+    if (!de || !String(de.title || '').trim() || String(de.title).trim().length < 3) {
+      throw new Error('translations.de.title erforderlich (min. 3 Zeichen)');
+    }
+    if (!de || !String(de.content || '').trim() || String(de.content).trim().length < 10) {
+      throw new Error('translations.de.content erforderlich (min. 10 Zeichen)');
     }
     return true;
   }),
@@ -255,18 +271,19 @@ async function create(req, res) {
   const { translations, status, image_url, content_format, views } = req.body;
   const format = ['blocks', 'markdown', 'html'].includes(content_format) ? content_format : 'html';
 
-  // Sanitize content per language
+  // Fill missing EN/IT slots from DE, then sanitize
+  const filled = fillMissingBlogSlots(translations);
   const sanitizedTranslations = {};
   for (const l of LANGS) {
-    const slot = translations[l];
+    const slot = filled[l];
     const { html, raw } = resolveContent(format, slot.content || '', slot.content_markdown || '');
     sanitizedTranslations[l] = {
-      title: sanitizeText(slot.title || ''),
-      slug: slot.slug ? sanitizeText(slot.slug) : '',
-      excerpt: slot.excerpt ? sanitizeText(slot.excerpt) : '',
-      content: html,
+      title:            sanitizeText(slot.title || ''),
+      slug:             slot.slug ? sanitizeText(slot.slug) : '',
+      excerpt:          slot.excerpt ? sanitizeText(slot.excerpt) : '',
+      content:          html,
       content_markdown: raw,
-      image_alt: slot.image_alt ? sanitizeText(slot.image_alt) : '',
+      image_alt:        slot.image_alt ? sanitizeText(slot.image_alt) : '',
     };
   }
 
@@ -301,17 +318,22 @@ async function update(req, res) {
     const format = ['blocks', 'markdown', 'html'].includes(content_format)
       ? content_format
       : (blog.content_format || 'html');
+    const merged = {};
+    for (const l of LANGS) {
+      merged[l] = { ...(blog.translations?.[l] || {}), ...(translations[l] || {}) };
+    }
+    const filled = fillMissingBlogSlots(merged);
     const sanitizedTranslations = {};
     for (const l of LANGS) {
-      const slot = translations[l] || {};
+      const slot = filled[l];
       const { html, raw } = resolveContent(format, slot.content || '', slot.content_markdown || '');
       sanitizedTranslations[l] = {
-        title: sanitizeText(slot.title || ''),
-        slug: slot.slug ? sanitizeText(slot.slug) : '',
-        excerpt: slot.excerpt ? sanitizeText(slot.excerpt) : '',
-        content: html,
+        title:            sanitizeText(slot.title || ''),
+        slug:             slot.slug ? sanitizeText(slot.slug) : '',
+        excerpt:          slot.excerpt ? sanitizeText(slot.excerpt) : '',
+        content:          html,
         content_markdown: raw,
-        image_alt: slot.image_alt ? sanitizeText(slot.image_alt) : '',
+        image_alt:        slot.image_alt ? sanitizeText(slot.image_alt) : '',
       };
     }
     updates.translations = sanitizedTranslations;

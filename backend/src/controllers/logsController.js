@@ -1,5 +1,8 @@
 const { Op, fn, col, literal, Sequelize } = require('sequelize');
 const { AccessLog, AuthLog, SuspiciousActivity } = require('../models');
+const { cache, KEYS, LOG_STATS_TTL } = require('../config/cache');
+
+const isMySQL = () => AccessLog.sequelize.getDialect() === 'mysql';
 
 // ── Access Logs ───────────────────────────────────────────────
 
@@ -79,6 +82,10 @@ async function getSecurityLogs(req, res) {
 
 async function getGeoData(req, res) {
   const days = Math.min(90, parseInt(req.query.days, 10) || 30);
+  const cacheKey = KEYS.LOG_GEO(days);
+  const cached = cache.get(cacheKey);
+  if (cached) return res.json(cached);
+
   const since = new Date(Date.now() - days * 86400 * 1000);
 
   const rows = await AccessLog.findAll({
@@ -88,15 +95,17 @@ async function getGeoData(req, res) {
       created_at: { [Op.gte]: since },
     },
     attributes: [
+      // Include all selected columns in GROUP BY to satisfy ONLY_FULL_GROUP_BY
       'country_code', 'country', 'city', 'lat', 'lng',
-      [fn('COUNT', col('id')), 'count'],
+      [fn('COUNT', col('AccessLog.id')), 'count'],
     ],
-    group: ['country_code', 'city'],
+    group: ['country_code', 'country', 'city', 'lat', 'lng'],
     order: [[literal('count'), 'DESC']],
     limit: 500,
     raw: true,
   });
 
+  cache.set(cacheKey, rows, LOG_STATS_TTL);
   res.json(rows);
 }
 
@@ -104,6 +113,10 @@ async function getGeoData(req, res) {
 
 async function getTopCountries(req, res) {
   const days  = Math.min(90, parseInt(req.query.days, 10) || 30);
+  const cacheKey = KEYS.LOG_COUNTRIES(days);
+  const cached = cache.get(cacheKey);
+  if (cached) return res.json(cached);
+
   const since = new Date(Date.now() - days * 86400 * 1000);
 
   const rows = await AccessLog.findAll({
@@ -113,22 +126,37 @@ async function getTopCountries(req, res) {
     },
     attributes: [
       'country_code', 'country',
-      [fn('COUNT', col('id')), 'count'],
+      [fn('COUNT', col('AccessLog.id')), 'count'],
     ],
-    group: ['country_code'],
+    // Include country in GROUP BY — functionally dependent on country_code but
+    // MySQL ONLY_FULL_GROUP_BY requires explicit listing.
+    group: ['country_code', 'country'],
     order: [[literal('count'), 'DESC']],
     limit: 20,
     raw: true,
   });
 
+  cache.set(cacheKey, rows, LOG_STATS_TTL);
   res.json(rows);
 }
 
 // ── Overview stats ────────────────────────────────────────────
 
 async function getStats(req, res) {
+  const cached = cache.get(KEYS.LOG_STATS);
+  if (cached) return res.json(cached);
+
   const since24h = new Date(Date.now() - 24 * 3600 * 1000);
   const since7d  = new Date(Date.now() - 7  * 86400 * 1000);
+  const mysql = isMySQL();
+
+  // Hour expression: MySQL uses HOUR(), SQLite uses strftime
+  const hourExpr   = mysql ? fn('HOUR', col('created_at')) : fn('strftime', '%H', col('created_at'));
+  const hourGroup  = mysql ? [fn('HOUR', col('created_at'))] : [fn('strftime', '%H', col('created_at'))];
+  const hourOrder  = mysql ? [[fn('HOUR', col('created_at')), 'ASC']] : [[fn('strftime', '%H', col('created_at')), 'ASC']];
+
+  // Status-group expression: FLOOR(status/100)*100 works on both MySQL and SQLite
+  const statusGroupExpr = literal('FLOOR(status / 100) * 100');
 
   const [
     total24h,
@@ -142,10 +170,8 @@ async function getStats(req, res) {
     statusGroups,
     uniqueIPCount,
   ] = await Promise.all([
-    // Total API requests last 24h
     AccessLog.count({ where: { created_at: { [Op.gte]: since24h } } }),
 
-    // 4xx + 5xx last 24h
     AccessLog.count({
       where: {
         created_at: { [Op.gte]: since24h },
@@ -153,7 +179,6 @@ async function getStats(req, res) {
       },
     }),
 
-    // Auth failures last 24h
     AuthLog.count({
       where: {
         created_at: { [Op.gte]: since24h },
@@ -161,29 +186,26 @@ async function getStats(req, res) {
       },
     }),
 
-    // Security events last 24h
     SuspiciousActivity.count({ where: { created_at: { [Op.gte]: since24h } } }),
 
-    // Avg response time last 24h
     AccessLog.findOne({
       where:      { created_at: { [Op.gte]: since24h } },
       attributes: [[fn('AVG', col('response_time')), 'avg']],
       raw: true,
     }),
 
-    // Requests by hour (last 24h) — SQLite strftime
     AccessLog.findAll({
       where: { created_at: { [Op.gte]: since24h } },
       attributes: [
-        [fn('strftime', '%H', col('created_at')), 'hour'],
-        [fn('COUNT', col('id')), 'count'],
+        [hourExpr, 'hour'],
+        [fn('COUNT', col('AccessLog.id')), 'count'],
       ],
-      group: [fn('strftime', '%H', col('created_at'))],
-      order: [[fn('strftime', '%H', col('created_at')), 'ASC']],
+      group: hourGroup,
+      order: hourOrder,
       raw: true,
     }),
 
-    // Top IPs last 24h
+    // Top IPs — include country + country_code in GROUP BY for MySQL compat
     AccessLog.findAll({
       where: {
         created_at: { [Op.gte]: since24h },
@@ -191,20 +213,19 @@ async function getStats(req, res) {
       },
       attributes: [
         'ip', 'country', 'country_code',
-        [fn('COUNT', col('id')), 'count'],
+        [fn('COUNT', col('AccessLog.id')), 'count'],
       ],
-      group: ['ip'],
+      group: ['ip', 'country', 'country_code'],
       order: [[literal('count'), 'DESC']],
       limit: 10,
       raw: true,
     }),
 
-    // Top endpoints last 7d
     AccessLog.findAll({
       where: { created_at: { [Op.gte]: since7d } },
       attributes: [
         'method', 'url',
-        [fn('COUNT', col('id')), 'count'],
+        [fn('COUNT', col('AccessLog.id')), 'count'],
         [fn('AVG', col('response_time')), 'avg_ms'],
       ],
       group: ['method', 'url'],
@@ -213,18 +234,16 @@ async function getStats(req, res) {
       raw: true,
     }),
 
-    // Requests by status group last 24h
     AccessLog.findAll({
       where: { created_at: { [Op.gte]: since24h } },
       attributes: [
-        [literal('CAST((status / 100) * 100 AS INTEGER)'), 'status_group'],
-        [fn('COUNT', col('id')), 'count'],
+        [statusGroupExpr, 'status_group'],
+        [fn('COUNT', col('AccessLog.id')), 'count'],
       ],
-      group: [literal('CAST((status / 100) * 100 AS INTEGER)')],
+      group: [statusGroupExpr],
       raw: true,
     }),
 
-    // Unique IPs last 24h
     AccessLog.count({
       where: {
         created_at: { [Op.gte]: since24h },
@@ -235,7 +254,6 @@ async function getStats(req, res) {
     }),
   ]);
 
-  // Build 24-hour array (fill missing hours with 0)
   const hourMap = {};
   requestsByHour.forEach(r => { hourMap[parseInt(r.hour)] = parseInt(r.count); });
   const hourlyData = Array.from({ length: 24 }, (_, h) => ({
@@ -243,18 +261,20 @@ async function getStats(req, res) {
     count: hourMap[h] || 0,
   }));
 
-  res.json({
+  const result = {
     total24h,
     errors24h,
     authFails24h,
     secEvents24h,
-    uniqueIPs24h:   uniqueIPCount,
+    uniqueIPs24h:    uniqueIPCount,
     avgResponseTime: Math.round(avgResponseTime?.avg || 0),
     hourlyData,
     topIPs,
     topEndpoints,
     statusGroups,
-  });
+  };
+  cache.set(KEYS.LOG_STATS, result, LOG_STATS_TTL);
+  res.json(result);
 }
 
 module.exports = { getAccessLogs, getAuthLogs, getSecurityLogs, getGeoData, getTopCountries, getStats };

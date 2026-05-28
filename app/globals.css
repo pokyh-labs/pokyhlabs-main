@@ -69,12 +69,12 @@ body {
   }
 }
 
-/* letter fly-in */
+/* letter fly-in — transform+opacity only (GPU composited, no layout/paint) */
 .ch {
   display: inline-block;
   opacity: 0;
   transform: translateY(0.6em);
-  filter: blur(6px);
+  will-change: transform, opacity;
   animation: chIn 0.7s cubic-bezier(0.22, 0.61, 0.36, 1) both;
   animation-delay: var(--d, 0ms);
 }
@@ -85,9 +85,8 @@ body {
 }
 
 @keyframes chIn {
-  0%   { opacity: 0; transform: translateY(0.6em); filter: blur(6px); }
-  60%  { opacity: 1; filter: blur(0); }
-  100% { opacity: 1; transform: translateY(0); filter: blur(0); }
+  0%   { opacity: 0; transform: translateY(0.6em); }
+  100% { opacity: 1; transform: translateY(0); }
 }
 
 /* scroll arrow: runner goes down stem, splits into branches, crossfades back into stem */
