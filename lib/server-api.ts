@@ -2,7 +2,7 @@
 // Uses BACKEND_URL env var, falling back to the current PORT so it always points
 // at the running process regardless of environment.
 
-const BACKEND = (process.env.BACKEND_URL ?? `http://localhost:${process.env.PORT ?? 3000}`).replace(/\/$/, '')
+const BACKEND = (process.env.BACKEND_URL ?? `http://127.0.0.1:${process.env.PORT ?? 3000}`).replace(/\/$/, '')
 
 export interface Project {
   id: number

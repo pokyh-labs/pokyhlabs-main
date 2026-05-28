@@ -173,7 +173,7 @@ async function create(req, res) {
   const format = ['blocks', 'markdown', 'html'].includes(content_format) ? content_format : 'html';
   const { html: htmlContent, raw } = resolveContent(format, content, content_markdown);
 
-  const finalStatus = status || 'draft';
+  const finalStatus = status || 'published';
   const blog = await Blog.create({
     title: sanitizeText(title),
     content: htmlContent,

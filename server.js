@@ -4,17 +4,17 @@ const { parse } = require('url');
 const path = require('path');
 const fs = require('fs');
 
-// Load .env from project root, falling back to backend/.env
-require('dotenv').config({
-  path: (() => {
-    const root = path.resolve(__dirname, '.env');
-    const local = path.resolve(__dirname, 'backend', '.env');
-    return fs.existsSync(root) ? root : local;
-  })(),
-});
+if (process.env.NODE_ENV !== 'production') {
+  require('dotenv').config({
+    path: (() => {
+      const root = path.resolve(__dirname, '.env');
+      const local = path.resolve(__dirname, 'backend', '.env');
+      return fs.existsSync(root) ? root : local;
+    })(),
+  });
+}
 
 const PORT = parseInt(process.env.PORT || '3000', 10);
-const HOST = process.env.HOSTNAME || '0.0.0.0';
 const dev = process.env.NODE_ENV !== 'production';
 
 async function main() {
@@ -22,9 +22,9 @@ async function main() {
   const { app: backendApp, initDatabase } = require('./backend/src/app');
   await initDatabase();
 
-  // 2. Prepare Next.js
+  // 2. Prepare Next.js — always bind to 0.0.0.0 so SSR loopback requests work in Docker
   const next = require('next');
-  const nextApp = next({ dev, hostname: HOST, port: PORT });
+  const nextApp = next({ dev, hostname: '0.0.0.0', port: PORT });
   const handle = nextApp.getRequestHandler();
   await nextApp.prepare();
 
@@ -49,7 +49,7 @@ async function main() {
     }
   });
 
-  server.listen(PORT, HOST, () => {
+  server.listen(PORT, '0.0.0.0', () => {
     console.log(`> Ready on http://localhost:${PORT} [${dev ? 'development' : 'production'}]`);
   });
 }
