@@ -30,7 +30,6 @@ export default function Projects() {
   const [tabErrors, setTabErrors] = useState({});
   const [editId, setEditId]     = useState(null);
   const [saving, setSaving]     = useState(false);
-  const [translating, setTranslating] = useState(false);
   const [deleting, setDeleting] = useState(null);
   const [formError, setFormError] = useState('');
   const [imageFile, setImageFile] = useState(null);
@@ -130,38 +129,6 @@ export default function Projects() {
       return next;
     });
     toast(`Inhalt nach ${targets.map(t => t.toUpperCase()).join(', ')} übertragen`);
-  }
-
-  // Machine-translate the current language's fields into the other languages.
-  async function autoTranslate() {
-    const src = activeTab;
-    const targets = PROJ_LANGS.filter(l => l !== src);
-    setTranslating(true);
-    try {
-      const srcSlot = form.translations[src];
-      const updates = {};
-      for (const to of targets) {
-        const texts = [srcSlot.title || '', srcSlot.description || '', srcSlot.image_alt || ''];
-        const res = await apiFetch('/translate', {
-          method: 'POST',
-          body: JSON.stringify({ from: src, to, texts }),
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.error || 'Übersetzung fehlgeschlagen');
-        const out = data.texts || [];
-        updates[to] = { title: out[0] ?? '', description: out[1] ?? '', image_alt: out[2] ?? '' };
-      }
-      setForm(f => {
-        const next = { ...f, translations: { ...f.translations } };
-        for (const to of targets) next.translations[to] = { ...f.translations[to], ...updates[to] };
-        return next;
-      });
-      toast(`Übersetzt nach ${targets.map(t => t.toUpperCase()).join(', ')} — bitte prüfen`);
-    } catch (err) {
-      toast(err.message, 'error');
-    } finally {
-      setTranslating(false);
-    }
   }
 
   function handleImageChange(e) {
@@ -423,22 +390,9 @@ export default function Projects() {
                   type="button"
                   className="lang-action-btn"
                   onClick={copyFieldsToOthers}
-                  disabled={translating}
                   title={`Inhalt von ${PROJ_LANG_LABELS[activeTab]} in die anderen Sprachen kopieren`}
                 >
                   <i className="bi bi-layers" /> Übertragen
-                </button>
-                <button
-                  type="button"
-                  className={`lang-action-btn${translating ? ' is-busy' : ''}`}
-                  onClick={autoTranslate}
-                  disabled={translating}
-                  title={`Inhalt von ${PROJ_LANG_LABELS[activeTab]} automatisch übersetzen`}
-                >
-                  {translating
-                    ? <span className="spinner" style={{ width: 12, height: 12 }} />
-                    : <i className="bi bi-translate" />}
-                  {translating ? 'Übersetze…' : 'Übersetzen'}
                 </button>
               </div>
             </div>

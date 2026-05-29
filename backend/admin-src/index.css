@@ -818,4 +818,3 @@ tbody tr:hover { background: rgba(89,61,248,0.06); }
   color: var(--accent);
 }
 .lang-action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.lang-action-btn.is-busy { color: var(--accent); border-color: rgba(89, 61, 248, 0.28); }

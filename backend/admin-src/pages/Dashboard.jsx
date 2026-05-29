@@ -27,7 +27,7 @@ function useCountUp(target, duration = 800) {
   return count;
 }
 
-function StatBlock({ value, label, tint, delay = 0, onClick }) {
+function StatBlock({ value, label, delay = 0, onClick }) {
   const [hovered, setHovered] = useState(false);
   const displayed = useCountUp(value, 800);
 
@@ -37,7 +37,8 @@ function StatBlock({ value, label, tint, delay = 0, onClick }) {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        background: tint,
+        background: 'var(--surface)',
+        border: '1px solid var(--border)',
         borderRadius: 'var(--r-xl)',
         padding: '1.4rem 1.5rem 1.4rem',
         minHeight: 150,
@@ -46,8 +47,9 @@ function StatBlock({ value, label, tint, delay = 0, onClick }) {
         justifyContent: 'space-between',
         position: 'relative',
         animationDelay: `${delay}ms`,
-        transition: 'transform 320ms var(--ease-spring)',
+        transition: 'transform 320ms var(--ease-spring), box-shadow 320ms var(--ease)',
         transform: hovered ? 'translateY(-3px)' : 'translateY(0)',
+        boxShadow: hovered ? 'var(--s-lg)' : 'var(--s-md)',
       }}
     >
       <span style={{ fontSize: '0.92rem', fontWeight: 600, color: 'var(--ink)', letterSpacing: '-0.015em' }}>
@@ -200,22 +202,24 @@ export default function Dashboard({ onNavigate, user }) {
       {/* ── Stat blocks ── */}
       <h3 className="h-section" style={{ marginBottom: '1rem' }}>Deine Inhalte</h3>
       <div className="grid-3 mb-4">
-        <StatBlock value={stats?.total}     label="Blogs gesamt"   tint="var(--mint)"   delay={0}   onClick={() => onNavigate('blogs')} />
-        <StatBlock value={stats?.published} label="Veröffentlicht" tint="var(--yellow)" delay={80}  onClick={() => onNavigate('blogs')} />
-        <StatBlock value={stats?.drafts}    label="Entwürfe"       tint="var(--lav)"    delay={160} onClick={() => onNavigate('blogs')} />
+        <StatBlock value={stats?.total}     label="Blogs gesamt"   delay={0}   onClick={() => onNavigate('blogs')} />
+        <StatBlock value={stats?.published} label="Veröffentlicht" delay={80}  onClick={() => onNavigate('blogs')} />
+        <StatBlock value={stats?.drafts}    label="Entwürfe"       delay={160} onClick={() => onNavigate('blogs')} />
       </div>
 
       {/* ── Publish rate progress ── */}
       {stats?.total > 0 && (
         <div className="fade-up" style={{
-          background: 'var(--pink)',
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
+          boxShadow: 'var(--s-md)',
           borderRadius: 'var(--r-xl)',
           padding: '1.5rem 1.6rem',
           marginBottom: '1.5rem',
         }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 16 }}>
             <div>
-              <p style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--ink)', opacity: 0.6 }}>Veröffentlichungsrate</p>
+              <p style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--l3)' }}>Veröffentlichungsrate</p>
               <p style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--ink)', letterSpacing: '-0.04em', marginTop: 4 }}>
                 {stats.published} von {stats.total} veröffentlicht
               </p>
@@ -239,7 +243,7 @@ export default function Dashboard({ onNavigate, user }) {
 
       {/* ── System Health ── */}
       {health && (
-        <div className="card mb-4">
+        <div className="card mb-4" style={{ boxShadow: 'var(--s-md)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
             <span style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--l1)', letterSpacing: '-0.03em' }}>System</span>
             <button className="btn-outline btn-sm" onClick={handleBackup} disabled={backing}>
@@ -260,7 +264,7 @@ export default function Dashboard({ onNavigate, user }) {
       )}
 
       {/* ── Recent posts ── */}
-      <div className="card">
+      <div className="card" style={{ boxShadow: 'var(--s-md)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.1rem' }}>
           <span style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--l1)', letterSpacing: '-0.03em' }}>Letzte Beiträge</span>
           <button className="btn-ghost btn-sm" onClick={() => onNavigate('blogs')}>

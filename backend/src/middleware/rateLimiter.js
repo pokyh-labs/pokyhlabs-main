@@ -14,8 +14,12 @@ function createLimiter(options) {
     standardHeaders: true,
     legacyHeaders: false,
     skipSuccessfulRequests: options.skipSuccessful || false,
-    // Loopback requests are SSR fetches from Next.js – never rate-limit them
-    skip: (req) => isLoopback(req.ip || req.socket?.remoteAddress),
+    // Never rate-limit:
+    //  • loopback requests (SSR fetches from Next.js)
+    //  • authenticated users — a valid JWT (req.user) means the request comes
+    //    from a logged-in admin/editor, not an anonymous/external client.
+    // The strict limits stay in force for everyone who is NOT logged in.
+    skip: (req) => isLoopback(req.ip || req.socket?.remoteAddress) || !!req.user,
     handler: async (req, res) => {
       const ip = req.ip || req.socket.remoteAddress;
       logger.warn('Rate limit exceeded', {

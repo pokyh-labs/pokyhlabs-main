@@ -84,6 +84,9 @@ function validateToken(req, res, next) {
   // Claim the token before multer runs — prevents double-use even under concurrent requests
   data.claimed = true;
   req._uploadUserId = data.userId;
+  // A valid one-time token means this upload came from a logged-in user (the
+  // presign step required auth), so downstream rate limiters treat it as such.
+  req.user = req.user || { id: data.userId, viaUploadToken: true };
   next();
 }
 

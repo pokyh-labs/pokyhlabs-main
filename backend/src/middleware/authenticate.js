@@ -47,4 +47,31 @@ async function authenticate(req, res, next) {
   }
 }
 
-module.exports = { authenticate };
+/**
+ * Like authenticate(), but never rejects: if a valid Bearer token is present it
+ * attaches req.user, otherwise it simply continues. Used early in the pipeline
+ * so rate limiters can tell logged-in users apart from anonymous/external ones.
+ */
+function optionalAuthenticate(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith('Bearer ')) return next();
+
+  try {
+    const payload = jwt.verify(authHeader.slice(7), process.env.JWT_SECRET, {
+      algorithms: ['HS256'],
+      issuer: process.env.JWT_ISSUER || 'pokyhlabs',
+      audience: process.env.JWT_AUDIENCE || 'pokyhlabs-api',
+    });
+    req.user = {
+      id: payload.sub,
+      role: payload.role,
+      username: payload.username,
+    };
+  } catch {
+    // Invalid/expired token → treat as anonymous (the protected route's own
+    // authenticate() will return the proper 401 later).
+  }
+  next();
+}
+
+module.exports = { authenticate, optionalAuthenticate };

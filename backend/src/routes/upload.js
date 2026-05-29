@@ -10,10 +10,13 @@ router.post('/presign',
   presign
 );
 
-// Consume the one-time token and upload the file (token IS the auth — no JWT needed)
+// Consume the one-time token and upload the file (token IS the auth — no JWT needed).
+// validateToken runs first: a valid token marks the request as authenticated, so
+// uploadRateLimiter skips it. Anonymous requests with a bad token are rejected by
+// validateToken before they ever reach the limiter.
 router.put('/:token',
-  uploadRateLimiter,
   validateToken,
+  uploadRateLimiter,
   multerUpload.single('file'),
   consumeUpload
 );

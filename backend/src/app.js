@@ -25,6 +25,7 @@ const { sequelize } = require('./models');
 const logger = require('./utils/logger');
 const { detectSuspiciousInput, detectSuspiciousUA } = require('./middleware/sanitize');
 const { globalRateLimiter } = require('./middleware/rateLimiter');
+const { optionalAuthenticate } = require('./middleware/authenticate');
 const authRoutes       = require('./routes/auth');
 const blogRoutes       = require('./routes/blogs');
 const userRoutes       = require('./routes/users');
@@ -34,7 +35,6 @@ const seoRoutes        = require('./routes/seo');
 const inquiryRoutes    = require('./routes/inquiries');
 const projectRoutes    = require('./routes/projects');
 const uploadRoutes     = require('./routes/upload');
-const translateRoutes  = require('./routes/translate');
 const honeypotRoutes   = require('./routes/honeypot');
 const requestLogger    = require('./middleware/requestLogger');
 const errorLogger      = require('./middleware/errorLogger');
@@ -144,6 +144,11 @@ app.use(detectSuspiciousInput);
 // Request logging (access log to DB — must be before routes)
 app.use(requestLogger);
 
+// Attach req.user for valid tokens *before* rate limiting, so logged-in
+// admins/editors are exempt from the limits (only anonymous/external clients
+// are throttled). Never blocks — protected routes still run real authenticate().
+app.use('/api/', optionalAuthenticate);
+
 // Global rate limiting
 app.use('/api/', globalRateLimiter);
 
@@ -157,7 +162,6 @@ app.use('/api/seo',         seoRoutes);
 app.use('/api/inquiries',   inquiryRoutes);
 app.use('/api/projects',   projectRoutes);
 app.use('/api/upload',     uploadRoutes);
-app.use('/api/translate',  translateRoutes);
 
 // SPA routing for admin
 // Asset paths (/admin/assets/*) are NOT caught here — if express.static didn't
