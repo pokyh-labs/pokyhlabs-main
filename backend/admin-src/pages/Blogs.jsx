@@ -1014,7 +1014,6 @@ function BlogEditor({ blog, onSave, onCancel }) {
                           width: 24, height: 24,
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           color: '#fff', cursor: 'pointer',
-                          backdropFilter: 'blur(4px)',
                         }}
                         title="Bild entfernen"
                       >

@@ -6,23 +6,23 @@ const NAV_SECTIONS = [
   {
     label: null,
     items: [
-      { id: 'dashboard', icon: 'bi-squares-fill',  label: 'Dashboard', roles: ['admin'] },
+      { id: 'dashboard', icon: 'bi-grid',          label: 'Dashboard', roles: ['admin'] },
     ],
   },
   {
     label: 'Inhalt',
     items: [
       { id: 'blogs',     icon: 'bi-journal-text',  label: 'Blogs',     roles: ['admin', 'editor'] },
-      { id: 'projects',  icon: 'bi-grid-fill',     label: 'Projekte',  roles: ['admin'] },
-      { id: 'inquiries', icon: 'bi-envelope-fill', label: 'Anfragen',  roles: ['admin'] },
+      { id: 'projects',  icon: 'bi-collection',    label: 'Projekte',  roles: ['admin'] },
+      { id: 'inquiries', icon: 'bi-envelope',      label: 'Anfragen',  roles: ['admin'] },
     ],
   },
   {
     label: 'Verwaltung',
     items: [
-      { id: 'users',   icon: 'bi-person-2-fill',   label: 'Benutzer',  roles: ['admin'] },
+      { id: 'users',   icon: 'bi-people',          label: 'Benutzer',  roles: ['admin'] },
       { id: 'seo',     icon: 'bi-search',          label: 'SEO',       roles: ['admin'] },
-      { id: 'logs',    icon: 'bi-chart-bar-fill',  label: 'Logs',      roles: ['admin'] },
+      { id: 'logs',    icon: 'bi-bar-chart',       label: 'Logs',      roles: ['admin'] },
     ],
   },
 ];
@@ -36,20 +36,21 @@ function NavItem({ item, active, onClick }) {
       onMouseDown={() => setPressed(true)}
       onMouseUp={() => setPressed(false)}
       style={{
+        position: 'relative',
         width: '100%',
-        padding: '8px 12px',
+        padding: '9px 12px',
         display: 'flex',
         alignItems: 'center',
-        gap: 10,
+        gap: 11,
         background: active ? 'var(--sb-active-bg)' : 'transparent',
         border: `1px solid ${active ? 'var(--sb-active-bdr)' : 'transparent'}`,
         borderRadius: 9,
         cursor: 'pointer',
         color: active ? 'var(--sb-text-active)' : 'var(--sb-text)',
-        transition: 'background 140ms ease, color 140ms ease, border-color 140ms ease, transform 160ms var(--ease-spring)',
+        transition: 'background 140ms ease, color 140ms ease, border-color 140ms ease, transform 160ms var(--ease-site)',
         textAlign: 'left',
         outline: 'none',
-        transform: pressed ? 'scale(0.96)' : 'scale(1)',
+        transform: pressed ? 'scale(0.97)' : 'scale(1)',
         WebkitTapHighlightColor: 'transparent',
       }}
       onMouseEnter={e => {
@@ -66,20 +67,32 @@ function NavItem({ item, active, onClick }) {
         setPressed(false);
       }}
     >
+      {/* Active marker */}
+      <span style={{
+        position: 'absolute',
+        left: -8,
+        top: '50%',
+        transform: `translateY(-50%) scaleY(${active ? 1 : 0})`,
+        width: 3,
+        height: 18,
+        borderRadius: 3,
+        background: 'var(--accent)',
+        transition: 'transform 200ms var(--ease-site)',
+      }} />
       <i
         className={`bi ${item.icon}`}
         style={{
-          fontSize: '0.875rem',
+          fontSize: '0.95rem',
           lineHeight: 1,
           flexShrink: 0,
-          color: active ? 'var(--accent-light)' : 'inherit',
+          color: active ? 'var(--accent)' : 'inherit',
           transition: 'color 140ms ease',
         }}
       />
       <span style={{
-        fontSize: '0.8125rem',
+        fontSize: '0.825rem',
         fontWeight: active ? 500 : 400,
-        letterSpacing: '-0.014em',
+        letterSpacing: '-0.01em',
         lineHeight: 1,
       }}>
         {item.label}
@@ -116,19 +129,18 @@ export default function Sidebar({ user, page, onPageChange, onLogout, open }) {
 
       {/* ── Logo ── */}
       <div style={{
-        padding: '18px 14px 16px',
+        padding: '20px 16px 18px',
         display: 'flex',
         alignItems: 'center',
-        gap: 10,
+        gap: 11,
         borderBottom: '1px solid var(--sb-border)',
         flexShrink: 0,
       }}>
         <div style={{
           width: 32, height: 32,
-          borderRadius: 9,
+          borderRadius: 8,
           overflow: 'hidden',
           flexShrink: 0,
-          boxShadow: '0 2px 8px rgba(0,0,0,0.36)',
         }}>
           <img
             src="/assets/logo.png"
@@ -138,8 +150,8 @@ export default function Sidebar({ user, page, onPageChange, onLogout, open }) {
         </div>
         <div>
           <div style={{
-            color: 'rgba(255,255,255,0.90)',
-            fontSize: '0.8rem',
+            color: 'var(--l1)',
+            fontSize: '0.85rem',
             fontWeight: 600,
             letterSpacing: '-0.022em',
             lineHeight: 1.2,
@@ -149,23 +161,17 @@ export default function Sidebar({ user, page, onPageChange, onLogout, open }) {
           <div style={{
             display: 'flex',
             alignItems: 'center',
-            gap: 5,
-            marginTop: 2,
+            gap: 6,
+            marginTop: 3,
           }}>
             <span style={{
               width: 5, height: 5,
               borderRadius: '50%',
               background: 'var(--green)',
               display: 'inline-block',
-              boxShadow: '0 0 5px var(--green)',
               flexShrink: 0,
             }} />
-            <span style={{
-              color: 'rgba(255,255,255,0.26)',
-              fontSize: '0.66rem',
-              fontWeight: 400,
-              letterSpacing: '0.01em',
-            }}>
+            <span className="label-mono" style={{ fontSize: '0.56rem', letterSpacing: '0.14em' }}>
               Admin Panel
             </span>
           </div>
@@ -175,7 +181,7 @@ export default function Sidebar({ user, page, onPageChange, onLogout, open }) {
       {/* ── Navigation ── */}
       <nav style={{
         flex: 1,
-        padding: '6px 8px',
+        padding: '8px 10px',
         display: 'flex',
         flexDirection: 'column',
         gap: 0,
@@ -187,7 +193,7 @@ export default function Sidebar({ user, page, onPageChange, onLogout, open }) {
             {section.label && (
               <div className="sb-label">{section.label}</div>
             )}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               {section.items.map(item => (
                 <NavItem
                   key={item.id}
@@ -203,7 +209,7 @@ export default function Sidebar({ user, page, onPageChange, onLogout, open }) {
 
       {/* ── User ── */}
       <div style={{
-        padding: '10px 8px 14px',
+        padding: '12px 10px 16px',
         borderTop: '1px solid var(--sb-border)',
         flexShrink: 0,
       }}>
@@ -211,31 +217,32 @@ export default function Sidebar({ user, page, onPageChange, onLogout, open }) {
         <div style={{
           display: 'flex',
           alignItems: 'center',
-          gap: 9,
+          gap: 10,
           padding: '8px 12px',
-          marginBottom: 1,
+          marginBottom: 2,
         }}>
           <div style={{
-            width: 28, height: 28,
-            background: 'linear-gradient(145deg, #7c5af5, var(--accent))',
+            width: 30, height: 30,
+            background: 'var(--surface-4)',
+            border: '1px solid var(--border)',
             borderRadius: '50%',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontWeight: 700,
-            fontSize: '0.68rem',
-            color: '#fff',
-            letterSpacing: '-0.01em',
+            fontFamily: 'var(--font-mono)',
+            fontWeight: 500,
+            fontSize: '0.7rem',
+            color: 'var(--l1)',
+            letterSpacing: '0',
             userSelect: 'none',
             flexShrink: 0,
-            boxShadow: '0 2px 8px rgba(89,61,248,0.48)',
           }}>
             {initial}
           </div>
           <div style={{ minWidth: 0, flex: 1 }}>
             <div style={{
-              color: 'rgba(255,255,255,0.84)',
-              fontSize: '0.78rem',
+              color: 'var(--l1)',
+              fontSize: '0.8rem',
               fontWeight: 500,
-              letterSpacing: '-0.014em',
+              letterSpacing: '-0.012em',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
@@ -243,12 +250,10 @@ export default function Sidebar({ user, page, onPageChange, onLogout, open }) {
             }}>
               {user?.username}
             </div>
-            <div style={{
-              color: 'rgba(255,255,255,0.26)',
-              fontSize: '0.66rem',
-              textTransform: 'capitalize',
-              letterSpacing: '0.01em',
-              marginTop: 2,
+            <div className="label-mono" style={{
+              fontSize: '0.54rem',
+              letterSpacing: '0.14em',
+              marginTop: 3,
             }}>
               {user?.role}
             </div>
@@ -276,28 +281,28 @@ function LogoutBtn({ loading, onClick }) {
       onMouseUp={() => setPressed(false)}
       style={{
         width: '100%',
-        padding: '8px 12px',
+        padding: '9px 12px',
         display: 'flex',
         alignItems: 'center',
-        gap: 10,
-        background: hovered ? 'rgba(255,59,48,0.10)' : 'transparent',
-        border: `1px solid ${hovered ? 'rgba(255,59,48,0.18)' : 'transparent'}`,
+        gap: 11,
+        background: hovered ? 'var(--red-bg)' : 'transparent',
+        border: `1px solid ${hovered ? 'var(--red-border)' : 'transparent'}`,
         borderRadius: 9,
         cursor: loading ? 'not-allowed' : 'pointer',
-        color: hovered ? '#fc8181' : 'var(--sb-text)',
-        transition: 'background 140ms ease, color 140ms ease, border-color 140ms ease, transform 160ms var(--ease-spring)',
+        color: hovered ? 'var(--red)' : 'var(--sb-text)',
+        transition: 'background 140ms ease, color 140ms ease, border-color 140ms ease, transform 160ms var(--ease-site)',
         textAlign: 'left',
         opacity: loading ? 0.45 : 1,
-        transform: pressed ? 'scale(0.96)' : 'scale(1)',
+        transform: pressed ? 'scale(0.97)' : 'scale(1)',
         outline: 'none',
         WebkitTapHighlightColor: 'transparent',
       }}
     >
       {loading
-        ? <span className="spinner" style={{ borderTopColor: '#fc8181', width: 12, height: 12 }} />
-        : <i className="bi bi-box-arrow-right" style={{ fontSize: '0.875rem', lineHeight: 1 }} />
+        ? <span className="spinner" style={{ borderTopColor: 'var(--red)', width: 12, height: 12 }} />
+        : <i className="bi bi-box-arrow-right" style={{ fontSize: '0.95rem', lineHeight: 1 }} />
       }
-      <span style={{ fontSize: '0.8125rem', fontWeight: 400, letterSpacing: '-0.014em' }}>
+      <span style={{ fontSize: '0.825rem', fontWeight: 400, letterSpacing: '-0.01em' }}>
         Abmelden
       </span>
     </button>

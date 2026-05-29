@@ -130,7 +130,7 @@ export default function App() {
             ref={mainRef}
             className="page-content"
           >
-            <PageComponent onNavigate={handleNavigate} />
+            <PageComponent onNavigate={handleNavigate} user={user} />
           </main>
         </div>
       </div>

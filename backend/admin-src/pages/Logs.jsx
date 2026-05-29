@@ -133,27 +133,20 @@ function HourlyChart({ data }) {
 function StatCard({ value, label, icon, color, sub }) {
   return (
     <div className="card stat-card" style={{
-      display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.125rem',
-      transition: 'transform 160ms ease, box-shadow 160ms ease',
+      padding: '1.25rem 1.35rem',
+      transition: 'border-color 200ms var(--ease)',
     }}
-      onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = 'var(--shadow-md)'; }}
-      onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = ''; }}
+      onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(12,12,12,0.20)'; }}
+      onMouseLeave={e => { e.currentTarget.style.borderColor = ''; }}
     >
-      <div style={{
-        width: 42, height: 42, borderRadius: 12, flexShrink: 0,
-        background: `${color}14`, border: `1px solid ${color}22`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: '1rem', color,
-      }}>
-        <i className={`bi ${icon}`} />
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+        <span className="label-mono">{label}</span>
+        <i className={`bi ${icon}`} style={{ fontSize: '0.9rem', color: 'var(--l4)', lineHeight: 1 }} />
       </div>
-      <div style={{ minWidth: 0 }}>
-        <div style={{ fontSize: '1.7rem', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.05em', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
-          {value ?? '–'}
-        </div>
-        <div style={{ fontSize: '0.75rem', color: 'var(--text3)', fontWeight: 500, marginTop: 3 }}>{label}</div>
-        {sub && <div style={{ fontSize: '0.68rem', color: 'var(--text3)', marginTop: 2, opacity: 0.75 }}>{sub}</div>}
+      <div style={{ fontSize: '2rem', fontWeight: 600, color: 'var(--text)', letterSpacing: '-0.05em', lineHeight: 1, fontVariantNumeric: 'tabular-nums', marginTop: '1rem' }}>
+        {value ?? '–'}
       </div>
+      {sub && <div style={{ fontSize: '0.7rem', color: 'var(--text3)', marginTop: 6 }}>{sub}</div>}
     </div>
   );
 }
@@ -651,7 +644,7 @@ function MapTab({ geoData, countries }) {
             <p style={{ fontSize: '0.73rem', color: 'var(--text3)', marginTop: 2 }}>Letzte 30 Tage · {geoData?.length || 0} Standorte</p>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#593df8', boxShadow: '0 0 6px rgba(89,61,248,0.7)' }} />
+            <div style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--accent)' }} />
             <span style={{ fontSize: '0.72rem', color: 'var(--text3)' }}>Zugriffspunkte</span>
           </div>
         </div>

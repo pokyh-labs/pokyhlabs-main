@@ -140,9 +140,8 @@ export default function WorldMap({ countries = [], className = '' }) {
       {/* Hover tooltip — bottom-left corner */}
       <div style={{
         position: 'absolute', bottom: 14, left: 14,
-        background: 'rgba(8,8,18,0.88)',
+        background: 'rgba(12,12,12,0.92)',
         border: `1px solid ${hovered && countByCode[hovered] ? 'rgba(89,61,248,0.5)' : 'rgba(255,255,255,0.08)'}`,
-        backdropFilter: 'blur(8px)',
         borderRadius: 9, padding: '9px 14px',
         minWidth: 140, transition: 'border-color 150ms',
       }}>

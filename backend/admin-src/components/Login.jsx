@@ -43,109 +43,67 @@ export default function Login({ onLogin }) {
       overflow: 'hidden',
     }}>
 
-      {/* ── Animated blobs ── */}
-      <div style={{
-        position: 'fixed', top: '-8%', left: '2%',
-        width: 700, height: 700, borderRadius: '50%',
-        background: 'radial-gradient(circle at 40% 40%, rgba(89,61,248,0.13) 0%, transparent 65%)',
-        filter: 'blur(52px)',
-        animation: 'blobFloat 11s ease-in-out infinite',
-        pointerEvents: 'none', zIndex: 0,
-      }} />
-      <div style={{
-        position: 'fixed', bottom: '-10%', right: '-4%',
-        width: 580, height: 580, borderRadius: '50%',
-        background: 'radial-gradient(circle at 60% 60%, rgba(89,61,248,0.08) 0%, rgba(200,180,100,0.06) 55%, transparent 70%)',
-        filter: 'blur(60px)',
-        animation: 'blobFloat2 15s ease-in-out infinite',
-        pointerEvents: 'none', zIndex: 0,
-      }} />
-      <div style={{
-        position: 'fixed', top: '35%', right: '8%',
-        width: 340, height: 340, borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(89,61,248,0.06) 0%, transparent 70%)',
-        filter: 'blur(40px)',
-        animation: 'blobFloat 20s ease-in-out infinite reverse',
-        pointerEvents: 'none', zIndex: 0,
-      }} />
-
       {/* ── Card ── */}
       <div style={{
         width: '100%',
-        maxWidth: 374,
+        maxWidth: 380,
         position: 'relative',
         zIndex: 1,
-        animation: 'pageFade 0.50s var(--ease-spring)',
+        animation: 'fadeUp 0.6s var(--ease-site) both',
       }}>
 
         {/* Brand */}
         <div style={{ textAlign: 'center', marginBottom: '2.25rem' }}>
           <div style={{
-            width: 62, height: 62,
+            width: 58, height: 58,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             margin: '0 auto 1.25rem',
-            borderRadius: 18,
-            background: 'rgba(255,255,255,0.72)',
-            backdropFilter: 'blur(16px)',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.09), 0 1px 0 rgba(255,255,255,0.85) inset',
-            border: '1px solid rgba(255,255,255,0.68)',
+            borderRadius: 16,
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
           }}>
             <img
               src="/assets/logo.png"
               alt="pokyh.studio"
-              style={{ width: 38, height: 38, objectFit: 'contain' }}
+              style={{ width: 36, height: 36, objectFit: 'contain' }}
             />
           </div>
           <h1 style={{
             color: 'var(--l1)',
-            fontSize: '1.45rem',
-            fontWeight: 700,
-            letterSpacing: '-0.04em',
+            fontSize: '1.5rem',
+            fontWeight: 600,
+            letterSpacing: '-0.035em',
             lineHeight: 1.15,
-            marginBottom: 6,
+            marginBottom: 8,
           }}>
             pokyh.studio
           </h1>
-          <p style={{
-            color: 'var(--l3)',
-            fontSize: '0.825rem',
-            fontWeight: 400,
-            letterSpacing: '-0.01em',
-          }}>
-            Melde dich im Admin-Panel an
+          <p className="label-mono" style={{ letterSpacing: '0.16em' }}>
+            Admin Panel
           </p>
         </div>
 
-        {/* Glass card */}
-        <div className="card-glass" style={{ padding: '2rem' }}>
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        {/* Auth card */}
+        <div className="auth-card" style={{ padding: '2rem' }}>
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
 
             {/* Username field */}
             <div>
-              <label style={{
-                display: 'block',
-                fontSize: '0.77rem',
-                fontWeight: 500,
-                color: 'var(--l2)',
-                marginBottom: '0.35rem',
-                letterSpacing: '-0.005em',
-              }}>
-                Benutzername
-              </label>
+              <label className="form-label">Benutzername</label>
               <div style={{ position: 'relative' }}>
                 <i className="bi bi-person" style={{
-                  position: 'absolute', left: '0.75rem', top: '50%',
+                  position: 'absolute', left: '0.8rem', top: '50%',
                   transform: 'translateY(-50%)',
                   color: focused === 'user' ? 'var(--accent)' : 'var(--l4)',
                   fontSize: '0.9rem', pointerEvents: 'none',
-                  transition: 'color var(--t-sm) var(--ease)',
+                  transition: 'color 160ms var(--ease)',
                 }} />
                 <input
                   type="text"
                   placeholder="admin"
                   autoComplete="username"
                   required
-                  style={{ paddingLeft: '2.25rem' }}
+                  style={{ paddingLeft: '2.35rem' }}
                   value={form.username}
                   onFocus={() => setFocused('user')}
                   onBlur={() => setFocused('')}
@@ -156,30 +114,21 @@ export default function Login({ onLogin }) {
 
             {/* Password field */}
             <div>
-              <label style={{
-                display: 'block',
-                fontSize: '0.77rem',
-                fontWeight: 500,
-                color: 'var(--l2)',
-                marginBottom: '0.35rem',
-                letterSpacing: '-0.005em',
-              }}>
-                Passwort
-              </label>
+              <label className="form-label">Passwort</label>
               <div style={{ position: 'relative' }}>
                 <i className="bi bi-lock" style={{
-                  position: 'absolute', left: '0.75rem', top: '50%',
+                  position: 'absolute', left: '0.8rem', top: '50%',
                   transform: 'translateY(-50%)',
                   color: focused === 'pw' ? 'var(--accent)' : 'var(--l4)',
                   fontSize: '0.9rem', pointerEvents: 'none',
-                  transition: 'color var(--t-sm) var(--ease)',
+                  transition: 'color 160ms var(--ease)',
                 }} />
                 <input
                   type={showPw ? 'text' : 'password'}
                   placeholder="••••••••"
                   autoComplete="current-password"
                   required
-                  style={{ paddingLeft: '2.25rem', paddingRight: '2.75rem' }}
+                  style={{ paddingLeft: '2.35rem', paddingRight: '2.75rem' }}
                   value={form.password}
                   onFocus={() => setFocused('pw')}
                   onBlur={() => setFocused('')}
@@ -190,12 +139,12 @@ export default function Login({ onLogin }) {
                   onClick={() => setShowPw(v => !v)}
                   tabIndex={-1}
                   style={{
-                    position: 'absolute', right: '0.625rem', top: '50%',
+                    position: 'absolute', right: '0.6rem', top: '50%',
                     transform: 'translateY(-50%)',
                     background: 'none', border: 'none', padding: '0.22rem',
                     color: 'var(--l4)', cursor: 'pointer',
                     display: 'flex', alignItems: 'center',
-                    transition: 'color var(--t-sm) var(--ease)',
+                    transition: 'color 160ms var(--ease)',
                     borderRadius: 5,
                   }}
                   onMouseEnter={e => e.currentTarget.style.color = 'var(--l2)'}
@@ -216,20 +165,19 @@ export default function Login({ onLogin }) {
             {/* Submit */}
             <button
               type="submit"
-              className="btn-primary w-full"
+              className="btn-primary btn-pill w-full"
               disabled={loading}
               style={{
-                padding: '0.72rem',
+                padding: '0.78rem',
                 justifyContent: 'center',
                 fontSize: '0.875rem',
                 marginTop: 4,
-                borderRadius: 12,
-                letterSpacing: '-0.014em',
+                letterSpacing: '-0.012em',
               }}
             >
               {loading
                 ? <span className="spinner" />
-                : <i className="bi bi-arrow-right-circle-fill" style={{ fontSize: '0.95rem' }} />
+                : <i className="bi bi-arrow-right" style={{ fontSize: '0.95rem' }} />
               }
               {loading ? 'Einloggen…' : 'Einloggen'}
             </button>
@@ -238,10 +186,10 @@ export default function Login({ onLogin }) {
 
         <p style={{
           textAlign: 'center',
-          marginTop: '1.25rem',
+          marginTop: '1.5rem',
           color: 'var(--l4)',
           fontSize: '0.72rem',
-          letterSpacing: '-0.005em',
+          letterSpacing: '0',
         }}>
           pokyh.studio © {new Date().getFullYear()}
         </p>

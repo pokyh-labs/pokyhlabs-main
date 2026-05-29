@@ -358,7 +358,7 @@ export default function Inquiries() {
       {/* ── Delete confirm modal ── */}
       {confirmDelete && (
         <div
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' }}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(12,12,12,0.42)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}
           onClick={() => setConfirmDelete(null)}
         >
           <div

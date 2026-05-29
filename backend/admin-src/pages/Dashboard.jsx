@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useApi } from '../hooks/useApi';
 import { toast } from '../hooks/useToast';
 
@@ -27,7 +27,7 @@ function useCountUp(target, duration = 700) {
   return count;
 }
 
-function StatCard({ value, label, icon, color, delay = 0 }) {
+function StatCard({ value, label, icon, delay = 0 }) {
   const [hovered, setHovered] = useState(false);
   const displayed = useCountUp(value, 700);
 
@@ -35,69 +35,38 @@ function StatCard({ value, label, icon, color, delay = 0 }) {
     <div
       className="card stat-card"
       style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '1.125rem',
-        padding: '1.375rem',
+        padding: '1.4rem 1.5rem',
         cursor: 'default',
         animationDelay: `${delay}ms`,
-        transition: 'transform 220ms var(--ease-spring), box-shadow 220ms var(--ease)',
-        transform: hovered ? 'translateY(-3px) scale(1.010)' : 'translateY(0) scale(1)',
-        boxShadow: hovered ? 'var(--s-md)' : 'var(--s)',
-        overflow: 'hidden',
+        transition: 'border-color 220ms var(--ease)',
+        borderColor: hovered ? 'rgba(12,12,12,0.20)' : 'var(--border)',
         position: 'relative',
       }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      {/* Subtle gradient accent in corner */}
-      <div style={{
-        position: 'absolute', top: 0, right: 0,
-        width: 80, height: 80,
-        background: `radial-gradient(circle at 100% 0%, ${color}0e 0%, transparent 65%)`,
-        pointerEvents: 'none',
-      }} />
-
-      <div style={{
-        width: 48, height: 48,
-        borderRadius: 14,
-        background: `linear-gradient(145deg, ${color}16, ${color}0a)`,
-        border: `1px solid ${color}24`,
-        color,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: '1.2rem',
-        flexShrink: 0,
-        transition: 'transform 220ms var(--ease-spring)',
-        transform: hovered ? 'scale(1.12) rotate(-6deg)' : 'scale(1) rotate(0deg)',
-        boxShadow: `0 4px 14px ${color}20`,
-      }}>
-        <i className={`bi ${icon}`} />
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+        <span className="label-mono">{label}</span>
+        <i className={`bi ${icon}`} style={{
+          fontSize: '0.95rem',
+          color: 'var(--l4)',
+          lineHeight: 1,
+        }} />
       </div>
-
-      <div>
-        <div
-          className="num-pop"
-          style={{
-            fontSize: '2.05rem',
-            fontWeight: 700,
-            color: 'var(--l1)',
-            lineHeight: 1,
-            letterSpacing: '-0.055em',
-            fontVariantNumeric: 'tabular-nums',
-            animationDelay: `${delay + 100}ms`,
-          }}
-        >
-          {value != null ? displayed : '–'}
-        </div>
-        <div style={{
-          color: 'var(--l3)',
-          fontSize: '0.745rem',
-          marginTop: 5,
-          fontWeight: 500,
-          letterSpacing: '0.002em',
-        }}>
-          {label}
-        </div>
+      <div
+        className="num-pop"
+        style={{
+          fontSize: '2.4rem',
+          fontWeight: 600,
+          color: 'var(--l1)',
+          lineHeight: 1,
+          letterSpacing: '-0.05em',
+          fontVariantNumeric: 'tabular-nums',
+          marginTop: '1.1rem',
+          animationDelay: `${delay + 120}ms`,
+        }}
+      >
+        {value != null ? displayed : '–'}
       </div>
     </div>
   );
@@ -121,25 +90,23 @@ function fmtUptime(s) {
 
 function MemBar({ used, total }) {
   const pct = total > 0 ? Math.round((used / total) * 100) : 0;
-  const color = pct > 85 ? '#e5383b' : pct > 65 ? '#f59500' : 'var(--accent)';
-  const gradColor = pct > 85 ? '#ef4444, #e5383b' : pct > 65 ? '#fb923c, #f59500' : '#7c5af5, #593df8';
+  const color = pct > 85 ? 'var(--red)' : pct > 65 ? 'var(--orange)' : 'var(--accent)';
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-        <span style={{ fontSize: '0.73rem', color: 'var(--text3)', fontWeight: 500 }}>Heap-Speicher</span>
-        <span style={{ fontSize: '0.73rem', color: 'var(--text2)', fontVariantNumeric: 'tabular-nums' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 7 }}>
+        <span style={{ fontSize: '0.78rem', color: 'var(--l3)' }}>Heap-Speicher</span>
+        <span style={{ fontSize: '0.78rem', color: 'var(--l2)', fontVariantNumeric: 'tabular-nums' }}>
           {fmtBytes(used)} / {fmtBytes(total)}
-          <span style={{ color: 'var(--text3)', marginLeft: 5 }}>· {pct}%</span>
+          <span style={{ color: 'var(--l3)', marginLeft: 6 }}>· {pct}%</span>
         </span>
       </div>
-      <div style={{ height: 6, borderRadius: 99, background: 'var(--bg3)', overflow: 'hidden', border: '1px solid var(--border2)' }}>
+      <div style={{ height: 6, borderRadius: 99, background: 'var(--surface-3)', overflow: 'hidden', border: '1px solid var(--border-2)' }}>
         <div style={{
           height: '100%',
           width: `${pct}%`,
-          background: `linear-gradient(90deg, ${gradColor})`,
+          background: color,
           borderRadius: 99,
-          transition: 'width 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
-          boxShadow: `0 0 8px ${color}55`,
+          transition: 'width 0.8s var(--ease-site)',
         }} />
       </div>
     </div>
@@ -148,10 +115,10 @@ function MemBar({ used, total }) {
 
 function HealthRow({ icon, label, value }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0', borderBottom: '1px solid var(--border2)' }}>
-      <i className={`bi bi-${icon}`} style={{ color: 'var(--text3)', fontSize: '0.82rem', width: 16, textAlign: 'center', flexShrink: 0 }} />
-      <span style={{ fontSize: '0.78rem', color: 'var(--text3)', flex: 1 }}>{label}</span>
-      <span style={{ fontSize: '0.78rem', color: 'var(--text2)', fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>{value}</span>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '8px 0', borderBottom: '1px solid var(--border-2)' }}>
+      <i className={`bi bi-${icon}`} style={{ color: 'var(--l4)', fontSize: '0.82rem', width: 16, textAlign: 'center', flexShrink: 0 }} />
+      <span style={{ fontSize: '0.8rem', color: 'var(--l3)', flex: 1 }}>{label}</span>
+      <span style={{ fontSize: '0.8rem', color: 'var(--l2)', fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>{value}</span>
     </div>
   );
 }
@@ -161,24 +128,34 @@ function StatusDot({ value, max }) {
   return (
     <div style={{
       width: '100%',
-      height: 4,
-      background: 'var(--bg3)',
+      height: 5,
+      background: 'var(--surface-3)',
       borderRadius: 99,
       overflow: 'hidden',
-      marginTop: 8,
+      marginTop: 9,
+      border: '1px solid var(--border-2)',
     }}>
       <div style={{
         height: '100%',
         width: `${pct}%`,
         background: 'var(--accent)',
         borderRadius: 99,
-        transition: 'width 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
+        transition: 'width 0.8s var(--ease-site)',
       }} />
     </div>
   );
 }
 
-export default function Dashboard({ onNavigate }) {
+function SectionLabel({ children }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--accent)', display: 'inline-block', flexShrink: 0 }} />
+      <span className="label-mono">{children}</span>
+    </div>
+  );
+}
+
+export default function Dashboard({ onNavigate, user }) {
   const { request } = useApi();
   const [stats, setStats]   = useState(null);
   const [recent, setRecent] = useState([]);
@@ -216,40 +193,72 @@ export default function Dashboard({ onNavigate }) {
     return new Date(d).toLocaleDateString('de-DE', { day: '2-digit', month: 'short', year: 'numeric' });
   }
 
+  const now      = new Date();
+  const hour     = now.getHours();
+  const greeting = hour < 12 ? 'Guten Morgen' : hour < 18 ? 'Guten Tag' : 'Guten Abend';
+  const today    = now.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
   return (
     <div>
+      {/* ── Welcome hero ── */}
+      <div className="fade-up" style={{ marginBottom: '2.25rem' }}>
+        <div style={{ marginBottom: 14 }}>
+          <SectionLabel>{today}</SectionLabel>
+        </div>
+        <h2 style={{
+          fontSize: 'clamp(1.7rem, 3.4vw, 2.5rem)',
+          fontWeight: 600,
+          letterSpacing: '-0.035em',
+          lineHeight: 1.05,
+          color: 'var(--l1)',
+        }}>
+          {greeting}{user?.username ? ',' : ''}{' '}
+          {user?.username && (
+            <span style={{ color: 'var(--accent)' }}>{user.username}</span>
+          )}
+          <span style={{ color: 'var(--l4)' }}>.</span>
+        </h2>
+        <p style={{
+          fontSize: '0.95rem',
+          color: 'var(--l3)',
+          marginTop: 10,
+          letterSpacing: '-0.01em',
+          maxWidth: 540,
+          lineHeight: 1.6,
+        }}>
+          Schön, dass du da bist. Hier ist der aktuelle Stand deines Studios.
+        </p>
+      </div>
+
       {/* Stats row */}
       <div className="grid-3 mb-4">
         <StatCard
           value={stats?.total}
           label="Blogs gesamt"
           icon="bi-journal-text"
-          color="#593df8"
           delay={0}
         />
         <StatCard
           value={stats?.published}
           label="Veröffentlicht"
-          icon="bi-check-circle-fill"
-          color="#28a745"
-          delay={60}
+          icon="bi-check-circle"
+          delay={70}
         />
         <StatCard
           value={stats?.drafts}
           label="Entwürfe"
           icon="bi-file-earmark"
-          color="#8c8c8c"
-          delay={120}
+          delay={140}
         />
       </div>
 
       {/* Published progress */}
       {stats?.total > 0 && (
-        <div className="card mb-4" style={{
-          padding: '1rem 1.25rem',
+        <div className="card mb-4 fade-up" style={{
+          padding: '1.1rem 1.4rem',
           display: 'flex',
           alignItems: 'center',
-          gap: '1rem',
+          gap: '1.25rem',
         }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{
@@ -258,17 +267,17 @@ export default function Dashboard({ onNavigate }) {
               justifyContent: 'space-between',
               marginBottom: 2,
             }}>
-              <span style={{ fontSize: '0.78rem', fontWeight: 500, color: 'var(--text2)' }}>
+              <span style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--l2)' }}>
                 Veröffentlichungsrate
               </span>
-              <span style={{ fontSize: '0.78rem', color: 'var(--text3)', fontVariantNumeric: 'tabular-nums' }}>
+              <span style={{ fontSize: '0.8rem', color: 'var(--l3)', fontVariantNumeric: 'tabular-nums' }}>
                 {stats?.total > 0 ? Math.round((stats.published / stats.total) * 100) : 0}%
               </span>
             </div>
             <StatusDot value={stats?.published ?? 0} max={stats?.total ?? 1} />
           </div>
           <button
-            className="btn-primary btn-sm"
+            className="btn-primary btn-pill btn-sm"
             onClick={() => onNavigate('blogs')}
             style={{ flexShrink: 0 }}
           >
@@ -281,22 +290,17 @@ export default function Dashboard({ onNavigate }) {
       {/* System Health */}
       {health && (
         <div className="card mb-4">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <i className="bi bi-cpu" style={{ color: 'var(--accent)', fontSize: '0.875rem' }} />
-              <span style={{ fontWeight: 600, fontSize: '0.825rem', color: 'var(--text)', letterSpacing: '-0.01em' }}>
-                System Health
-              </span>
-            </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+            <SectionLabel>System Health</SectionLabel>
             <button className="btn-outline btn-sm" onClick={handleBackup} disabled={backing}>
-              {backing ? <span className="spinner" /> : <i className="bi bi-database-down" />}
+              {backing ? <span className="spinner" /> : <i className="bi bi-download" />}
               {backing ? 'Backup…' : 'DB Backup'}
             </button>
           </div>
           <MemBar used={health.memory?.heapUsed} total={health.memory?.heapTotal} />
-          <div style={{ marginTop: '0.875rem' }}>
+          <div style={{ marginTop: '1.1rem' }}>
             <HealthRow icon="clock-history"  label="Uptime"          value={fmtUptime(health.uptime)} />
-            <HealthRow icon="node-plus"      label="Node.js"         value={health.nodeVersion} />
+            <HealthRow icon="hdd-network"    label="Node.js"         value={health.nodeVersion} />
             <HealthRow icon="database"       label="Datenbank"       value={fmtBytes(health.database?.sizeBytes)} />
             <div style={{ borderBottom: 'none' }}>
               <HealthRow icon="folder2"      label="Uploads"         value={fmtBytes(health.uploads?.sizeBytes)} />
@@ -309,50 +313,40 @@ export default function Dashboard({ onNavigate }) {
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
         <div
           style={{
-            padding: '0.875rem 1.125rem',
+            padding: '1.1rem 1.4rem',
             borderBottom: '1px solid var(--border)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-            <i className="bi bi-clock-history" style={{ color: 'var(--text3)', fontSize: '0.825rem' }} />
-            <span style={{
-              color: 'var(--text)',
-              fontWeight: 600,
-              fontSize: '0.825rem',
-              letterSpacing: '-0.01em',
-            }}>
-              Letzte Beiträge
-            </span>
-          </div>
+          <SectionLabel>Letzte Beiträge</SectionLabel>
           <button className="btn-outline btn-sm" onClick={() => onNavigate('blogs')}>
             Alle anzeigen
           </button>
         </div>
 
         {recent.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '3.5rem', color: 'var(--text3)' }}>
+          <div style={{ textAlign: 'center', padding: '3.5rem', color: 'var(--l3)' }}>
             <div style={{
-              width: 56, height: 56,
-              borderRadius: 16,
-              background: 'var(--bg3)',
+              width: 52, height: 52,
+              borderRadius: 14,
+              background: 'var(--surface-3)',
               border: '1px solid var(--border)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               margin: '0 auto 1rem',
             }}>
-              <i className="bi bi-journal-x" style={{ fontSize: '1.4rem', color: 'var(--text3)' }} />
+              <i className="bi bi-journal-x" style={{ fontSize: '1.4rem', color: 'var(--l4)' }} />
             </div>
-            <p style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--text2)', marginBottom: 4 }}>
+            <p style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--l2)', marginBottom: 4 }}>
               Noch keine Blogs vorhanden
             </p>
-            <p style={{ fontSize: '0.75rem' }}>Erstelle deinen ersten Beitrag.</p>
+            <p style={{ fontSize: '0.78rem' }}>Erstelle deinen ersten Beitrag.</p>
           </div>
         ) : (
           <div className="table-scroll">
             <table style={{ width: '100%' }}>
-              <thead style={{ background: 'var(--bg3)' }}>
+              <thead style={{ background: 'var(--surface-2)' }}>
                 <tr>
                   {['Titel', 'Status', 'Datum'].map(h => (
                     <th key={h}>{h}</th>
@@ -361,24 +355,23 @@ export default function Dashboard({ onNavigate }) {
               </thead>
               <tbody>
                 {recent.map((b, i) => (
-                  <tr key={b.id} style={{ animation: `pageFade 0.3s ease ${i * 40}ms both` }}>
-                    <td style={{ color: 'var(--text)', maxWidth: 280, minWidth: 160 }}>
-                      <div className="truncate" style={{ fontWeight: 500, fontSize: '0.825rem' }}>
+                  <tr key={b.id} style={{ animation: `pageFade 0.4s var(--ease-site) ${i * 50}ms both` }}>
+                    <td style={{ color: 'var(--l1)', maxWidth: 280, minWidth: 160 }}>
+                      <div className="truncate" style={{ fontWeight: 500, fontSize: '0.85rem' }}>
                         {b.title}
                       </div>
                       {b.slug && (
-                        <div style={{ color: 'var(--text3)', fontSize: '0.7rem', marginTop: 2 }}>
+                        <div style={{ color: 'var(--l3)', fontSize: '0.72rem', marginTop: 2 }}>
                           /{b.slug}
                         </div>
                       )}
                     </td>
                     <td style={{ whiteSpace: 'nowrap' }}>
                       <span className={`badge badge-${b.status}`}>
-                        <i className={`bi bi-${b.status === 'published' ? 'check-circle-fill' : 'file-earmark'}`} />
                         {b.status === 'published' ? 'Veröffentlicht' : 'Entwurf'}
                       </span>
                     </td>
-                    <td style={{ color: 'var(--text3)', fontSize: '0.78rem', whiteSpace: 'nowrap' }}>
+                    <td style={{ color: 'var(--l3)', fontSize: '0.78rem', whiteSpace: 'nowrap' }}>
                       {fmt(b.created_at)}
                     </td>
                   </tr>
