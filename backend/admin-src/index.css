@@ -404,9 +404,10 @@ th {
   text-align: left;
 }
 td { padding: 0.85rem 1rem; vertical-align: middle; }
+thead th { background: var(--surface-4); }
 tbody tr { border-top: 1px solid var(--border-2); transition: background 150ms var(--ease); }
 tbody tr:first-child { border-top: none; }
-tbody tr:hover { background: var(--surface-3); }
+tbody tr:hover { background: rgba(89,61,248,0.06); }
 
 /* ── Divider ────────────────────────────────────────────── */
 .divider { height: 1px; background: var(--border); margin: 0.875rem 0; }
@@ -473,6 +474,9 @@ tbody tr:hover { background: var(--surface-3); }
   position: sticky;
   top: 0;
   z-index: 50;
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -490,7 +494,9 @@ tbody tr:hover { background: var(--surface-3); }
 .page-content {
   padding: 0.5rem 2rem 2.5rem;
   flex: 1;
-  max-width: 1320px;
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
 }
 
 /* ══════════════════════════════════════════════════════════
