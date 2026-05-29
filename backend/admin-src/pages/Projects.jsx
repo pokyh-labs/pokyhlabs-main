@@ -474,9 +474,9 @@ function ProjectRow({ project, onEdit, onDelete, deleting }) {
   const displayAlt = deSlot.image_alt || project.image_alt || '';
   return (
     <div
-      style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 14, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', transition: 'border-color 160ms var(--ease), background 160ms var(--ease)' }}
-      onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(12,12,12,0.16)'; e.currentTarget.style.background = 'var(--surface-2)'; }}
-      onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'var(--bg2)'; }}
+      style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 14, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', transition: 'background 160ms var(--ease)' }}
+      onMouseEnter={e => { e.currentTarget.style.background = 'var(--surface-3)'; }}
+      onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg2)'; }}
     >
       {/* Thumbnail */}
       {project.image_url ? (

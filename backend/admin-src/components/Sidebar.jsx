@@ -105,14 +105,15 @@ export default function Sidebar({ user, page, onPageChange, onLogout, open }) {
         <div style={{
           width: 44, height: 44,
           borderRadius: 14,
-          background: 'var(--ink)',
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           overflow: 'hidden',
         }}>
           <img
             src="/assets/logo.png"
             alt="pokyh.studio"
-            style={{ width: 28, height: 28, objectFit: 'contain', display: 'block', filter: 'brightness(0) invert(1)' }}
+            style={{ width: 30, height: 30, objectFit: 'contain', display: 'block' }}
           />
         </div>
       </div>
