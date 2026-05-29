@@ -146,10 +146,15 @@ Copy `.env.example` → `.env` and fill in the values. **Never commit `.env`.**
 | `CLOUDFLARE_API_TOKEN` | API token with zone read + cache purge permissions | No |
 | `CLOUDFLARE_ZONE_ID` | Zone ID for the domain | No |
 | `CLOUDFLARE_TUNNEL_TOKEN` | Cloudflare Tunnel token (for `--profile tunnel`) | No |
-| `DB_NAME` | MySQL DB name for Docker Compose MySQL setup (default: `pokyhlabs`) | No |
-| `DB_USER` | MySQL user (default: `pokyhlabs_user`) | No |
-| `DB_PASSWORD` | MySQL user password | Docker MySQL |
-| `DB_ROOT_PASSWORD` | MySQL root password — **no default, must be set explicitly** | Docker MySQL |
+| `DB_DIALECT` | Database dialect: `postgres` (default), `mysql`, or `mariadb`. If `DB_HOST` is unset, falls back to local SQLite. | No |
+| `DB_HOST` | Database host. When set, a network DB is used; otherwise SQLite. | No |
+| `DB_PORT` | Database port (default per dialect: postgres `5432`, mysql `3306`) | No |
+| `DB_NAME` | Database name (default: `pokyhlabs`) | If `DB_HOST` set |
+| `DB_USER` | Database user (default: `pokyhlabs_user`) | If `DB_HOST` set |
+| `DB_PASSWORD` | Database user password | If `DB_HOST` set |
+| `DB_SSL` / `DB_SSL_REJECT_UNAUTHORIZED` | Enable TLS / allow self-signed certs (`true`/`false`) | No |
+
+See [`backend/POSTGRES_MIGRATION.md`](backend/POSTGRES_MIGRATION.md) for the PostgreSQL / Dokploy setup and data-migration guide.
 | `ADMIN_USERNAME` | Initial admin username (used by `npm run add-admin` only) | No |
 | `ADMIN_EMAIL` | Initial admin email | No |
 | `ADMIN_PASSWORD` | Initial admin password | No |

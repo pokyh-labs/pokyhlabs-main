@@ -214,12 +214,17 @@ async function initDatabase() {
   logger.info('Database connected');
 
   // Schema migrations for older DB instances.
-  // MySQL forbids DEFAULT values on TEXT/BLOB columns, so we:
-  //   1. Add the column as nullable, no DEFAULT (works on MySQL + SQLite)
-  //   2. Backfill existing NULL rows with the desired default
-  // New rows still receive the default via the model's defaultValue at INSERT time.
+  // We add any missing columns as nullable (no DEFAULT) and then backfill
+  // existing NULL rows with the desired default value. New rows still receive
+  // the default via the model's defaultValue at INSERT time.
+  //
+  // Columns are added via qi.addColumn() with Sequelize DataTypes so the
+  // concrete SQL type is generated per-dialect (postgres/mysql/sqlite) — no
+  // hardcoded dialect-specific SQL. On a fresh database none of these fire,
+  // because sequelize.sync() below creates every column straight from the model.
+  const { DataTypes } = require('sequelize');
   const qi = sequelize.getQueryInterface();
-  const isMySQL = sequelize.getDialect() === 'mysql';
+  const qg = qi.queryGenerator;
 
   async function tableExists(table) {
     try {
@@ -228,17 +233,19 @@ async function initDatabase() {
     } catch { return false; }
   }
 
-  async function ensureColumn(table, column, sqlType, backfill) {
+  async function ensureColumn(table, column, type, backfill) {
     if (!(await tableExists(table))) return; // sync() will create it from the model
     let desc;
     try { desc = await qi.describeTable(table); } catch { return; }
     if (desc[column]) return;
     try {
-      await sequelize.query(`ALTER TABLE \`${table}\` ADD COLUMN \`${column}\` ${sqlType}`);
+      await qi.addColumn(table, column, { type, allowNull: true });
       logger.info(`Migration: added column ${table}.${column}`);
       if (backfill !== undefined) {
+        const t = qg.quoteIdentifier(table);
+        const c = qg.quoteIdentifier(column);
         const quoted = typeof backfill === 'string' ? `'${backfill.replace(/'/g, "''")}'` : backfill;
-        await sequelize.query(`UPDATE \`${table}\` SET \`${column}\` = ${quoted} WHERE \`${column}\` IS NULL`);
+        await sequelize.query(`UPDATE ${t} SET ${c} = ${quoted} WHERE ${c} IS NULL`);
       }
     } catch (err) {
       logger.error(`Migration failed: ${table}.${column}`, { message: err.message });
@@ -246,22 +253,22 @@ async function initDatabase() {
   }
 
   // Generic single-language columns
-  await ensureColumn('blogs', 'content_format', 'VARCHAR(10) NULL', 'html');
-  await ensureColumn('blogs', 'content_markdown', isMySQL ? 'LONGTEXT NULL' : 'TEXT');
-  await ensureColumn('inquiries', 'createdAt', 'DATETIME NULL');
-  await ensureColumn('inquiries', 'updatedAt', 'DATETIME NULL');
-  await ensureColumn('inquiries', 'deadline', 'DATE NULL');
-  await ensureColumn('projects', 'sort_order', 'INTEGER NULL', 0);
-  await ensureColumn('projects', 'image_url', 'VARCHAR(500) NULL');
-  await ensureColumn('projects', 'image_alt', 'VARCHAR(255) NULL');
-  await ensureColumn('projects', 'gallery', isMySQL ? 'LONGTEXT NULL' : 'TEXT', '[]');
+  await ensureColumn('blogs', 'content_format', DataTypes.STRING(10), 'html');
+  await ensureColumn('blogs', 'content_markdown', DataTypes.TEXT('long'));
+  await ensureColumn('inquiries', 'createdAt', DataTypes.DATE);
+  await ensureColumn('inquiries', 'updatedAt', DataTypes.DATE);
+  await ensureColumn('inquiries', 'deadline', DataTypes.DATEONLY);
+  await ensureColumn('projects', 'sort_order', DataTypes.INTEGER, 0);
+  await ensureColumn('projects', 'image_url', DataTypes.STRING(500));
+  await ensureColumn('projects', 'image_alt', DataTypes.STRING(255));
+  await ensureColumn('projects', 'gallery', DataTypes.TEXT('long'), '[]');
 
   // Multi-language CMS columns
-  await ensureColumn('blogs',    'translations', isMySQL ? 'LONGTEXT NULL' : 'TEXT', '{}');
-  await ensureColumn('blogs',    'slug_de',      'VARCHAR(300) NULL');
-  await ensureColumn('blogs',    'slug_en',      'VARCHAR(300) NULL');
-  await ensureColumn('blogs',    'slug_it',      'VARCHAR(300) NULL');
-  await ensureColumn('projects', 'translations', isMySQL ? 'LONGTEXT NULL' : 'TEXT', '{}');
+  await ensureColumn('blogs',    'translations', DataTypes.TEXT('long'), '{}');
+  await ensureColumn('blogs',    'slug_de',      DataTypes.STRING(300));
+  await ensureColumn('blogs',    'slug_en',      DataTypes.STRING(300));
+  await ensureColumn('blogs',    'slug_it',      DataTypes.STRING(300));
+  await ensureColumn('projects', 'translations', DataTypes.TEXT('long'), '{}');
 
   await sequelize.sync({ force: false });
   logger.info('Database synced');

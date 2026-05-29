@@ -4,6 +4,10 @@ const { Op } = require('sequelize');
 const { ErrorLog } = require('../models');
 const logger = require('../utils/logger');
 
+// MySQL's LIKE is case-insensitive; Postgres LIKE is case-sensitive. Use ILIKE
+// on Postgres so substring filters behave identically across dialects.
+const likeOp = () => (ErrorLog.sequelize.getDialect() === 'postgres' ? Op.iLike : Op.like);
+
 let lastBackupTime = 0;
 const BACKUP_COOLDOWN_MS = 10 * 60 * 1000;
 
@@ -55,7 +59,7 @@ async function getErrorLogs(req, res) {
   const offset = (page - 1) * limit;
 
   const where = {};
-  if (req.query.endpoint)    where.endpoint    = { [Op.like]: `%${req.query.endpoint}%` };
+  if (req.query.endpoint)    where.endpoint    = { [likeOp()]: `%${req.query.endpoint}%` };
   if (req.query.status_code) where.status_code = parseInt(req.query.status_code);
 
   const { count, rows } = await ErrorLog.findAndCountAll({

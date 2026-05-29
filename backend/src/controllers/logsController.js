@@ -2,7 +2,22 @@ const { Op, fn, col, literal, Sequelize } = require('sequelize');
 const { AccessLog, AuthLog, SuspiciousActivity } = require('../models');
 const { cache, KEYS, LOG_STATS_TTL } = require('../config/cache');
 
-const isMySQL = () => AccessLog.sequelize.getDialect() === 'mysql';
+const dialect = () => AccessLog.sequelize.getDialect();
+
+// MySQL's LIKE is case-insensitive by default; Postgres LIKE is case-sensitive.
+// Use ILIKE on Postgres so substring filters behave identically across dialects.
+const likeOp = () => (dialect() === 'postgres' ? Op.iLike : Op.like);
+
+// Hour-of-day extraction differs per dialect:
+//   mysql    → HOUR(col)
+//   postgres → date_part('hour', col)   (equivalent to EXTRACT(HOUR FROM col))
+//   sqlite   → strftime('%H', col)
+function hourFn() {
+  const d = dialect();
+  if (d === 'mysql')    return fn('HOUR', col('created_at'));
+  if (d === 'postgres') return fn('date_part', 'hour', col('created_at'));
+  return fn('strftime', '%H', col('created_at'));
+}
 
 // ── Access Logs ───────────────────────────────────────────────
 
@@ -16,7 +31,7 @@ async function getAccessLogs(req, res) {
   if (req.query.method)  where.method = req.query.method.toUpperCase();
   if (req.query.ip) {
     const safeIp = req.query.ip.replace(/[%_\\]/g, '\\$&');
-    where.ip = { [Op.like]: `%${safeIp}%` };
+    where.ip = { [likeOp()]: `%${safeIp}%` };
   }
   if (req.query.user_id) where.user_id = parseInt(req.query.user_id, 10);
 
@@ -41,7 +56,7 @@ async function getAuthLogs(req, res) {
   if (req.query.event_type) where.event_type = req.query.event_type;
   if (req.query.ip) {
     const safeIp = req.query.ip.replace(/[%_\\]/g, '\\$&');
-    where.ip = { [Op.like]: `%${safeIp}%` };
+    where.ip = { [likeOp()]: `%${safeIp}%` };
   }
 
   const { count, rows } = await AuthLog.findAndCountAll({
@@ -65,7 +80,7 @@ async function getSecurityLogs(req, res) {
   if (req.query.event_type) where.event_type = req.query.event_type;
   if (req.query.ip) {
     const safeIp = req.query.ip.replace(/[%_\\]/g, '\\$&');
-    where.ip_address = { [Op.like]: `%${safeIp}%` };
+    where.ip_address = { [likeOp()]: `%${safeIp}%` };
   }
 
   const { count, rows } = await SuspiciousActivity.findAndCountAll({
@@ -148,14 +163,12 @@ async function getStats(req, res) {
 
   const since24h = new Date(Date.now() - 24 * 3600 * 1000);
   const since7d  = new Date(Date.now() - 7  * 86400 * 1000);
-  const mysql = isMySQL();
+  // Hour-of-day expression, dialect-aware (see hourFn above).
+  const hourExpr   = hourFn();
+  const hourGroup  = [hourFn()];
+  const hourOrder  = [[hourFn(), 'ASC']];
 
-  // Hour expression: MySQL uses HOUR(), SQLite uses strftime
-  const hourExpr   = mysql ? fn('HOUR', col('created_at')) : fn('strftime', '%H', col('created_at'));
-  const hourGroup  = mysql ? [fn('HOUR', col('created_at'))] : [fn('strftime', '%H', col('created_at'))];
-  const hourOrder  = mysql ? [[fn('HOUR', col('created_at')), 'ASC']] : [[fn('strftime', '%H', col('created_at')), 'ASC']];
-
-  // Status-group expression: FLOOR(status/100)*100 works on both MySQL and SQLite
+  // Status-group expression: FLOOR(status/100)*100 works on MySQL, Postgres and SQLite
   const statusGroupExpr = literal('FLOOR(status / 100) * 100');
 
   const [
