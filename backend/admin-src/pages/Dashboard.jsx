@@ -4,7 +4,7 @@ import { toast } from '../hooks/useToast';
 
 /* ─── Count-up hook ────────────────────────────────────────── */
 
-function useCountUp(target, duration = 700) {
+function useCountUp(target, duration = 800) {
   const [count, setCount] = useState(0);
   const rafRef = useRef();
 
@@ -27,46 +27,50 @@ function useCountUp(target, duration = 700) {
   return count;
 }
 
-function StatCard({ value, label, icon, delay = 0 }) {
+function StatBlock({ value, label, tint, delay = 0, onClick }) {
   const [hovered, setHovered] = useState(false);
-  const displayed = useCountUp(value, 700);
+  const displayed = useCountUp(value, 800);
 
   return (
     <div
-      className="card stat-card"
-      style={{
-        padding: '1.4rem 1.5rem',
-        cursor: 'default',
-        animationDelay: `${delay}ms`,
-        transition: 'border-color 220ms var(--ease)',
-        borderColor: hovered ? 'rgba(12,12,12,0.20)' : 'var(--border)',
-        position: 'relative',
-      }}
+      className="stat-card"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      style={{
+        background: tint,
+        borderRadius: 'var(--r-xl)',
+        padding: '1.4rem 1.5rem 1.4rem',
+        minHeight: 150,
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        position: 'relative',
+        animationDelay: `${delay}ms`,
+        transition: 'transform 320ms var(--ease-spring)',
+        transform: hovered ? 'translateY(-3px)' : 'translateY(0)',
+      }}
     >
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-        <span className="label-mono">{label}</span>
-        <i className={`bi ${icon}`} style={{
-          fontSize: '0.95rem',
-          color: 'var(--l4)',
-          lineHeight: 1,
-        }} />
-      </div>
-      <div
-        className="num-pop"
-        style={{
-          fontSize: '2.4rem',
-          fontWeight: 600,
-          color: 'var(--l1)',
-          lineHeight: 1,
-          letterSpacing: '-0.05em',
-          fontVariantNumeric: 'tabular-nums',
-          marginTop: '1.1rem',
-          animationDelay: `${delay + 120}ms`,
-        }}
-      >
-        {value != null ? displayed : '–'}
+      <span style={{ fontSize: '0.92rem', fontWeight: 600, color: 'var(--ink)', letterSpacing: '-0.015em' }}>
+        {label}
+      </span>
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12 }}>
+        <span
+          className="num-pop"
+          style={{
+            fontSize: '2.9rem',
+            fontWeight: 800,
+            color: 'var(--ink)',
+            lineHeight: 0.9,
+            letterSpacing: '-0.05em',
+            fontVariantNumeric: 'tabular-nums',
+            animationDelay: `${delay + 120}ms`,
+          }}
+        >
+          {value != null ? displayed : '–'}
+        </span>
+        <button className="arrow-btn" onClick={onClick} aria-label={label}>
+          <i className="bi bi-arrow-up-right" />
+        </button>
       </div>
     </div>
   );
@@ -90,23 +94,23 @@ function fmtUptime(s) {
 
 function MemBar({ used, total }) {
   const pct = total > 0 ? Math.round((used / total) * 100) : 0;
-  const color = pct > 85 ? 'var(--red)' : pct > 65 ? 'var(--orange)' : 'var(--accent)';
+  const color = pct > 85 ? 'var(--red)' : pct > 65 ? 'var(--orange)' : 'var(--ink)';
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 7 }}>
-        <span style={{ fontSize: '0.78rem', color: 'var(--l3)' }}>Heap-Speicher</span>
-        <span style={{ fontSize: '0.78rem', color: 'var(--l2)', fontVariantNumeric: 'tabular-nums' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+        <span style={{ fontSize: '0.8rem', color: 'var(--l3)', fontWeight: 500 }}>Heap-Speicher</span>
+        <span style={{ fontSize: '0.8rem', color: 'var(--l2)', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
           {fmtBytes(used)} / {fmtBytes(total)}
-          <span style={{ color: 'var(--l3)', marginLeft: 6 }}>· {pct}%</span>
+          <span style={{ color: 'var(--l3)', marginLeft: 6, fontWeight: 500 }}>· {pct}%</span>
         </span>
       </div>
-      <div style={{ height: 6, borderRadius: 99, background: 'var(--surface-3)', overflow: 'hidden', border: '1px solid var(--border-2)' }}>
+      <div style={{ height: 9, borderRadius: 99, background: 'rgba(12,12,12,0.07)', overflow: 'hidden' }}>
         <div style={{
           height: '100%',
           width: `${pct}%`,
           background: color,
           borderRadius: 99,
-          transition: 'width 0.8s var(--ease-site)',
+          transition: 'width 0.9s var(--ease-spring)',
         }} />
       </div>
     </div>
@@ -115,42 +119,10 @@ function MemBar({ used, total }) {
 
 function HealthRow({ icon, label, value }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '8px 0', borderBottom: '1px solid var(--border-2)' }}>
-      <i className={`bi bi-${icon}`} style={{ color: 'var(--l4)', fontSize: '0.82rem', width: 16, textAlign: 'center', flexShrink: 0 }} />
-      <span style={{ fontSize: '0.8rem', color: 'var(--l3)', flex: 1 }}>{label}</span>
-      <span style={{ fontSize: '0.8rem', color: 'var(--l2)', fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>{value}</span>
-    </div>
-  );
-}
-
-function StatusDot({ value, max }) {
-  const pct = max > 0 ? Math.min(100, Math.round((value / max) * 100)) : 0;
-  return (
-    <div style={{
-      width: '100%',
-      height: 5,
-      background: 'var(--surface-3)',
-      borderRadius: 99,
-      overflow: 'hidden',
-      marginTop: 9,
-      border: '1px solid var(--border-2)',
-    }}>
-      <div style={{
-        height: '100%',
-        width: `${pct}%`,
-        background: 'var(--accent)',
-        borderRadius: 99,
-        transition: 'width 0.8s var(--ease-site)',
-      }} />
-    </div>
-  );
-}
-
-function SectionLabel({ children }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--accent)', display: 'inline-block', flexShrink: 0 }} />
-      <span className="label-mono">{children}</span>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '9px 0', borderBottom: '1px solid var(--border-2)' }}>
+      <i className={`bi bi-${icon}`} style={{ color: 'var(--l3)', fontSize: '0.9rem', width: 18, textAlign: 'center', flexShrink: 0 }} />
+      <span style={{ fontSize: '0.82rem', color: 'var(--l3)', flex: 1 }}>{label}</span>
+      <span style={{ fontSize: '0.82rem', color: 'var(--l1)', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{value}</span>
     </div>
   );
 }
@@ -168,7 +140,6 @@ export default function Dashboard({ onNavigate, user }) {
     request('/system/health').then(setHealth).catch(() => {});
   }, []);
 
-  // Auto-refresh health every 30s
   useEffect(() => {
     const id = setInterval(() => {
       request('/system/health').then(setHealth).catch(() => {});
@@ -197,101 +168,80 @@ export default function Dashboard({ onNavigate, user }) {
   const hour     = now.getHours();
   const greeting = hour < 12 ? 'Guten Morgen' : hour < 18 ? 'Guten Tag' : 'Guten Abend';
   const today    = now.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const pubRate  = stats?.total > 0 ? Math.round((stats.published / stats.total) * 100) : 0;
 
   return (
     <div>
       {/* ── Welcome hero ── */}
-      <div className="fade-up" style={{ marginBottom: '2.25rem' }}>
-        <div style={{ marginBottom: 14 }}>
-          <SectionLabel>{today}</SectionLabel>
-        </div>
+      <div className="fade-up" style={{ margin: '0.5rem 0 2rem' }}>
+        <p style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--l3)', letterSpacing: '-0.01em', textTransform: 'capitalize', marginBottom: 8 }}>
+          {today}
+        </p>
         <h2 style={{
-          fontSize: 'clamp(1.7rem, 3.4vw, 2.5rem)',
-          fontWeight: 600,
-          letterSpacing: '-0.035em',
-          lineHeight: 1.05,
+          fontSize: 'clamp(1.9rem, 4vw, 2.9rem)',
+          fontWeight: 800,
+          letterSpacing: '-0.04em',
+          lineHeight: 1.02,
           color: 'var(--l1)',
         }}>
-          {greeting}{user?.username ? ',' : ''}{' '}
-          {user?.username && (
-            <span style={{ color: 'var(--accent)' }}>{user.username}</span>
-          )}
-          <span style={{ color: 'var(--l4)' }}>.</span>
+          {greeting}{user?.username ? `, ${user.username}` : ''} <span className="wave" style={{ display: 'inline-block' }}>👋</span>
         </h2>
         <p style={{
-          fontSize: '0.95rem',
+          fontSize: '0.98rem',
           color: 'var(--l3)',
           marginTop: 10,
           letterSpacing: '-0.01em',
-          maxWidth: 540,
-          lineHeight: 1.6,
+          maxWidth: 560,
         }}>
           Schön, dass du da bist. Hier ist der aktuelle Stand deines Studios.
         </p>
       </div>
 
-      {/* Stats row */}
+      {/* ── Stat blocks ── */}
+      <h3 className="h-section" style={{ marginBottom: '1rem' }}>Deine Inhalte</h3>
       <div className="grid-3 mb-4">
-        <StatCard
-          value={stats?.total}
-          label="Blogs gesamt"
-          icon="bi-journal-text"
-          delay={0}
-        />
-        <StatCard
-          value={stats?.published}
-          label="Veröffentlicht"
-          icon="bi-check-circle"
-          delay={70}
-        />
-        <StatCard
-          value={stats?.drafts}
-          label="Entwürfe"
-          icon="bi-file-earmark"
-          delay={140}
-        />
+        <StatBlock value={stats?.total}     label="Blogs gesamt"   tint="var(--mint)"   delay={0}   onClick={() => onNavigate('blogs')} />
+        <StatBlock value={stats?.published} label="Veröffentlicht" tint="var(--yellow)" delay={80}  onClick={() => onNavigate('blogs')} />
+        <StatBlock value={stats?.drafts}    label="Entwürfe"       tint="var(--lav)"    delay={160} onClick={() => onNavigate('blogs')} />
       </div>
 
-      {/* Published progress */}
+      {/* ── Publish rate progress ── */}
       {stats?.total > 0 && (
-        <div className="card mb-4 fade-up" style={{
-          padding: '1.1rem 1.4rem',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '1.25rem',
+        <div className="fade-up" style={{
+          background: 'var(--pink)',
+          borderRadius: 'var(--r-xl)',
+          padding: '1.5rem 1.6rem',
+          marginBottom: '1.5rem',
         }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'baseline',
-              justifyContent: 'space-between',
-              marginBottom: 2,
-            }}>
-              <span style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--l2)' }}>
-                Veröffentlichungsrate
-              </span>
-              <span style={{ fontSize: '0.8rem', color: 'var(--l3)', fontVariantNumeric: 'tabular-nums' }}>
-                {stats?.total > 0 ? Math.round((stats.published / stats.total) * 100) : 0}%
-              </span>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 16 }}>
+            <div>
+              <p style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--ink)', opacity: 0.6 }}>Veröffentlichungsrate</p>
+              <p style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--ink)', letterSpacing: '-0.04em', marginTop: 4 }}>
+                {stats.published} von {stats.total} veröffentlicht
+              </p>
             </div>
-            <StatusDot value={stats?.published ?? 0} max={stats?.total ?? 1} />
+            <button className="btn-primary btn-sm" onClick={() => onNavigate('blogs')} style={{ flexShrink: 0 }}>
+              <i className="bi bi-plus-lg" />
+              Neuer Blog
+            </button>
           </div>
-          <button
-            className="btn-primary btn-pill btn-sm"
-            onClick={() => onNavigate('blogs')}
-            style={{ flexShrink: 0 }}
-          >
-            <i className="bi bi-plus-lg" />
-            Neuer Blog
-          </button>
+          <div style={{ height: 10, borderRadius: 99, background: 'rgba(12,12,12,0.08)', overflow: 'hidden' }}>
+            <div style={{
+              height: '100%',
+              width: `${pubRate}%`,
+              background: 'var(--ink)',
+              borderRadius: 99,
+              transition: 'width 0.9s var(--ease-spring)',
+            }} />
+          </div>
         </div>
       )}
 
-      {/* System Health */}
+      {/* ── System Health ── */}
       {health && (
         <div className="card mb-4">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-            <SectionLabel>System Health</SectionLabel>
+            <span style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--l1)', letterSpacing: '-0.03em' }}>System</span>
             <button className="btn-outline btn-sm" onClick={handleBackup} disabled={backing}>
               {backing ? <span className="spinner" /> : <i className="bi bi-download" />}
               {backing ? 'Backup…' : 'DB Backup'}
@@ -299,85 +249,84 @@ export default function Dashboard({ onNavigate, user }) {
           </div>
           <MemBar used={health.memory?.heapUsed} total={health.memory?.heapTotal} />
           <div style={{ marginTop: '1.1rem' }}>
-            <HealthRow icon="clock-history"  label="Uptime"          value={fmtUptime(health.uptime)} />
-            <HealthRow icon="hdd-network"    label="Node.js"         value={health.nodeVersion} />
-            <HealthRow icon="database"       label="Datenbank"       value={fmtBytes(health.database?.sizeBytes)} />
+            <HealthRow icon="clock-history"  label="Uptime"     value={fmtUptime(health.uptime)} />
+            <HealthRow icon="hdd-network"    label="Node.js"    value={health.nodeVersion} />
+            <HealthRow icon="database"       label="Datenbank"  value={fmtBytes(health.database?.sizeBytes)} />
             <div style={{ borderBottom: 'none' }}>
-              <HealthRow icon="folder2"      label="Uploads"         value={fmtBytes(health.uploads?.sizeBytes)} />
+              <HealthRow icon="folder2"      label="Uploads"    value={fmtBytes(health.uploads?.sizeBytes)} />
             </div>
           </div>
         </div>
       )}
 
-      {/* Recent posts table */}
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-        <div
-          style={{
-            padding: '1.1rem 1.4rem',
-            borderBottom: '1px solid var(--border)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          <SectionLabel>Letzte Beiträge</SectionLabel>
-          <button className="btn-outline btn-sm" onClick={() => onNavigate('blogs')}>
+      {/* ── Recent posts ── */}
+      <div className="card">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.1rem' }}>
+          <span style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--l1)', letterSpacing: '-0.03em' }}>Letzte Beiträge</span>
+          <button className="btn-ghost btn-sm" onClick={() => onNavigate('blogs')}>
             Alle anzeigen
+            <i className="bi bi-arrow-right" />
           </button>
         </div>
 
         {recent.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '3.5rem', color: 'var(--l3)' }}>
+          <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--l3)' }}>
             <div style={{
-              width: 52, height: 52,
-              borderRadius: 14,
+              width: 54, height: 54,
+              borderRadius: 18,
               background: 'var(--surface-3)',
-              border: '1px solid var(--border)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               margin: '0 auto 1rem',
             }}>
               <i className="bi bi-journal-x" style={{ fontSize: '1.4rem', color: 'var(--l4)' }} />
             </div>
-            <p style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--l2)', marginBottom: 4 }}>
+            <p style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--l2)', marginBottom: 4 }}>
               Noch keine Blogs vorhanden
             </p>
-            <p style={{ fontSize: '0.78rem' }}>Erstelle deinen ersten Beitrag.</p>
+            <p style={{ fontSize: '0.8rem' }}>Erstelle deinen ersten Beitrag.</p>
           </div>
         ) : (
-          <div className="table-scroll">
-            <table style={{ width: '100%' }}>
-              <thead style={{ background: 'var(--surface-2)' }}>
-                <tr>
-                  {['Titel', 'Status', 'Datum'].map(h => (
-                    <th key={h}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {recent.map((b, i) => (
-                  <tr key={b.id} style={{ animation: `pageFade 0.4s var(--ease-site) ${i * 50}ms both` }}>
-                    <td style={{ color: 'var(--l1)', maxWidth: 280, minWidth: 160 }}>
-                      <div className="truncate" style={{ fontWeight: 500, fontSize: '0.85rem' }}>
-                        {b.title}
-                      </div>
-                      {b.slug && (
-                        <div style={{ color: 'var(--l3)', fontSize: '0.72rem', marginTop: 2 }}>
-                          /{b.slug}
-                        </div>
-                      )}
-                    </td>
-                    <td style={{ whiteSpace: 'nowrap' }}>
-                      <span className={`badge badge-${b.status}`}>
-                        {b.status === 'published' ? 'Veröffentlicht' : 'Entwurf'}
-                      </span>
-                    </td>
-                    <td style={{ color: 'var(--l3)', fontSize: '0.78rem', whiteSpace: 'nowrap' }}>
-                      {fmt(b.created_at)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {recent.map((b, i) => (
+              <div
+                key={b.id}
+                onClick={() => onNavigate('blogs')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 14,
+                  padding: '12px 14px',
+                  borderRadius: 'var(--r)',
+                  background: 'var(--surface-3)',
+                  cursor: 'pointer',
+                  animation: `pageFade 0.45s var(--ease-spring) ${i * 60}ms both`,
+                  transition: 'background 160ms var(--ease)',
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-4)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'var(--surface-3)'}
+              >
+                <div style={{
+                  width: 40, height: 40, flexShrink: 0,
+                  borderRadius: 12,
+                  background: 'var(--surface)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: 'var(--ink)',
+                }}>
+                  <i className="bi bi-journal-text" style={{ fontSize: '1rem' }} />
+                </div>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div className="truncate" style={{ fontWeight: 600, fontSize: '0.88rem', color: 'var(--l1)' }}>
+                    {b.title}
+                  </div>
+                  <div style={{ color: 'var(--l3)', fontSize: '0.74rem', marginTop: 2 }}>
+                    {fmt(b.created_at)}{b.slug ? ` · /${b.slug}` : ''}
+                  </div>
+                </div>
+                <span className={`badge badge-${b.status}`} style={{ flexShrink: 0 }}>
+                  {b.status === 'published' ? 'Veröffentlicht' : 'Entwurf'}
+                </span>
+              </div>
+            ))}
           </div>
         )}
       </div>

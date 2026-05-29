@@ -55,17 +55,16 @@ export default function Login({ onLogin }) {
         {/* Brand */}
         <div style={{ textAlign: 'center', marginBottom: '2.25rem' }}>
           <div style={{
-            width: 58, height: 58,
+            width: 60, height: 60,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             margin: '0 auto 1.25rem',
-            borderRadius: 16,
-            background: 'var(--surface)',
-            border: '1px solid var(--border)',
+            borderRadius: 18,
+            background: 'var(--ink)',
           }}>
             <img
               src="/assets/logo.png"
               alt="pokyh.studio"
-              style={{ width: 36, height: 36, objectFit: 'contain' }}
+              style={{ width: 36, height: 36, objectFit: 'contain', filter: 'brightness(0) invert(1)' }}
             />
           </div>
           <h1 style={{

@@ -1,7 +1,7 @@
 import React from 'react';
 
 const PAGE_META = {
-  dashboard:  { title: 'Dashboard' },
+  dashboard:  { title: 'Übersicht' },
   blogs:      { title: 'Blogs' },
   projects:   { title: 'Projekte' },
   inquiries:  { title: 'Anfragen' },
@@ -11,8 +11,8 @@ const PAGE_META = {
 };
 
 export default function Topbar({ page, user, onMenuToggle }) {
-  const meta     = PAGE_META[page] || PAGE_META.dashboard;
-  const initial  = (user?.username?.[0] || 'A').toUpperCase();
+  const meta    = PAGE_META[page] || PAGE_META.dashboard;
+  const initial = (user?.username?.[0] || 'A').toUpperCase();
 
   return (
     <header className="topbar">
@@ -23,28 +23,26 @@ export default function Topbar({ page, user, onMenuToggle }) {
         onClick={onMenuToggle}
         aria-label="Menü"
         style={{
-          background: 'transparent',
+          background: 'var(--surface)',
           border: '1px solid var(--border)',
-          borderRadius: 8,
-          padding: '0.4rem 0.48rem',
+          borderRadius: 12,
+          padding: '0.5rem 0.58rem',
           cursor: 'pointer',
-          color: 'var(--l2)',
+          color: 'var(--ink)',
           flexShrink: 0,
           transition: 'background 160ms var(--ease)',
         }}
-        onMouseEnter={e => e.currentTarget.style.background = 'rgba(12,12,12,0.045)'}
-        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
       >
-        <i className="bi bi-list" style={{ fontSize: '1.15rem', lineHeight: 1 }} />
+        <i className="bi bi-list" style={{ fontSize: '1.2rem', lineHeight: 1 }} />
       </button>
 
       {/* ── Page title ── */}
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
         <h1 style={{
-          fontSize: '0.95rem',
-          fontWeight: 600,
+          fontSize: 'clamp(1.15rem, 2.2vw, 1.55rem)',
+          fontWeight: 700,
           color: 'var(--l1)',
-          letterSpacing: '-0.022em',
+          letterSpacing: '-0.035em',
           lineHeight: 1,
           overflow: 'hidden',
           textOverflow: 'ellipsis',
@@ -55,16 +53,16 @@ export default function Topbar({ page, user, onMenuToggle }) {
       </div>
 
       {/* ── Right side ── */}
-      <div className="hide-mobile" style={{
+      <div style={{
         display: 'flex',
         alignItems: 'center',
-        gap: 11,
+        gap: 12,
         flexShrink: 0,
       }}>
-        <span style={{
-          fontSize: '0.8rem',
-          color: 'var(--l2)',
-          fontWeight: 500,
+        <span className="hide-mobile" style={{
+          fontSize: '0.86rem',
+          color: 'var(--l1)',
+          fontWeight: 600,
           letterSpacing: '-0.01em',
         }}>
           {user?.username}
@@ -72,15 +70,14 @@ export default function Topbar({ page, user, onMenuToggle }) {
 
         {/* Avatar chip */}
         <div style={{
-          width: 30, height: 30,
-          background: 'var(--surface-4)',
-          border: '1px solid var(--border)',
+          width: 42, height: 42,
+          background: 'var(--lav)',
           borderRadius: '50%',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontFamily: 'var(--font-mono)',
-          fontSize: '0.7rem',
-          fontWeight: 500,
-          color: 'var(--l1)',
+          fontSize: '0.92rem',
+          fontWeight: 700,
+          color: 'var(--ink)',
+          letterSpacing: '-0.02em',
           userSelect: 'none',
         }}>
           {initial}

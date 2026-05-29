@@ -1,108 +1,82 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useLayoutEffect, useEffect } from 'react';
 import { clearTokens, apiFetch } from '../hooks/useApi';
 import { toast } from '../hooks/useToast';
 
-const NAV_SECTIONS = [
-  {
-    label: null,
-    items: [
-      { id: 'dashboard', icon: 'bi-grid',          label: 'Dashboard', roles: ['admin'] },
-    ],
-  },
-  {
-    label: 'Inhalt',
-    items: [
-      { id: 'blogs',     icon: 'bi-journal-text',  label: 'Blogs',     roles: ['admin', 'editor'] },
-      { id: 'projects',  icon: 'bi-collection',    label: 'Projekte',  roles: ['admin'] },
-      { id: 'inquiries', icon: 'bi-envelope',      label: 'Anfragen',  roles: ['admin'] },
-    ],
-  },
-  {
-    label: 'Verwaltung',
-    items: [
-      { id: 'users',   icon: 'bi-people',          label: 'Benutzer',  roles: ['admin'] },
-      { id: 'seo',     icon: 'bi-search',          label: 'SEO',       roles: ['admin'] },
-      { id: 'logs',    icon: 'bi-bar-chart',       label: 'Logs',      roles: ['admin'] },
-    ],
-  },
+const NAV_ITEMS = [
+  { id: 'dashboard', icon: 'bi-grid-1x2-fill',  label: 'Dashboard', roles: ['admin'] },
+  { id: 'blogs',     icon: 'bi-journal-text',    label: 'Blogs',     roles: ['admin', 'editor'] },
+  { id: 'projects',  icon: 'bi-collection-fill', label: 'Projekte',  roles: ['admin'] },
+  { id: 'inquiries', icon: 'bi-envelope-fill',   label: 'Anfragen',  roles: ['admin'] },
+  { id: 'users',     icon: 'bi-people-fill',     label: 'Benutzer',  roles: ['admin'] },
+  { id: 'seo',       icon: 'bi-search',          label: 'SEO',       roles: ['admin'] },
+  { id: 'logs',      icon: 'bi-bar-chart-fill',  label: 'Logs',      roles: ['admin'] },
 ];
 
-function NavItem({ item, active, onClick }) {
-  const [pressed, setPressed] = useState(false);
+const ITEM = 52; // size of each rail target
 
+function RailButton({ item, active, onClick, btnRef }) {
+  const [hover, setHover] = useState(false);
   return (
     <button
+      ref={btnRef}
       onClick={onClick}
-      onMouseDown={() => setPressed(true)}
-      onMouseUp={() => setPressed(false)}
+      title={item.label}
+      aria-label={item.label}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
       style={{
         position: 'relative',
-        width: '100%',
-        padding: '9px 12px',
+        zIndex: 1,
+        width: ITEM, height: ITEM,
+        minWidth: ITEM,
+        borderRadius: 16,
+        background: !active && hover ? 'var(--surface-3)' : 'transparent',
+        border: 'none',
+        padding: 0,
         display: 'flex',
         alignItems: 'center',
-        gap: 11,
-        background: active ? 'var(--sb-active-bg)' : 'transparent',
-        border: `1px solid ${active ? 'var(--sb-active-bdr)' : 'transparent'}`,
-        borderRadius: 9,
+        justifyContent: 'center',
         cursor: 'pointer',
-        color: active ? 'var(--sb-text-active)' : 'var(--sb-text)',
-        transition: 'background 140ms ease, color 140ms ease, border-color 140ms ease, transform 160ms var(--ease-site)',
-        textAlign: 'left',
-        outline: 'none',
-        transform: pressed ? 'scale(0.97)' : 'scale(1)',
+        color: active ? '#fff' : (hover ? 'var(--ink)' : 'var(--l3)'),
+        transition: 'color 240ms var(--ease), background 200ms var(--ease)',
         WebkitTapHighlightColor: 'transparent',
       }}
-      onMouseEnter={e => {
-        if (!active) {
-          e.currentTarget.style.background = 'var(--sb-hover-bg)';
-          e.currentTarget.style.color = 'var(--sb-text-hover)';
-        }
-      }}
-      onMouseLeave={e => {
-        if (!active) {
-          e.currentTarget.style.background = 'transparent';
-          e.currentTarget.style.color = 'var(--sb-text)';
-        }
-        setPressed(false);
-      }}
     >
-      {/* Active marker */}
-      <span style={{
-        position: 'absolute',
-        left: -8,
-        top: '50%',
-        transform: `translateY(-50%) scaleY(${active ? 1 : 0})`,
-        width: 3,
-        height: 18,
-        borderRadius: 3,
-        background: 'var(--accent)',
-        transition: 'transform 200ms var(--ease-site)',
-      }} />
-      <i
-        className={`bi ${item.icon}`}
-        style={{
-          fontSize: '0.95rem',
-          lineHeight: 1,
-          flexShrink: 0,
-          color: active ? 'var(--accent)' : 'inherit',
-          transition: 'color 140ms ease',
-        }}
-      />
-      <span style={{
-        fontSize: '0.825rem',
-        fontWeight: active ? 500 : 400,
-        letterSpacing: '-0.01em',
+      <i className={`bi ${item.icon}`} style={{
+        fontSize: '1.15rem',
         lineHeight: 1,
-      }}>
-        {item.label}
-      </span>
+        transition: 'transform 320ms var(--ease-spring)',
+        transform: active ? 'scale(1.05)' : 'scale(1)',
+      }} />
     </button>
   );
 }
 
 export default function Sidebar({ user, page, onPageChange, onLogout, open }) {
   const [loggingOut, setLoggingOut] = useState(false);
+  const [logoutHover, setLogoutHover] = useState(false);
+  const navRef = useRef(null);
+  const btnRefs = useRef({});
+  const [indicator, setIndicator] = useState({ y: 0, ready: false });
+
+  const items = NAV_ITEMS.filter(item => item.roles.includes(user?.role));
+
+  // Position the sliding indicator behind the active item.
+  useLayoutEffect(() => {
+    const el = btnRefs.current[page];
+    if (el && navRef.current) {
+      setIndicator({ y: el.offsetTop, ready: true });
+    }
+  }, [page, items.length, open]);
+
+  useEffect(() => {
+    function onResize() {
+      const el = btnRefs.current[page];
+      if (el) setIndicator(i => ({ ...i, y: el.offsetTop }));
+    }
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [page]);
 
   async function handleLogout() {
     setLoggingOut(true);
@@ -117,194 +91,112 @@ export default function Sidebar({ user, page, onPageChange, onLogout, open }) {
     setLoggingOut(false);
   }
 
-  const initial = (user?.username?.[0] || 'A').toUpperCase();
-
-  const visibleSections = NAV_SECTIONS.map(section => ({
-    ...section,
-    items: section.items.filter(item => item.roles.includes(user?.role)),
-  })).filter(section => section.items.length > 0);
-
   return (
     <aside className={`sidebar${open ? ' open' : ''}`}>
 
       {/* ── Logo ── */}
       <div style={{
-        padding: '20px 16px 18px',
+        height: 'var(--topbar-h)',
         display: 'flex',
         alignItems: 'center',
-        gap: 11,
-        borderBottom: '1px solid var(--sb-border)',
+        justifyContent: 'center',
         flexShrink: 0,
       }}>
         <div style={{
-          width: 32, height: 32,
-          borderRadius: 8,
+          width: 44, height: 44,
+          borderRadius: 14,
+          background: 'var(--ink)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
           overflow: 'hidden',
-          flexShrink: 0,
         }}>
           <img
             src="/assets/logo.png"
             alt="pokyh.studio"
-            style={{ width: 32, height: 32, objectFit: 'contain', display: 'block' }}
+            style={{ width: 28, height: 28, objectFit: 'contain', display: 'block', filter: 'brightness(0) invert(1)' }}
           />
-        </div>
-        <div>
-          <div style={{
-            color: 'var(--l1)',
-            fontSize: '0.85rem',
-            fontWeight: 600,
-            letterSpacing: '-0.022em',
-            lineHeight: 1.2,
-          }}>
-            pokyh.studio
-          </div>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            marginTop: 3,
-          }}>
-            <span style={{
-              width: 5, height: 5,
-              borderRadius: '50%',
-              background: 'var(--green)',
-              display: 'inline-block',
-              flexShrink: 0,
-            }} />
-            <span className="label-mono" style={{ fontSize: '0.56rem', letterSpacing: '0.14em' }}>
-              Admin Panel
-            </span>
-          </div>
         </div>
       </div>
 
-      {/* ── Navigation ── */}
-      <nav style={{
-        flex: 1,
-        padding: '8px 10px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 0,
-        overflowY: 'auto',
-        overflowX: 'hidden',
-      }}>
-        {visibleSections.map((section, si) => (
-          <div key={si}>
-            {section.label && (
-              <div className="sb-label">{section.label}</div>
-            )}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {section.items.map(item => (
-                <NavItem
-                  key={item.id}
-                  item={item}
-                  active={page === item.id}
-                  onClick={() => onPageChange(item.id)}
-                />
-              ))}
-            </div>
-          </div>
+      {/* ── Navigation rail ── */}
+      <nav
+        ref={navRef}
+        style={{
+          flex: 1,
+          position: 'relative',
+          padding: '8px 0',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 8,
+        }}
+      >
+        {/* Sliding active indicator */}
+        <span
+          aria-hidden
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: '50%',
+            width: ITEM, height: ITEM,
+            marginLeft: -ITEM / 2,
+            borderRadius: 16,
+            background: 'var(--ink)',
+            transform: `translateY(${indicator.y}px)`,
+            transition: indicator.ready
+              ? 'transform 0.46s var(--ease-spring)'
+              : 'none',
+            zIndex: 0,
+            boxShadow: '0 6px 16px -6px rgba(12,12,12,0.4)',
+          }}
+        />
+        {items.map(item => (
+          <RailButton
+            key={item.id}
+            item={item}
+            active={page === item.id}
+            onClick={() => onPageChange(item.id)}
+            btnRef={el => { btnRefs.current[item.id] = el; }}
+          />
         ))}
       </nav>
 
-      {/* ── User ── */}
+      {/* ── User + Logout ── */}
       <div style={{
-        padding: '12px 10px 16px',
-        borderTop: '1px solid var(--sb-border)',
+        padding: '8px 0 16px',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 10,
         flexShrink: 0,
       }}>
-        {/* User row */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-          padding: '8px 12px',
-          marginBottom: 2,
-        }}>
-          <div style={{
-            width: 30, height: 30,
-            background: 'var(--surface-4)',
-            border: '1px solid var(--border)',
-            borderRadius: '50%',
+        <div style={{ width: 28, height: 1, background: 'var(--border)' }} />
+        <button
+          onClick={handleLogout}
+          disabled={loggingOut}
+          title="Abmelden"
+          aria-label="Abmelden"
+          onMouseEnter={() => setLogoutHover(true)}
+          onMouseLeave={() => setLogoutHover(false)}
+          style={{
+            width: ITEM, height: ITEM, minWidth: ITEM,
+            borderRadius: 16,
+            background: logoutHover ? 'var(--red-bg)' : 'transparent',
+            border: 'none',
+            padding: 0,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontFamily: 'var(--font-mono)',
-            fontWeight: 500,
-            fontSize: '0.7rem',
-            color: 'var(--l1)',
-            letterSpacing: '0',
-            userSelect: 'none',
-            flexShrink: 0,
-          }}>
-            {initial}
-          </div>
-          <div style={{ minWidth: 0, flex: 1 }}>
-            <div style={{
-              color: 'var(--l1)',
-              fontSize: '0.8rem',
-              fontWeight: 500,
-              letterSpacing: '-0.012em',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              lineHeight: 1.2,
-            }}>
-              {user?.username}
-            </div>
-            <div className="label-mono" style={{
-              fontSize: '0.54rem',
-              letterSpacing: '0.14em',
-              marginTop: 3,
-            }}>
-              {user?.role}
-            </div>
-          </div>
-        </div>
-
-        {/* Logout */}
-        <LogoutBtn loading={loggingOut} onClick={handleLogout} />
+            cursor: loggingOut ? 'not-allowed' : 'pointer',
+            color: logoutHover ? 'var(--red)' : 'var(--l3)',
+            opacity: loggingOut ? 0.5 : 1,
+            transition: 'color 200ms var(--ease), background 200ms var(--ease)',
+            WebkitTapHighlightColor: 'transparent',
+          }}
+        >
+          {loggingOut
+            ? <span className="spinner" style={{ borderTopColor: 'var(--red)', width: 14, height: 14 }} />
+            : <i className="bi bi-box-arrow-right" style={{ fontSize: '1.1rem', lineHeight: 1 }} />
+          }
+        </button>
       </div>
     </aside>
-  );
-}
-
-function LogoutBtn({ loading, onClick }) {
-  const [hovered, setHovered] = useState(false);
-  const [pressed, setPressed] = useState(false);
-
-  return (
-    <button
-      onClick={onClick}
-      disabled={loading}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => { setHovered(false); setPressed(false); }}
-      onMouseDown={() => setPressed(true)}
-      onMouseUp={() => setPressed(false)}
-      style={{
-        width: '100%',
-        padding: '9px 12px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 11,
-        background: hovered ? 'var(--red-bg)' : 'transparent',
-        border: `1px solid ${hovered ? 'var(--red-border)' : 'transparent'}`,
-        borderRadius: 9,
-        cursor: loading ? 'not-allowed' : 'pointer',
-        color: hovered ? 'var(--red)' : 'var(--sb-text)',
-        transition: 'background 140ms ease, color 140ms ease, border-color 140ms ease, transform 160ms var(--ease-site)',
-        textAlign: 'left',
-        opacity: loading ? 0.45 : 1,
-        transform: pressed ? 'scale(0.97)' : 'scale(1)',
-        outline: 'none',
-        WebkitTapHighlightColor: 'transparent',
-      }}
-    >
-      {loading
-        ? <span className="spinner" style={{ borderTopColor: 'var(--red)', width: 12, height: 12 }} />
-        : <i className="bi bi-box-arrow-right" style={{ fontSize: '0.95rem', lineHeight: 1 }} />
-      }
-      <span style={{ fontSize: '0.825rem', fontWeight: 400, letterSpacing: '-0.01em' }}>
-        Abmelden
-      </span>
-    </button>
   );
 }
