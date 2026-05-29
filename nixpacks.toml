@@ -1,11 +1,18 @@
-[variables]
-NODE_ENV = "production"
+# NOTE: NODE_ENV is intentionally NOT set to "production" here.
+# Setting it makes npm skip devDependencies during install — but the admin
+# dashboard is built with Vite, which lives in backend's devDependencies.
+# The build/start npm scripts set NODE_ENV=production themselves where needed.
 
 [phases.install]
 cmds = ["npm ci"]
 
 [phases.build]
-cmds = ["NODE_ENV=production npx next build"]
+# `npm run build` builds BOTH:
+#   - the Next.js frontend (next build)
+#   - the admin SPA (vite build -> backend/public/admin)
+# The previous config only ran `next build`, so the admin assets were never
+# generated in the image and /admin/assets/* 404'd.
+cmds = ["npm run build"]
 
 [start]
 cmd = "npm run start"
