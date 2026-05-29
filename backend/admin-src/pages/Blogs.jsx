@@ -665,6 +665,7 @@ function BlogEditor({ blog, onSave, onCancel }) {
   const [imagePreview, setImagePreview] = useState(blog?.image_url || null);
   const [saving, setSaving]             = useState(false);
   const [importing, setImporting]       = useState(false);
+  const [translating, setTranslating]   = useState(false);
   const [viewMode, setViewMode]         = useState('split');
   const [error, setError]               = useState('');
 
@@ -705,6 +706,65 @@ function BlogEditor({ blog, onSave, onCancel }) {
     const slugWasAuto = !slot.slug || slot.slug === autoSlug(slot.title || '');
     setSlotField(activeTab, 'title', val);
     if (slugWasAuto) setSlotField(activeTab, 'slug', autoSlug(val));
+  }
+
+  // Copy the current language's block layout (structure + content) into the
+  // other two languages — handy after designing the layout once.
+  function copyLayoutToOthers() {
+    const src = activeTab;
+    const targets = LANGS.filter(l => l !== src);
+    setBlocksByLang(prev => {
+      const next = { ...prev };
+      for (const to of targets) next[to] = prev[src].map(b => ({ ...b, id: genId() }));
+      return next;
+    });
+    toast(`Layout nach ${targets.map(t => t.toUpperCase()).join(', ')} übertragen`);
+  }
+
+  // Machine-translate the current language (fields + blocks) into the others.
+  async function autoTranslate() {
+    const src = activeTab;
+    const targets = LANGS.filter(l => l !== src);
+    setTranslating(true);
+    try {
+      const srcSlot = translations[src];
+      const srcBlocks = blocksByLang[src];
+      const nextTrans  = { ...translations };
+      const nextBlocks = { ...blocksByLang };
+
+      for (const to of targets) {
+        const texts = [
+          srcSlot.title || '',
+          srcSlot.excerpt || '',
+          srcSlot.image_alt || '',
+          ...srcBlocks.map(b => b.content || ''),
+        ];
+        const res = await apiFetch('/translate', {
+          method: 'POST',
+          body: JSON.stringify({ from: src, to, texts }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Übersetzung fehlgeschlagen');
+        const out = data.texts || [];
+        const title = out[0] ?? srcSlot.title;
+        nextTrans[to] = {
+          ...nextTrans[to],
+          title,
+          slug: autoSlug(title || ''),
+          excerpt: out[1] ?? '',
+          image_alt: out[2] ?? '',
+        };
+        nextBlocks[to] = srcBlocks.map((b, i) => ({ ...b, id: genId(), content: out[3 + i] ?? b.content }));
+      }
+
+      setTranslations(nextTrans);
+      setBlocksByLang(nextBlocks);
+      toast(`Übersetzt nach ${targets.map(t => t.toUpperCase()).join(', ')} — bitte prüfen`);
+    } catch (err) {
+      toast(err.message, 'error');
+    } finally {
+      setTranslating(false);
+    }
   }
 
   const blocks = blocksByLang[activeTab] || [];
@@ -844,32 +904,58 @@ function BlogEditor({ blog, onSave, onCancel }) {
         </button>
       </div>
 
-      {/* Language tab strip */}
-      <div style={{ display: 'flex', gap: 4, marginBottom: '1rem' }}>
-        {LANGS.map(l => (
+      {/* Language tab strip + translate / copy actions */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: '1rem', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 4 }}>
+          {LANGS.map(l => (
+            <button
+              key={l}
+              type="button"
+              onClick={() => setActiveTab(l)}
+              style={{
+                padding: '6px 14px',
+                borderRadius: 8,
+                border: activeTab === l ? '1.5px solid var(--accent)' : '1.5px solid var(--border)',
+                background: activeTab === l ? 'var(--accent-dim, rgba(89,61,248,0.08))' : 'var(--bg2)',
+                color: activeTab === l ? 'var(--accent)' : tabErrors[l] ? 'var(--danger)' : 'var(--text2)',
+                fontSize: '0.78rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 5,
+                transition: 'all 120ms',
+              }}
+            >
+              {LANG_LABELS[l]}
+              {tabErrors[l] && <i className="bi bi-exclamation-circle-fill" style={{ fontSize: '0.65rem', color: 'var(--danger)' }} />}
+            </button>
+          ))}
+        </div>
+
+        <div className="lang-actions">
           <button
-            key={l}
             type="button"
-            onClick={() => setActiveTab(l)}
-            style={{
-              padding: '6px 14px',
-              borderRadius: 8,
-              border: activeTab === l ? '1.5px solid var(--accent)' : '1.5px solid var(--border)',
-              background: activeTab === l ? 'var(--accent-dim, rgba(89,61,248,0.08))' : 'var(--bg2)',
-              color: activeTab === l ? 'var(--accent)' : tabErrors[l] ? 'var(--danger)' : 'var(--text2)',
-              fontSize: '0.78rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 5,
-              transition: 'all 120ms',
-            }}
+            className="lang-action-btn"
+            onClick={copyLayoutToOthers}
+            disabled={translating}
+            title={`Block-Layout von ${LANG_LABELS[activeTab]} in die anderen Sprachen kopieren`}
           >
-            {LANG_LABELS[l]}
-            {tabErrors[l] && <i className="bi bi-exclamation-circle-fill" style={{ fontSize: '0.65rem', color: 'var(--danger)' }} />}
+            <i className="bi bi-layers" /> Layout übertragen
           </button>
-        ))}
+          <button
+            type="button"
+            className={`lang-action-btn${translating ? ' is-busy' : ''}`}
+            onClick={autoTranslate}
+            disabled={translating}
+            title={`Inhalt von ${LANG_LABELS[activeTab]} automatisch in die anderen Sprachen übersetzen`}
+          >
+            {translating
+              ? <span className="spinner" style={{ width: 12, height: 12 }} />
+              : <i className="bi bi-translate" />}
+            {translating ? 'Übersetze…' : 'Automatisch übersetzen'}
+          </button>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit}>

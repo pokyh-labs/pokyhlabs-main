@@ -106,7 +106,7 @@ export default function Sidebar({ user, page, onPageChange, onLogout, open }) {
           width: 44, height: 44,
           borderRadius: 14,
           background: 'var(--surface)',
-          border: '1px solid var(--border)',
+          border: 'none',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           overflow: 'hidden',
         }}>

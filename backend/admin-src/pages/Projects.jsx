@@ -30,6 +30,7 @@ export default function Projects() {
   const [tabErrors, setTabErrors] = useState({});
   const [editId, setEditId]     = useState(null);
   const [saving, setSaving]     = useState(false);
+  const [translating, setTranslating] = useState(false);
   const [deleting, setDeleting] = useState(null);
   const [formError, setFormError] = useState('');
   const [imageFile, setImageFile] = useState(null);
@@ -117,6 +118,50 @@ export default function Projects() {
 
   function setSlotField(lang, key, val) {
     setForm(f => ({ ...f, translations: { ...f.translations, [lang]: { ...f.translations[lang], [key]: val } } }));
+  }
+
+  // Copy the current language's fields verbatim into the other languages.
+  function copyFieldsToOthers() {
+    const src = activeTab;
+    const targets = PROJ_LANGS.filter(l => l !== src);
+    setForm(f => {
+      const next = { ...f, translations: { ...f.translations } };
+      for (const to of targets) next.translations[to] = { ...f.translations[src] };
+      return next;
+    });
+    toast(`Inhalt nach ${targets.map(t => t.toUpperCase()).join(', ')} übertragen`);
+  }
+
+  // Machine-translate the current language's fields into the other languages.
+  async function autoTranslate() {
+    const src = activeTab;
+    const targets = PROJ_LANGS.filter(l => l !== src);
+    setTranslating(true);
+    try {
+      const srcSlot = form.translations[src];
+      const updates = {};
+      for (const to of targets) {
+        const texts = [srcSlot.title || '', srcSlot.description || '', srcSlot.image_alt || ''];
+        const res = await apiFetch('/translate', {
+          method: 'POST',
+          body: JSON.stringify({ from: src, to, texts }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Übersetzung fehlgeschlagen');
+        const out = data.texts || [];
+        updates[to] = { title: out[0] ?? '', description: out[1] ?? '', image_alt: out[2] ?? '' };
+      }
+      setForm(f => {
+        const next = { ...f, translations: { ...f.translations } };
+        for (const to of targets) next.translations[to] = { ...f.translations[to], ...updates[to] };
+        return next;
+      });
+      toast(`Übersetzt nach ${targets.map(t => t.toUpperCase()).join(', ')} — bitte prüfen`);
+    } catch (err) {
+      toast(err.message, 'error');
+    } finally {
+      setTranslating(false);
+    }
   }
 
   function handleImageChange(e) {
@@ -330,7 +375,12 @@ export default function Projects() {
 
       {/* Modal */}
       {modal && (
-        <Modal title={editId ? 'Projekt bearbeiten' : 'Neues Projekt'} onClose={closeModal}>
+        <Modal
+          title={editId ? 'Projekt bearbeiten' : 'Neues Projekt'}
+          subtitle={editId ? 'Änderungen werden für alle Sprachen gespeichert' : 'Alle 3 Sprachen anlegen'}
+          icon={editId ? 'bi-pencil-square' : 'bi-plus-circle'}
+          onClose={closeModal}
+        >
           <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
             {formError && (
@@ -340,31 +390,57 @@ export default function Projects() {
               </div>
             )}
 
-            {/* Language tab strip */}
-            <div style={{ display: 'flex', gap: 4 }}>
-              {PROJ_LANGS.map(l => (
+            {/* Language tab strip + translate / copy actions */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: 4 }}>
+                {PROJ_LANGS.map(l => (
+                  <button
+                    key={l}
+                    type="button"
+                    onClick={() => setActiveTab(l)}
+                    style={{
+                      padding: '5px 12px',
+                      borderRadius: 7,
+                      border: activeTab === l ? '1.5px solid var(--accent)' : '1.5px solid var(--border)',
+                      background: activeTab === l ? 'rgba(89,61,248,0.08)' : 'var(--bg2)',
+                      color: activeTab === l ? 'var(--accent)' : tabErrors[l] ? 'var(--danger)' : 'var(--text2)',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4,
+                    }}
+                  >
+                    {PROJ_LANG_LABELS[l]}
+                    {tabErrors[l] && <i className="bi bi-exclamation-circle-fill" style={{ fontSize: '0.62rem', color: 'var(--danger)' }} />}
+                  </button>
+                ))}
+              </div>
+
+              <div className="lang-actions">
                 <button
-                  key={l}
                   type="button"
-                  onClick={() => setActiveTab(l)}
-                  style={{
-                    padding: '5px 12px',
-                    borderRadius: 7,
-                    border: activeTab === l ? '1.5px solid var(--accent)' : '1.5px solid var(--border)',
-                    background: activeTab === l ? 'rgba(89,61,248,0.08)' : 'var(--bg2)',
-                    color: activeTab === l ? 'var(--accent)' : tabErrors[l] ? 'var(--danger)' : 'var(--text2)',
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 4,
-                  }}
+                  className="lang-action-btn"
+                  onClick={copyFieldsToOthers}
+                  disabled={translating}
+                  title={`Inhalt von ${PROJ_LANG_LABELS[activeTab]} in die anderen Sprachen kopieren`}
                 >
-                  {PROJ_LANG_LABELS[l]}
-                  {tabErrors[l] && <i className="bi bi-exclamation-circle-fill" style={{ fontSize: '0.62rem', color: 'var(--danger)' }} />}
+                  <i className="bi bi-layers" /> Übertragen
                 </button>
-              ))}
+                <button
+                  type="button"
+                  className={`lang-action-btn${translating ? ' is-busy' : ''}`}
+                  onClick={autoTranslate}
+                  disabled={translating}
+                  title={`Inhalt von ${PROJ_LANG_LABELS[activeTab]} automatisch übersetzen`}
+                >
+                  {translating
+                    ? <span className="spinner" style={{ width: 12, height: 12 }} />
+                    : <i className="bi bi-translate" />}
+                  {translating ? 'Übersetze…' : 'Übersetzen'}
+                </button>
+              </div>
             </div>
 
             <Field label={`Titel * (${PROJ_LANG_LABELS[activeTab]})`}>
@@ -526,7 +602,7 @@ function ProjectRow({ project, onEdit, onDelete, deleting }) {
   );
 }
 
-function Modal({ title, onClose, children }) {
+function Modal({ title, subtitle, icon = 'bi-collection-fill', onClose, children }) {
   useEffect(() => {
     function onKey(e) { if (e.key === 'Escape') onClose(); }
     window.addEventListener('keydown', onKey);
@@ -534,16 +610,21 @@ function Modal({ title, onClose, children }) {
   }, [onClose]);
 
   return (
-    <div
-      style={{ position: 'fixed', inset: 0, zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', background: 'rgba(12,12,12,0.42)' }}
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 14, padding: '1.5rem', width: '100%', maxWidth: 560, maxHeight: '90vh', overflowY: 'auto' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-          <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>{title}</h3>
-          <button className="btn-outline btn-icon" onClick={onClose}><i className="bi bi-x-lg" /></button>
+    <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="modal-card">
+        <div className="modal-head">
+          <span className="modal-icon"><i className={`bi ${icon}`} /></span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h3>{title}</h3>
+            {subtitle && <div className="modal-sub">{subtitle}</div>}
+          </div>
+          <button type="button" className="btn-outline btn-icon" onClick={onClose} title="Schließen">
+            <i className="bi bi-x-lg" />
+          </button>
         </div>
-        {children}
+        <div className="modal-body">
+          {children}
+        </div>
       </div>
     </div>
   );

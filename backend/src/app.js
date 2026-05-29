@@ -34,6 +34,7 @@ const seoRoutes        = require('./routes/seo');
 const inquiryRoutes    = require('./routes/inquiries');
 const projectRoutes    = require('./routes/projects');
 const uploadRoutes     = require('./routes/upload');
+const translateRoutes  = require('./routes/translate');
 const honeypotRoutes   = require('./routes/honeypot');
 const requestLogger    = require('./middleware/requestLogger');
 const errorLogger      = require('./middleware/errorLogger');
@@ -156,6 +157,7 @@ app.use('/api/seo',         seoRoutes);
 app.use('/api/inquiries',   inquiryRoutes);
 app.use('/api/projects',   projectRoutes);
 app.use('/api/upload',     uploadRoutes);
+app.use('/api/translate',  translateRoutes);
 
 // SPA routing for admin
 // Asset paths (/admin/assets/*) are NOT caught here — if express.static didn't

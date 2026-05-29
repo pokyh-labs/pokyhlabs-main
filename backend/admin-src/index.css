@@ -20,11 +20,13 @@
   --ink-soft:       #2a2a2a;
 
   /* ── Surfaces ─────────────────────────────────────── */
-  --bg:             #f1efe9;
+  /* --bg matches the public site (app/globals.css --bg) */
+  --bg:             #e4e2dc;
   --surface:        #ffffff;
-  --surface-2:      #faf9f6;
-  --surface-3:      #f3f1ec;
-  --surface-4:      #ebe9e2;
+  /* Secondary surfaces & hovers are neutral grey — never beige */
+  --surface-2:      #f6f6f7;
+  --surface-3:      #ececee;
+  --surface-4:      #e1e1e4;
 
   /* ── Pastels (soft tint blocks) ───────────────────── */
   --mint:           #d8eae1;
@@ -726,3 +728,94 @@ tbody tr:hover { background: rgba(89,61,248,0.06); }
     position: static !important;
   }
 }
+
+/* ══════════════════════════════════════════════════════════
+   MODAL (popup) — soft, rounded, animated
+   ══════════════════════════════════════════════════════════ */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(12, 12, 12, 0.40);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  animation: modalOverlayIn 0.22s var(--ease);
+}
+@keyframes modalOverlayIn { from { opacity: 0; } to { opacity: 1; } }
+
+.modal-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  width: 100%;
+  max-width: 600px;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--s-xl);
+  overflow: hidden;
+  animation: modalCardIn 0.34s var(--ease-spring);
+}
+@keyframes modalCardIn {
+  from { opacity: 0; transform: translateY(14px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.modal-head {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 1.15rem 1.4rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.modal-head .modal-icon {
+  width: 38px; height: 38px;
+  border-radius: var(--r-sm);
+  background: var(--accent-dim);
+  color: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.05rem;
+  flex-shrink: 0;
+}
+.modal-head h3 { margin: 0; font-size: 1.05rem; font-weight: 700; letter-spacing: -0.025em; }
+.modal-head .modal-sub { font-size: 0.74rem; color: var(--l3); margin-top: 1px; }
+
+.modal-body {
+  padding: 1.3rem 1.4rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* ── Translate / copy action toolbar (next to language tabs) ─ */
+.lang-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.lang-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--l2);
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 160ms var(--ease), border-color 160ms var(--ease), color 160ms var(--ease);
+}
+.lang-action-btn:hover:not(:disabled) {
+  background: var(--accent-dim);
+  border-color: rgba(89, 61, 248, 0.28);
+  color: var(--accent);
+}
+.lang-action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.lang-action-btn.is-busy { color: var(--accent); border-color: rgba(89, 61, 248, 0.28); }
