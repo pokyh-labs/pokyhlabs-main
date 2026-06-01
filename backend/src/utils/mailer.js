@@ -81,28 +81,26 @@ const BG     = '#f4f4f7';
 
 function shell({ preheader = '', body, footerNote }) {
   return `<!doctype html>
-<html lang="de">
+<html lang="de" style="height:100%;">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:${BG};">
+<body style="margin:0;padding:0;height:100%;width:100%;background:#ffffff;">
   <span style="display:none!important;opacity:0;color:transparent;height:0;width:0;overflow:hidden;">${esc(preheader)}</span>
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${BG};padding:32px 16px;">
-    <tr><td align="center">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border:1px solid ${LINE};border-radius:18px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-        <tr><td style="padding:26px 32px 22px;border-bottom:1px solid ${LINE};">
-          <div style="font-size:15px;font-weight:700;letter-spacing:-0.01em;color:${INK};">pokyh<span style="color:${ACCENT};">.</span>studio</div>
+  <table role="presentation" width="100%" height="100%" cellpadding="0" cellspacing="0" style="width:100%;height:100%;min-height:100%;background:#ffffff;border:0;border-collapse:collapse;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+    <tr><td valign="top" style="padding:0;border:0;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;border:0;border-collapse:collapse;">
+        <tr><td style="padding:30px 40px 24px;border:0;background:${BG};">
+          <div style="font-size:16px;font-weight:700;letter-spacing:-0.01em;color:${INK};">pokyh<span style="color:${ACCENT};">.</span>studio</div>
         </td></tr>
-        <tr><td style="padding:32px;">
+        <tr><td style="padding:40px;border:0;">
           ${body}
         </td></tr>
-        <tr><td style="padding:20px 32px 26px;border-top:1px solid ${LINE};">
+        <tr><td style="padding:24px 40px 30px;border:0;background:${BG};">
           <div style="font-size:12px;line-height:1.6;color:${MUTED};">
             ${footerNote || `Diese E-Mail wurde automatisch von pokyh.studio gesendet.`}
           </div>
+          <div style="font-size:11px;color:${MUTED};margin-top:6px;">pokyh.studio · ${esc(MAIL_DOMAIN)}</div>
         </td></tr>
       </table>
-      <div style="max-width:560px;margin:16px auto 0;font-size:11px;color:${MUTED};text-align:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-        pokyh.studio · ${esc(MAIL_DOMAIN)}
-      </div>
     </td></tr>
   </table>
 </body></html>`;
@@ -133,7 +131,7 @@ function inquiryNotificationEmail(inquiry) {
     <a href="mailto:${esc(inquiry.email)}" style="font-size:14px;color:${ACCENT};text-decoration:none;">${esc(inquiry.email)}</a>
     <div style="height:1px;background:${LINE};margin:24px 0;"></div>
     ${rows.join('')}
-    <a href="mailto:${esc(inquiry.email)}" style="display:inline-block;background:${ACCENT};color:#fff;font-size:14px;font-weight:600;text-decoration:none;padding:11px 22px;border-radius:10px;margin-top:4px;">Antworten</a>
+    <a href="mailto:${esc(inquiry.email)}" style="display:inline-block;background:${ACCENT};color:#fff;font-size:14px;font-weight:600;text-decoration:none;padding:12px 24px;border-radius:10px;margin-top:4px;">Antworten</a>
   `;
   return shell({
     preheader: `Neue Anfrage von ${inquiry.name}`,
@@ -166,22 +164,6 @@ function inquiryConfirmationEmail(inquiry) {
   });
 }
 
-// Wraps a free-text admin reply in the branded shell.
-function replyEmail({ name, bodyText, signatureName }) {
-  const safeBody = esc(bodyText).replace(/\n/g, '<br>');
-  const body = `
-    <p style="margin:0 0 18px;font-size:15px;line-height:1.75;color:#26262c;">${safeBody}</p>
-    <div style="height:1px;background:${LINE};margin:24px 0 18px;"></div>
-    <div style="font-size:14px;color:${INK};font-weight:600;">${esc(signatureName || MAIL_FROM_NAME)}</div>
-    <div style="font-size:13px;color:${MUTED};">pokyh.studio</div>
-  `;
-  return shell({
-    preheader: bodyText.slice(0, 90),
-    body,
-    footerNote: 'Antworte direkt auf diese E-Mail, um das Gespräch fortzusetzen.',
-  });
-}
-
 // ── High-level helpers used by the controller ────────────────────────────────
 async function sendInquiryNotification(inquiry) {
   return sendMail({
@@ -204,27 +186,11 @@ async function sendInquiryConfirmation(inquiry) {
   });
 }
 
-// Reply authored in the admin dashboard. The "from" local-part is the admin's
-// username, so each team member writes from their own <username>@pokyh.studio.
-async function sendReply({ username, displayName, to, subject, bodyText }) {
-  const localPart = String(username || 'hello').toLowerCase().replace(/[^a-z0-9._-]/g, '') || 'hello';
-  const from = `${localPart}@${MAIL_DOMAIN}`;
-  return sendMail({
-    from,
-    fromName: displayName || MAIL_FROM_NAME,
-    to,
-    replyTo: from,
-    subject,
-    html: replyEmail({ name: to, bodyText, signatureName: displayName }),
-  });
-}
-
 module.exports = {
   isMailEnabled,
   sendMail,
   sendInquiryNotification,
   sendInquiryConfirmation,
-  sendReply,
   MAIL_DOMAIN,
   MAIL_FROM,
   MAIL_ADMIN,

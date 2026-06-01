@@ -12,7 +12,8 @@ module.exports = (sequelize) => {
       type: DataTypes.STRING(20),
       defaultValue: 'new',
       allowNull: false,
-      validate: { isIn: [['new', 'read', 'archived']] },
+      // 'read' is kept for backwards-compatibility with older rows.
+      validate: { isIn: [['new', 'in_progress', 'developing', 'waiting', 'done', 'archived', 'read']] },
     },
     deadline: { type: DataTypes.DATEONLY, allowNull: true },
   }, {
