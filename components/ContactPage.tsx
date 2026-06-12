@@ -147,20 +147,27 @@ export default function ContactPage() {
         const text = (line.getAttribute("data-text") ?? "").trim()
         line.textContent = ""
         let idx = 0
-        for (const ch of text) {
-          if (ch === " ") {
+        // Chars are grouped per word (nowrap) so the headline can only break
+        // between words, never mid-word, at the huge works-style font size.
+        text.split(" ").filter(Boolean).forEach((word, wi) => {
+          if (wi > 0) {
             const sp = document.createElement("span")
             sp.className = "sp"
             line.appendChild(sp)
-            continue
           }
-          const s = document.createElement("span")
-          s.className = "ch"
-          s.textContent = ch
-          s.style.setProperty("--d", `${li * 120 + idx * 35}ms`)
-          line.appendChild(s)
-          idx++
-        }
+          const w = document.createElement("span")
+          w.style.display = "inline-block"
+          w.style.whiteSpace = "nowrap"
+          for (const ch of word) {
+            const s = document.createElement("span")
+            s.className = "ch"
+            s.textContent = ch
+            s.style.setProperty("--d", `${li * 120 + idx * 35}ms`)
+            w.appendChild(s)
+            idx++
+          }
+          line.appendChild(w)
+        })
       })
     }
 
@@ -307,6 +314,10 @@ export default function ContactPage() {
   return (
     <div style={{ backgroundColor: "var(--bg)", minHeight: "100vh" }}>
       <style>{`
+        @keyframes heroMouse {
+          0%, 100% { opacity: 0.45; transform: translateY(0); }
+          50%      { opacity: 0.9; transform: translateY(3px); }
+        }
         .svc-row { cursor: pointer; transition: background 0.25s ease; -webkit-tap-highlight-color: transparent; }
         .svc-row:hover { background: rgba(255,255,255,0.035); }
         .svc-row:focus-visible { outline: 2px solid rgba(89,61,248,0.55); outline-offset: -2px; }
@@ -328,31 +339,42 @@ export default function ContactPage() {
         .hosting-expand-btn:hover { opacity: 0.85; }
       `}</style>
 
-      {/* ── Hero ── */}
+      {/* ── Hero — same style as the /works book hero ── */}
       <div style={{ position: "relative", height: "100vh", width: "100%", backgroundColor: "var(--bg)", zIndex: 1 }}>
-        <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 clamp(28px, 6vw, 100px)" }}>
-          <p style={{
-            fontFamily: "var(--font-dm-mono)",
-            fontSize: 11,
-            letterSpacing: "0.2em",
+        <div style={{
+          position: "absolute",
+          inset: 0,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          textAlign: "center",
+          padding: "0 4vw",
+          color: "#0a0a0a",
+        }}>
+          <div style={{
+            fontFamily: "var(--font-inter), sans-serif",
+            fontSize: "clamp(10px, 1vw, 12px)",
+            letterSpacing: "0.42em",
             textTransform: "uppercase",
-            color: "var(--black)",
-            opacity: 0.4,
-            marginBottom: "1.75rem",
+            color: "rgba(10, 10, 10, 0.45)",
+            marginBottom: "clamp(18px, 3vh, 32px)",
+            fontWeight: 500,
             animation: "chIn 0.5s cubic-bezier(0.22,0.61,0.36,1) 100ms both",
           }}>
-            pokyh.studio / Contact
-          </p>
+            — pokyh.studio / Contact —
+          </div>
           <h1
             ref={headlineRef}
             suppressHydrationWarning
             style={{
-              color: "var(--black)",
+              fontFamily: "var(--font-inter), sans-serif",
               fontWeight: 500,
-              fontFamily: "var(--font-inter)",
-              lineHeight: 1.04,
-              letterSpacing: "-0.03em",
-              fontSize: "clamp(3rem, 8.5vw, 9.5rem)",
+              fontSize: "clamp(48px, 10vw, 150px)",
+              lineHeight: 0.96,
+              letterSpacing: "-0.05em",
+              margin: 0,
+              color: "#0a0a0a",
               userSelect: "none",
             }}
           >
@@ -361,35 +383,44 @@ export default function ContactPage() {
             </span>
           </h1>
           <p style={{
-            marginTop: "2rem",
-            fontFamily: "var(--font-inter)",
-            fontSize: "clamp(0.95rem, 1.2vw, 1.15rem)",
-            color: "var(--black)",
-            opacity: 0.5,
-            maxWidth: 460,
-            lineHeight: 1.65,
+            marginTop: "clamp(20px, 3.5vh, 40px)",
+            fontFamily: "var(--font-inter), sans-serif",
+            fontSize: "clamp(13px, 1.3vw, 18px)",
             fontWeight: 400,
+            lineHeight: 1.9,
+            color: "rgba(10, 10, 10, 0.5)",
+            letterSpacing: "0.01em",
+            maxWidth: 560,
             animation: "chIn 0.6s cubic-bezier(0.22,0.61,0.36,1) 900ms both",
           }}>
             {t("contact_hero_sub")}
           </p>
         </div>
 
-        <div style={{
+        <div aria-hidden="true" style={{
           position: "absolute",
-          bottom: 40,
-          left: "clamp(28px, 6vw, 100px)",
-          right: "clamp(28px, 6vw, 100px)",
+          left: "50%",
+          bottom: "clamp(40px, 9vh, 90px)",
+          transform: "translateX(-50%)",
           display: "flex",
-          justifyContent: "space-between",
           alignItems: "center",
+          gap: 13,
+          fontFamily: "var(--font-inter), sans-serif",
+          fontSize: 9,
+          letterSpacing: 4,
+          textTransform: "uppercase",
+          color: "rgba(10, 10, 10, 0.4)",
+          fontWeight: 500,
+          whiteSpace: "nowrap",
+          animation: "chIn 0.5s cubic-bezier(0.22,0.61,0.36,1) 1400ms both",
         }}>
-          <span style={{ fontFamily: "var(--font-dm-mono)", fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--black)", opacity: 0.35, animation: "chIn 0.5s cubic-bezier(0.22,0.61,0.36,1) 1200ms both" }}>
-            hello@pokyh.studio
+          <span style={{ display: "flex", alignItems: "center", animation: "heroMouse 2.2s ease-in-out infinite" }}>
+            <svg viewBox="0 0 14 22" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" width="13" height="20">
+              <rect x="1" y="1" width="12" height="20" rx="6" strokeWidth={1.4} />
+              <line x1="7" y1="5" x2="7" y2="8.5" strokeWidth={1.6} />
+            </svg>
           </span>
-          <span style={{ fontFamily: "var(--font-dm-mono)", fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--black)", opacity: 0.35, animation: "chIn 0.5s cubic-bezier(0.22,0.61,0.36,1) 1400ms both" }}>
-            {t("contact_reply")}
-          </span>
+          {t("scroll")}
         </div>
       </div>
 

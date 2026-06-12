@@ -573,9 +573,6 @@ function ProjectOverlay({ zoom, onClose }: { zoom: ZoomPayload | null; onClose: 
   const hasImage = !!zoom?.imageUrl
   const gallery = zoom?.gallery ?? []
   const body = zoom?.body ?? ""
-  // First "real" character gets dropcap treatment; rest of the paragraph follows.
-  const dropChar = body.trimStart().charAt(0)
-  const rest = dropChar ? body.trimStart().slice(1) : ""
 
   // Lightbox keyboard nav — wraps around, Esc closes.
   useEffect(() => {
@@ -610,8 +607,7 @@ function ProjectOverlay({ zoom, onClose }: { zoom: ZoomPayload | null; onClose: 
               <div className="detail__metaStrip">
                 {zoom?.year && <span className="detail__metaItem">{zoom.year}</span>}
                 {zoom?.status && (
-                  <span className="detail__metaItem detail__status">
-                    <span className={`detail__statusDot detail__statusDot--${zoom.status.toLowerCase()}`} />
+                  <span className={`detail__metaItem detail__status detail__status--${zoom.status.toLowerCase()}`}>
                     {zoom.status.toUpperCase()}
                   </span>
                 )}
@@ -633,23 +629,11 @@ function ProjectOverlay({ zoom, onClose }: { zoom: ZoomPayload | null; onClose: 
                   loading="eager"
                   decoding="async"
                 />
-                <figcaption className="detail__featureCaption">
-                  <span className="detail__featureCaptionDot" />
-                  {t("works_cover_image")}
-                </figcaption>
               </figure>
             )}
 
             <div className="detail__featureBody">
-              <div className="detail__sectionHead">
-                <span className="detail__sectionLabel">— {t("works_the_story")} —</span>
-                <span className="detail__sectionRule" />
-              </div>
-
-              <p className="detail__body">
-                {dropChar && <span className="detail__dropcap" aria-hidden="true">{dropChar}</span>}
-                {dropChar ? rest : body}
-              </p>
+              <p className="detail__body">{body}</p>
 
               {zoom?.tags && zoom.tags.length > 0 && (
                 <div className="detail__tags">
@@ -700,11 +684,7 @@ function ProjectOverlay({ zoom, onClose }: { zoom: ZoomPayload | null; onClose: 
             </section>
           )}
 
-          <div className="detail__footnote" aria-hidden="true">
-            <span className="detail__footnoteRule" />
-            <span>— {t("works_end_chapter")} —</span>
-            <span className="detail__footnoteRule" />
-          </div>
+          <div className="detail__footnote" aria-hidden="true" />
         </div>
 
         {/* Lightbox — fullscreen image viewer for the gallery. */}
@@ -857,16 +837,9 @@ function ProjectOverlay({ zoom, onClose }: { zoom: ZoomPayload | null; onClose: 
           opacity: 0.5;
           transform: translateY(-50%);
         }
-        .detail__statusDot {
-          display: inline-block;
-          width: 7px; height: 7px;
-          border-radius: 50%;
-          background: #ffd76e;
-          box-shadow: 0 0 0 3px rgba(255, 215, 110, 0.18);
-        }
-        .detail__statusDot--live    { background: #6bff9a; box-shadow: 0 0 0 3px rgba(107,255,154,0.18); }
-        .detail__statusDot--wip     { background: #ffd76e; box-shadow: 0 0 0 3px rgba(255,215,110,0.18); }
-        .detail__statusDot--concept { background: #644BFF; box-shadow: 0 0 0 3px rgba(100,75,255,0.22); }
+        .detail__status--live    { color: #1fa84f; }
+        .detail__status--wip     { color: #c79a2a; }
+        .detail__status--concept { color: #644BFF; }
 
         /* ── Feature band — image NEXT TO text on desktop ────── */
         .detail__feature {
@@ -913,30 +886,6 @@ function ProjectOverlay({ zoom, onClose }: { zoom: ZoomPayload | null; onClose: 
           height: 100%;
           object-fit: cover;
         }
-        .detail__featureCaption {
-          position: absolute;
-          left: 14px; bottom: 14px;
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          font-family: var(--font-inter), sans-serif;
-          font-size: 10px;
-          letter-spacing: 0.3em;
-          text-transform: uppercase;
-          color: #fff;
-          background: rgba(20, 15, 8, 0.55);
-          backdrop-filter: blur(6px);
-          -webkit-backdrop-filter: blur(6px);
-          padding: 6px 12px;
-          border-radius: 999px;
-          font-weight: 500;
-        }
-        .detail__featureCaptionDot {
-          width: 5px; height: 5px;
-          background: #ffd76e;
-          border-radius: 50%;
-        }
-
         .detail__featureBody { min-width: 0; }
 
         /* Reusable section header (with leading rule). */
@@ -979,17 +928,6 @@ function ProjectOverlay({ zoom, onClose }: { zoom: ZoomPayload | null; onClose: 
           letter-spacing: 0.003em;
           overflow-wrap: break-word;
         }
-        .detail__dropcap {
-          float: left;
-          font-family: var(--font-inter), sans-serif;
-          font-size: clamp(56px, 7vw, 92px);
-          line-height: 0.82;
-          padding: 4px 12px 0 0;
-          font-weight: 600;
-          color: #644BFF;
-          letter-spacing: -0.04em;
-        }
-
         .detail__tags {
           margin-top: clamp(32px, 5vh, 52px);
           display: flex;
@@ -1037,7 +975,7 @@ function ProjectOverlay({ zoom, onClose }: { zoom: ZoomPayload | null; onClose: 
           display: inline-flex;
           align-items: center;
           gap: 12px;
-          background: #1c140a;
+          background: #0a0a0a;
           color: #fff;
           text-decoration: none;
           padding: 14px 24px;
@@ -1130,26 +1068,9 @@ function ProjectOverlay({ zoom, onClose }: { zoom: ZoomPayload | null; onClose: 
           -webkit-backdrop-filter: blur(4px);
         }
 
+        /* Bottom spacer — keeps the last content clear of the fixed back button. */
         .detail__footnote {
-          margin: clamp(40px, 7vh, 80px) auto clamp(80px, 12vh, 140px);
-          max-width: 720px;
-          padding: 0 clamp(24px, 6vw, 40px);
-          display: flex;
-          align-items: center;
-          gap: 16px;
-          font-family: var(--font-inter), sans-serif;
-          font-size: 10px;
-          letter-spacing: 0.36em;
-          text-transform: uppercase;
-          color: rgba(28, 20, 10, 0.32);
-          font-weight: 500;
-          justify-content: center;
-        }
-        .detail__footnoteRule {
-          flex: 1;
-          max-width: 80px;
-          height: 1px;
-          background: rgba(28, 20, 10, 0.18);
+          height: clamp(80px, 12vh, 140px);
         }
 
         /* ── Responsive: stack feature + smaller type on mobile ─ */
@@ -1170,10 +1091,8 @@ function ProjectOverlay({ zoom, onClose }: { zoom: ZoomPayload | null; onClose: 
           .detail__title { font-size: clamp(36px, 11vw, 56px); letter-spacing: -0.035em; }
           .detail__metaStrip { gap: 8px 16px; font-size: 10px; }
           .detail__feature { padding: 16px 20px 32px; }
-          .detail__featureCaption { left: 10px; bottom: 10px; font-size: 9px; padding: 5px 10px; }
           .detail__sectionLabel { letter-spacing: 0.3em; }
           .detail__body { font-size: 15px; line-height: 1.7; }
-          .detail__dropcap { font-size: clamp(54px, 14vw, 72px); padding-right: 10px; }
           .detail__tags { flex-direction: column; gap: 10px; padding-top: 18px; }
           .detail__gallery { padding: 32px 16px 24px; }
           .detail__galleryGrid {
@@ -1183,7 +1102,7 @@ function ProjectOverlay({ zoom, onClose }: { zoom: ZoomPayload | null; onClose: 
           .detail__galleryItem { border-radius: 8px; aspect-ratio: 1 / 1; }
           .detail__galleryNum { font-size: 9px; padding: 3px 6px; }
           .detail__cta { padding: 13px 22px; font-size: 12px; }
-          .detail__footnote { font-size: 9px; letter-spacing: 0.3em; margin-bottom: 96px; }
+          .detail__footnote { height: 96px; }
         }
         @media (max-width: 380px) {
           .detail__galleryGrid { grid-template-columns: 1fr; }
@@ -1282,7 +1201,7 @@ function ProjectOverlay({ zoom, onClose }: { zoom: ZoomPayload | null; onClose: 
           bottom: clamp(20px, 4vh, 40px);
           right: clamp(16px, 4vw, 44px);
           z-index: 30;
-          background: #1c140a;
+          background: #0a0a0a;
           color: #fff;
           border: none;
           padding: 12px 22px 12px 16px;

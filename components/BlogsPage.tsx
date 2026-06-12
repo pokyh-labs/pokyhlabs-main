@@ -1,7 +1,9 @@
 "use client"
 
-import { useEffect, useRef, useState, useCallback } from "react"
+import { useEffect, useMemo, useRef, useState, useCallback } from "react"
 import { useT, useLanguage } from "@/lib/i18n/context"
+
+type SortMode = "new" | "old" | "views"
 
 interface Blog {
   id: number
@@ -35,6 +37,8 @@ export default function BlogsPage({ initialBlogs = [] }: { initialBlogs?: Blog[]
   const [blogs, setBlogs] = useState<Blog[]>(initialBlogs)
   const [loading, setLoading] = useState(initialBlogs.length === 0)
   const [error, setError] = useState<string | null>(null)
+  const [query, setQuery] = useState("")
+  const [sort, setSort] = useState<SortMode>("new")
 
   const loadBlogs = useCallback(() => {
     setLoading(true)
@@ -76,11 +80,135 @@ export default function BlogsPage({ initialBlogs = [] }: { initialBlogs?: Blog[]
     })
   }, [])
 
-  const [featured, ...rest] = blogs
+  // Client-side search + sort. The featured card only makes sense for the
+  // default view (newest first, no search) — otherwise everything is a row.
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    const list = q
+      ? blogs.filter((b) =>
+          b.title.toLowerCase().includes(q) ||
+          (b.excerpt ?? "").toLowerCase().includes(q) ||
+          (b.author?.username ?? "").toLowerCase().includes(q))
+      : [...blogs]
+    if (sort === "old") list.sort((a, b) => +new Date(a.published_at) - +new Date(b.published_at))
+    else if (sort === "views") list.sort((a, b) => b.views - a.views)
+    else list.sort((a, b) => +new Date(b.published_at) - +new Date(a.published_at))
+    return list
+  }, [blogs, query, sort])
+
+  const showFeatured = !query.trim() && sort === "new" && filtered.length > 0
+  const featured = showFeatured ? filtered[0] : null
+  const rest = showFeatured ? filtered.slice(1) : filtered
 
   return (
     <div style={{ backgroundColor: "var(--bg)", minHeight: "100vh" }}>
       <style>{`
+        @keyframes heroMouse {
+          0%, 100% { opacity: 0.45; transform: translateY(0); }
+          50%      { opacity: 0.9; transform: translateY(3px); }
+        }
+
+        /* ── Search + sort toolbar ── */
+        .btools {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          flex-wrap: wrap;
+          margin-bottom: clamp(2.75rem, 6vh, 4.5rem);
+        }
+        .btools__search {
+          position: relative;
+          flex: 1 1 280px;
+          min-width: 220px;
+        }
+        .btools__searchIcon {
+          position: absolute;
+          left: 17px;
+          top: 50%;
+          transform: translateY(-50%);
+          width: 15px; height: 15px;
+          stroke: #555;
+          fill: none;
+          stroke-width: 1.8;
+          stroke-linecap: round;
+          pointer-events: none;
+          transition: stroke 0.2s ease;
+        }
+        .btools__search:focus-within .btools__searchIcon { stroke: #a78bfa; }
+        .btools__search input {
+          width: 100%;
+          background: rgba(255,255,255,0.03);
+          border: 1px solid #2a2a2a;
+          border-radius: 999px;
+          padding: 12px 44px 12px 44px;
+          color: #fff;
+          font-family: var(--font-dm-mono), monospace;
+          font-size: 13px;
+          letter-spacing: 0.04em;
+          transition: border-color 0.2s ease, background 0.2s ease;
+        }
+        .btools__search input::placeholder { color: #555; }
+        .btools__search input:focus {
+          outline: none;
+          border-color: rgba(139,117,250,0.6);
+          background: rgba(255,255,255,0.05);
+        }
+        .btools__search input::-webkit-search-cancel-button { display: none; }
+        .btools__clear {
+          position: absolute;
+          right: 9px;
+          top: 50%;
+          transform: translateY(-50%);
+          width: 26px; height: 26px;
+          border-radius: 50%;
+          border: none;
+          background: rgba(255,255,255,0.07);
+          display: grid;
+          place-items: center;
+          cursor: pointer;
+          transition: background 0.2s ease;
+        }
+        .btools__clear:hover { background: rgba(255,255,255,0.14); }
+        .btools__clear svg {
+          width: 11px; height: 11px;
+          stroke: #aaa;
+          fill: none;
+          stroke-width: 2;
+          stroke-linecap: round;
+        }
+        .btools__sorts { display: flex; gap: 8px; flex-wrap: wrap; }
+        .bpill {
+          font-family: var(--font-dm-mono), monospace;
+          font-size: 11px;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+          padding: 10px 18px;
+          border-radius: 999px;
+          border: 1px solid #2a2a2a;
+          background: none;
+          color: #777;
+          cursor: pointer;
+          transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+        }
+        .bpill:hover { border-color: #3d3d3d; color: #aaa; }
+        .bpill--on {
+          border-color: rgba(139,117,250,0.7);
+          color: #c4b5fd;
+          background: rgba(89,61,248,0.14);
+        }
+        .bpill--on:hover { border-color: rgba(139,117,250,0.7); color: #c4b5fd; }
+        .btools__count {
+          margin-left: auto;
+          font-family: var(--font-dm-mono), monospace;
+          font-size: 11px;
+          letter-spacing: 0.1em;
+          color: #555;
+          white-space: nowrap;
+        }
+        @media (max-width: 640px) {
+          .btools__count { margin-left: 0; width: 100%; text-align: right; }
+        }
+
         /* ── Featured card ── */
         .bfeat {
           display: grid;
@@ -222,31 +350,42 @@ export default function BlogsPage({ initialBlogs = [] }: { initialBlogs?: Blog[]
         }
       `}</style>
 
-      {/* ── Hero ── */}
+      {/* ── Hero — same style as the /works book hero ── */}
       <div style={{ position: "relative", height: "100vh", width: "100%", backgroundColor: "var(--bg)", zIndex: 1 }}>
-        <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 clamp(28px, 6vw, 100px)" }}>
-          <p style={{
-            fontFamily: "var(--font-dm-mono)",
-            fontSize: 11,
-            letterSpacing: "0.2em",
+        <div style={{
+          position: "absolute",
+          inset: 0,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          textAlign: "center",
+          padding: "0 4vw",
+          color: "#0a0a0a",
+        }}>
+          <div style={{
+            fontFamily: "var(--font-inter), sans-serif",
+            fontSize: "clamp(10px, 1vw, 12px)",
+            letterSpacing: "0.42em",
             textTransform: "uppercase",
-            color: "var(--black)",
-            opacity: 0.4,
-            marginBottom: "1.75rem",
+            color: "rgba(10, 10, 10, 0.45)",
+            marginBottom: "clamp(18px, 3vh, 32px)",
+            fontWeight: 500,
             animation: "chIn 0.5s cubic-bezier(0.22,0.61,0.36,1) 100ms both",
           }}>
-            pokyh.studio / Blog
-          </p>
+            — pokyh.studio / Blog —
+          </div>
           <h1
             ref={headlineRef}
             suppressHydrationWarning
             style={{
-              color: "var(--black)",
+              fontFamily: "var(--font-inter), sans-serif",
               fontWeight: 500,
-              fontFamily: "var(--font-inter)",
-              lineHeight: 1.04,
-              letterSpacing: "-0.03em",
-              fontSize: "clamp(3rem, 8.5vw, 9.5rem)",
+              fontSize: "clamp(64px, 14vw, 180px)",
+              lineHeight: 0.92,
+              letterSpacing: "-0.05em",
+              margin: 0,
+              color: "#0a0a0a",
               userSelect: "none",
             }}
           >
@@ -255,35 +394,44 @@ export default function BlogsPage({ initialBlogs = [] }: { initialBlogs?: Blog[]
             </span>
           </h1>
           <p style={{
-            marginTop: "2rem",
-            fontFamily: "var(--font-inter)",
-            fontSize: "clamp(0.95rem, 1.2vw, 1.15rem)",
-            color: "var(--black)",
-            opacity: 0.5,
-            maxWidth: 460,
-            lineHeight: 1.65,
+            marginTop: "clamp(20px, 3.5vh, 40px)",
+            fontFamily: "var(--font-inter), sans-serif",
+            fontSize: "clamp(13px, 1.3vw, 18px)",
             fontWeight: 400,
+            lineHeight: 1.9,
+            color: "rgba(10, 10, 10, 0.5)",
+            letterSpacing: "0.01em",
+            maxWidth: 520,
             animation: "chIn 0.6s cubic-bezier(0.22,0.61,0.36,1) 900ms both",
           }}>
             {t("blog_subtitle")}
           </p>
         </div>
 
-        <div style={{
+        <div aria-hidden="true" style={{
           position: "absolute",
-          bottom: 40,
-          left: "clamp(28px, 6vw, 100px)",
-          right: "clamp(28px, 6vw, 100px)",
+          left: "50%",
+          bottom: "clamp(40px, 9vh, 90px)",
+          transform: "translateX(-50%)",
           display: "flex",
-          justifyContent: "space-between",
           alignItems: "center",
+          gap: 13,
+          fontFamily: "var(--font-inter), sans-serif",
+          fontSize: 9,
+          letterSpacing: 4,
+          textTransform: "uppercase",
+          color: "rgba(10, 10, 10, 0.4)",
+          fontWeight: 500,
+          whiteSpace: "nowrap",
+          animation: "chIn 0.5s cubic-bezier(0.22,0.61,0.36,1) 1400ms both",
         }}>
-          <span style={{ fontFamily: "var(--font-dm-mono)", fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--black)", opacity: 0.35, animation: "chIn 0.5s cubic-bezier(0.22,0.61,0.36,1) 1200ms both" }}>
-            {t("menu_blog_desc")}
+          <span style={{ display: "flex", alignItems: "center", animation: "heroMouse 2.2s ease-in-out infinite" }}>
+            <svg viewBox="0 0 14 22" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" width="13" height="20">
+              <rect x="1" y="1" width="12" height="20" rx="6" strokeWidth={1.4} />
+              <line x1="7" y1="5" x2="7" y2="8.5" strokeWidth={1.6} />
+            </svg>
           </span>
-          <span style={{ fontFamily: "var(--font-dm-mono)", fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--black)", opacity: 0.35, animation: "chIn 0.5s cubic-bezier(0.22,0.61,0.36,1) 1400ms both" }}>
-            {t("menu_blog_meta")}
-          </span>
+          {t("scroll")}
         </div>
       </div>
 
@@ -298,20 +446,51 @@ export default function BlogsPage({ initialBlogs = [] }: { initialBlogs?: Blog[]
         overflow: "hidden",
       }}>
         <div style={{ maxWidth: 1080, margin: "0 auto" }}>
-          <div
-            data-reveal
-            style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "clamp(3rem,7vh,5rem)" }}
-          >
-            <div style={{ fontFamily: "var(--font-dm-mono), monospace", fontSize: 12, letterSpacing: "0.2em", textTransform: "uppercase", color: "#555", display: "flex", alignItems: "center", gap: 14 }}>
-              <span style={{ display: "inline-block", width: 28, height: 1, background: "#555" }} />
-              {t("blog_latest")}
-            </div>
-            {!loading && !error && blogs.length > 0 && (
-              <span style={{ fontFamily: "var(--font-dm-mono), monospace", fontSize: 12, letterSpacing: "0.15em", color: "#444" }}>
-                {String(blogs.length).padStart(2, "0")}
+          {/* Search + sort toolbar */}
+          {!loading && !error && blogs.length > 0 && (
+            <div data-reveal className="btools">
+              <div className="btools__search">
+                <svg viewBox="0 0 24 24" className="btools__searchIcon" aria-hidden="true">
+                  <circle cx="11" cy="11" r="7" />
+                  <path d="m20 20-3.8-3.8" />
+                </svg>
+                <input
+                  type="search"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder={t("blog_search_placeholder")}
+                  aria-label={t("blog_search_placeholder")}
+                />
+                {query && (
+                  <button type="button" className="btools__clear" onClick={() => setQuery("")} aria-label={t("blog_clear_search")}>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+                  </button>
+                )}
+              </div>
+
+              <div className="btools__sorts" role="group" aria-label="Sort">
+                {([
+                  { id: "new" as SortMode, label: t("blog_sort_newest") },
+                  { id: "views" as SortMode, label: t("blog_sort_popular") },
+                  { id: "old" as SortMode, label: t("blog_sort_oldest") },
+                ]).map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    className={`bpill${sort === s.id ? " bpill--on" : ""}`}
+                    aria-pressed={sort === s.id}
+                    onClick={() => setSort(s.id)}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+
+              <span className="btools__count">
+                {filtered.length} {t("blog_articles_label")}
               </span>
-            )}
-          </div>
+            </div>
+          )}
 
           {loading ? (
             <LoadingState />
@@ -319,14 +498,23 @@ export default function BlogsPage({ initialBlogs = [] }: { initialBlogs?: Blog[]
             <ErrorState message={error} onRetry={loadBlogs} />
           ) : blogs.length === 0 ? (
             <EmptyState />
+          ) : filtered.length === 0 ? (
+            <div style={{ minHeight: "30vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", gap: "1.25rem" }}>
+              <p style={{ fontFamily: "var(--font-dm-mono), monospace", fontSize: 13, letterSpacing: "0.08em", color: "#666" }}>
+                {t("blog_no_results")}
+              </p>
+              <button type="button" className="bpill" onClick={() => setQuery("")}>
+                {t("blog_clear_search")}
+              </button>
+            </div>
           ) : (
             <>
               {featured && <FeaturedCard blog={featured} lang={langLc} />}
 
               {rest.length > 0 && (
-                <div style={{ marginTop: "clamp(2.5rem,5vh,4rem)" }}>
+                <div style={{ marginTop: featured ? "clamp(2.5rem,5vh,4rem)" : 0 }}>
                   {rest.map((blog, i) => (
-                    <BlogRow key={blog.id} blog={blog} index={i + 2} lang={langLc} />
+                    <BlogRow key={blog.id} blog={blog} index={i + (featured ? 2 : 1)} lang={langLc} />
                   ))}
                   <div style={{ borderTop: "1px solid #2a2a2a" }} />
                 </div>
