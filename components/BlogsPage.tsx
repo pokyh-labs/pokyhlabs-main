@@ -73,8 +73,6 @@ export default function BlogsPage({ initialBlogs = [] }: { initialBlogs?: Blog[]
   }, [blogs, query, sort])
 
   const isDefaultView = !query.trim() && sort === "new"
-  const featured = filtered.length > 0 ? filtered[0] : null
-  const rest = filtered.slice(1)
 
   return (
     <div style={{ backgroundColor: "var(--bg)", minHeight: "100vh" }}>
@@ -228,101 +226,10 @@ export default function BlogsPage({ initialBlogs = [] }: { initialBlogs?: Blog[]
         .bfeat__readlink svg { transition: transform 0.25s ease; }
         .bfeat:hover .bfeat__readlink svg { transform: translate(3px, -3px); }
 
-        /* ── List rows ── */
-        .brow {
-          position: relative;
-          display: grid;
-          grid-template-columns: 56px minmax(0, 1fr) 52px;
-          gap: clamp(1.25rem, 2.5vw, 2.25rem);
-          align-items: center;
-          padding: 2.1rem 1.4rem;
-          margin: 0 -1.4rem;
-          text-decoration: none;
-          border-radius: 12px;
-          transition: background 0.25s ease;
-          -webkit-tap-highlight-color: transparent;
-        }
-        .brow:hover { background: rgba(255,255,255,0.035); z-index: 5; }
-        /* Floating image preview — pops out of the row on hover (desktop only). */
-        .brow__thumb {
-          position: absolute;
-          right: clamp(110px, 14vw, 220px);
-          top: 50%;
-          width: clamp(190px, 17vw, 250px);
-          aspect-ratio: 4 / 3;
-          border-radius: 12px;
-          overflow: hidden;
-          border: 1px solid #2a2a2a;
-          background: #202020;
-          box-shadow: 0 24px 50px -20px rgba(0,0,0,0.65);
-          opacity: 0;
-          transform: translateY(-50%) rotate(-5deg) scale(0.82);
-          transition: opacity 0.3s ease, transform 0.5s cubic-bezier(.2,.8,.2,1);
-          pointer-events: none;
-          z-index: 2;
-        }
-        .brow:hover .brow__thumb {
-          opacity: 1;
-          transform: translateY(-50%) rotate(-2deg) scale(1);
-        }
-        .brow__thumb img {
-          display: block;
-          width: 100%; height: 100%;
-          object-fit: cover;
-        }
-        .brow__circle {
-          width: 52px; height: 52px;
-          border-radius: 50%;
-          border: 1px solid #2a2a2a;
-          display: grid;
-          place-items: center;
-          color: #fff;
-          transition: border-color 0.25s ease, background 0.25s ease, transform 0.25s ease;
-        }
-        .brow:hover .brow__circle {
-          border-color: rgba(139,117,250,0.7);
-          background: rgba(89,61,248,0.14);
-          transform: translate(2px, -2px);
-        }
-        .brow__title { transition: color 0.25s ease; }
-        .brow:hover .brow__title { color: #c4b5fd; }
-
-        /* Touch devices have no hover — show the image inline instead. */
-        @media (hover: none), (pointer: coarse) {
-          .brow { grid-template-columns: 56px 132px minmax(0, 1fr) 52px; }
-          .brow--noimg { grid-template-columns: 56px minmax(0, 1fr) 52px; }
-          .brow__thumb {
-            position: static;
-            width: 100%;
-            opacity: 1;
-            transform: none;
-            box-shadow: none;
-            border-radius: 10px;
-          }
-        }
-
         /* ── Responsive ── */
         @media (max-width: 860px) {
           .bfeat { grid-template-columns: 1fr; gap: 1.5rem; }
           .bfeat__media { order: -1; aspect-ratio: 16 / 9; }
-          .brow, .brow--noimg { grid-template-columns: 96px minmax(0, 1fr) 44px; padding: 1.7rem 1rem; margin: 0 -1rem; }
-          .brow--noimg { grid-template-columns: minmax(0, 1fr) 44px; }
-          .brow__idx { display: none; }
-          .brow__circle { width: 44px; height: 44px; }
-          .brow__thumb {
-            position: static;
-            width: 100%;
-            opacity: 1;
-            transform: none;
-            box-shadow: none;
-            border-radius: 10px;
-          }
-        }
-        @media (max-width: 520px) {
-          .brow { grid-template-columns: 84px minmax(0, 1fr); }
-          .brow--noimg { grid-template-columns: minmax(0, 1fr); }
-          .brow__circle { display: none; }
-          .brow__excerpt { display: none; }
         }
       `}</style>
 
@@ -485,18 +392,11 @@ export default function BlogsPage({ initialBlogs = [] }: { initialBlogs?: Blog[]
               </button>
             </div>
           ) : (
-            <>
-              {featured && <FeaturedCard blog={featured} lang={langLc} showLabel={isDefaultView} />}
-
-              {rest.length > 0 && (
-                <div style={{ marginTop: featured ? "clamp(2.5rem,5vh,4rem)" : 0 }}>
-                  {rest.map((blog, i) => (
-                    <BlogRow key={blog.id} blog={blog} index={i + 2} lang={langLc} />
-                  ))}
-                  <div style={{ borderTop: "1px solid #2a2a2a" }} />
-                </div>
-              )}
-            </>
+            <div style={{ display: "flex", flexDirection: "column", gap: "clamp(1.25rem,3vh,2rem)" }}>
+              {filtered.map((blog, i) => (
+                <FeaturedCard key={blog.id} blog={blog} lang={langLc} showLabel={i === 0 && isDefaultView} />
+              ))}
+            </div>
           )}
         </div>
       </div>
@@ -595,64 +495,6 @@ function FeaturedCard({ blog, lang, showLabel = true }: { blog: Blog; lang: stri
         </div>
 
         <Thumb blog={blog} className="bfeat__media" />
-      </a>
-    </article>
-  )
-}
-
-/* ── Index rows (2nd post onwards) ────────────────────────────────── */
-
-function BlogRow({ blog, index, lang }: { blog: Blog; index: number; lang: string }) {
-  const t = useT()
-  return (
-    <article data-reveal style={{ borderTop: "1px solid #2a2a2a" }}>
-      <a className={`brow${blog.image_url ? "" : " brow--noimg"}`} href={`/${lang}/blog/${blog.slug}`}>
-        <span className="brow__idx" style={{ fontFamily: "var(--font-dm-mono), monospace", fontSize: 12, color: "#593DF8", letterSpacing: "0.15em" }}>
-          {String(index).padStart(2, "0")}
-        </span>
-
-        <Thumb blog={blog} className="brow__thumb" />
-
-        <div style={{ minWidth: 0 }}>
-          <div style={{ fontFamily: "var(--font-dm-mono), monospace", fontSize: 11, letterSpacing: "0.08em", color: "#555", marginBottom: "0.7rem" }}>
-            {formatDate(blog.published_at, lang)}
-          </div>
-          <h3 className="brow__title" style={{
-            fontSize: "clamp(1.2rem, 2.2vw, 1.75rem)",
-            fontWeight: 500,
-            lineHeight: 1.15,
-            letterSpacing: "-0.02em",
-            color: "#fff",
-            fontFamily: "var(--font-inter)",
-            marginBottom: "0.65rem",
-            overflowWrap: "anywhere",
-          }}>
-            {blog.title}
-          </h3>
-          {blog.excerpt && (
-            <p className="brow__excerpt" style={{
-              fontSize: "0.92rem",
-              lineHeight: 1.65,
-              color: "#777",
-              maxWidth: 560,
-              fontFamily: "var(--font-inter)",
-              marginBottom: "0.9rem",
-              display: "-webkit-box",
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: "vertical",
-              overflow: "hidden",
-            }}>
-              {blog.excerpt}
-            </p>
-          )}
-          <MetaPills blog={blog} />
-        </div>
-
-        <div className="brow__circle" aria-hidden="true">
-          <svg viewBox="0 0 24 24" style={{ width: 16, height: 16, stroke: "currentColor", fill: "none", strokeWidth: 1.8 }}>
-            <path d="M7 17 L17 7 M9 7 H17 V15" />
-          </svg>
-        </div>
       </a>
     </article>
   )
