@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useRef } from "react";
 import { useT } from "@/lib/i18n/context";
+import CharFlyIn from "@/components/CharFlyIn";
 
 export default function Headline() {
-  const ref = useRef<HTMLHeadingElement>(null);
   const t = useT();
 
   const lines = [
@@ -12,38 +11,10 @@ export default function Headline() {
     { text: t("hero_line2"), bold: true },
   ];
 
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const lineEls = el.querySelectorAll<HTMLSpanElement>(".line");
-    const stagger = 35;
-    const lineGap = 120;
-    lineEls.forEach((line, li) => {
-      const text = (line.getAttribute("data-text") ?? "").trim();
-      line.textContent = "";
-      let idx = 0;
-      for (const ch of text) {
-        if (ch === " ") {
-          const sp = document.createElement("span");
-          sp.className = "sp";
-          line.appendChild(sp);
-          continue;
-        }
-        const s = document.createElement("span");
-        s.className = "ch";
-        s.textContent = ch;
-        s.style.setProperty("--d", li * lineGap + idx * stagger + "ms");
-        line.appendChild(s);
-        idx++;
-      }
-    });
-  }, [lines[0].text, lines[1].text]);
-
   return (
     <div className="headline-wrapper">
       <div className="headline-content">
         <h1
-          ref={ref}
           style={{
             width: "100%",
             color: "#0c0c0c",
@@ -55,18 +26,16 @@ export default function Headline() {
             userSelect: "none",
           }}
         >
-          {lines.map(({ text, bold }) => (
+          {lines.map(({ text, bold }, li) => (
             <span
               key={text}
               className="line"
-              data-text={text}
-              suppressHydrationWarning
               style={{
                 display: "block",
                 fontWeight: bold ? 600 : undefined,
               }}
             >
-              {text}
+              <CharFlyIn text={text} lineIndex={li} />
             </span>
           ))}
         </h1>

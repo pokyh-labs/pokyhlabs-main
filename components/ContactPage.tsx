@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from "react"
 import gsap from "gsap"
 import { ScrollTrigger } from "gsap/ScrollTrigger"
 import { useT } from "@/lib/i18n/context"
+import CharFlyIn from "@/components/CharFlyIn"
 // Register GSAP plugins globally before any component code runs
 gsap.registerPlugin(ScrollTrigger)
 
@@ -105,7 +106,6 @@ export default function ContactPage() {
     { id: "other",     label: t("contact_hosting_other") },
   ]
 
-  const headlineRef = useRef<HTMLHeadingElement>(null)
   const formRef = useRef<HTMLDivElement>(null)
   const stepIndicatorRef = useRef<HTMLDivElement>(null)
   // Honeypot — a hidden field real users never see. Bots auto-fill it, which
@@ -140,37 +140,6 @@ export default function ContactPage() {
 
   useEffect(() => {
     gsap.registerPlugin(ScrollTrigger)
-
-    if (headlineRef.current) {
-      const lines = headlineRef.current.querySelectorAll<HTMLSpanElement>(".contact-line")
-      lines.forEach((line, li) => {
-        const text = (line.getAttribute("data-text") ?? "").trim()
-        line.textContent = ""
-        let idx = 0
-        // Chars are grouped per word (nowrap) so the headline can only break
-        // between words, never mid-word, at the huge works-style font size.
-        text.split(" ").filter(Boolean).forEach((word, wi) => {
-          if (wi > 0) {
-            const sp = document.createElement("span")
-            sp.className = "sp"
-            line.appendChild(sp)
-          }
-          const w = document.createElement("span")
-          w.style.display = "inline-block"
-          w.style.whiteSpace = "nowrap"
-          for (const ch of word) {
-            const s = document.createElement("span")
-            s.className = "ch"
-            s.textContent = ch
-            s.style.setProperty("--d", `${li * 120 + idx * 35}ms`)
-            w.appendChild(s)
-            idx++
-          }
-          line.appendChild(w)
-        })
-      })
-    }
-
     return () => {
       ScrollTrigger.getAll().forEach((t) => t.kill())
     }
@@ -365,8 +334,6 @@ export default function ContactPage() {
             — pokyh.studio / Contact —
           </div>
           <h1
-            ref={headlineRef}
-            suppressHydrationWarning
             style={{
               fontFamily: "var(--font-inter), sans-serif",
               fontWeight: 500,
@@ -378,8 +345,8 @@ export default function ContactPage() {
               userSelect: "none",
             }}
           >
-            <span className="contact-line" data-text={t("contact_hero_title")} style={{ display: "block" }}>
-              {t("contact_hero_title")}
+            <span style={{ display: "block" }}>
+              <CharFlyIn text={t("contact_hero_title")} />
             </span>
           </h1>
           <p style={{
@@ -397,12 +364,15 @@ export default function ContactPage() {
           </p>
         </div>
 
+        {/* Centered via left/right + justify-content — the chIn animation owns
+            the transform property, so translateX(-50%) would get overridden. */}
         <div aria-hidden="true" style={{
           position: "absolute",
-          left: "50%",
+          left: 0,
+          right: 0,
           bottom: "clamp(40px, 9vh, 90px)",
-          transform: "translateX(-50%)",
           display: "flex",
+          justifyContent: "center",
           alignItems: "center",
           gap: 13,
           fontFamily: "var(--font-inter), sans-serif",

@@ -331,35 +331,37 @@ export default function ProjectBook({
 // ── Hero (top of page) ─────────────────────────────────────────────
 const Hero = forwardRef<HTMLDivElement>(function Hero(_props, ref) {
     const t = useT()
-    const titleRef = useRef<HTMLHeadingElement>(null)
-    const bodyRef = useRef<HTMLDivElement>(null)
     const heroTitle = t("works_hero_title")
     const heroLines = [t("works_hero_line1"), t("works_hero_line2"), t("works_hero_line3")]
 
-    // One-shot entrance animation on mount.
-    useEffect(() => {
-      if (!titleRef.current || !bodyRef.current) return
-      const chars = titleRef.current.querySelectorAll<HTMLSpanElement>(".hero__ch")
-      const lines = bodyRef.current.querySelectorAll<HTMLDivElement>(".hero__line")
-      gsap.set([...Array.from(chars), ...Array.from(lines)], { opacity: 0, y: 28 })
-      const tl = gsap.timeline({ defaults: { ease: "power3.out" } })
-      tl.to(chars, { opacity: 1, y: 0, duration: 1.0, stagger: 0.06 }, 0.1)
-        .to(lines, { opacity: 1, y: 0, duration: 0.8, stagger: 0.12 }, 0.5)
-      return () => { tl.kill() }
-    }, [])
-
+    // Entrance is pure CSS (chars start hidden, per-element delay via --d):
+    // no flash of un-animated text before JS runs, and the compositor keeps
+    // the animation smooth while the 3D scene builds on the main thread.
     return (
       <div ref={ref} className="hero" aria-hidden="false">
         <div className="hero__inner">
           <div className="hero__eyebrow">{t("works_hero_eyebrow")}</div>
-          <h1 ref={titleRef} className="hero__title" aria-label={heroTitle}>
+          <h1 className="hero__title" aria-label={heroTitle}>
             {heroTitle.split("").map((ch, i) => (
-              <span key={i} className="hero__ch" aria-hidden="true">{ch}</span>
+              <span
+                key={i}
+                className="hero__ch"
+                aria-hidden="true"
+                style={{ "--d": `${100 + i * 60}ms` } as React.CSSProperties}
+              >
+                {ch}
+              </span>
             ))}
           </h1>
-          <div ref={bodyRef} className="hero__body">
+          <div className="hero__body">
             {heroLines.map((line, i) => (
-              <div key={i} className="hero__line">{line}</div>
+              <div
+                key={i}
+                className="hero__line"
+                style={{ "--d": `${500 + i * 120}ms` } as React.CSSProperties}
+              >
+                {line}
+              </div>
             ))}
           </div>
         </div>
@@ -412,7 +414,13 @@ const Hero = forwardRef<HTMLDivElement>(function Hero(_props, ref) {
             margin: 0;
             color: #0a0a0a;
           }
-          .hero__ch { display: inline-block; will-change: opacity, transform; }
+          .hero__ch {
+            display: inline-block;
+            opacity: 0;
+            animation: heroIn 1s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+            animation-delay: var(--d, 0ms);
+            will-change: opacity, transform;
+          }
           .hero__body {
             margin-top: clamp(20px, 3.5vh, 40px);
             font-family: var(--font-inter), sans-serif;
@@ -422,7 +430,16 @@ const Hero = forwardRef<HTMLDivElement>(function Hero(_props, ref) {
             color: rgba(10, 10, 10, 0.5);
             letter-spacing: 0.01em;
           }
-          .hero__line { will-change: opacity, transform; }
+          .hero__line {
+            opacity: 0;
+            animation: heroIn 0.8s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+            animation-delay: var(--d, 0ms);
+            will-change: opacity, transform;
+          }
+          @keyframes heroIn {
+            from { opacity: 0; transform: translateY(28px); }
+            to   { opacity: 1; transform: translateY(0); }
+          }
 
           .hero__cue {
             position: absolute;

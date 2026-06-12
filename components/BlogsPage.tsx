@@ -1,7 +1,8 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState, useCallback } from "react"
+import { useEffect, useMemo, useState, useCallback } from "react"
 import { useT, useLanguage } from "@/lib/i18n/context"
+import CharFlyIn from "@/components/CharFlyIn"
 
 type SortMode = "new" | "old" | "views"
 
@@ -33,7 +34,6 @@ export default function BlogsPage({ initialBlogs = [] }: { initialBlogs?: Blog[]
   const t = useT()
   const { lang } = useLanguage()
   const langLc = lang.toLowerCase()
-  const headlineRef = useRef<HTMLHeadingElement>(null)
   const [blogs, setBlogs] = useState<Blog[]>(initialBlogs)
   const [loading, setLoading] = useState(initialBlogs.length === 0)
   const [error, setError] = useState<string | null>(null)
@@ -55,33 +55,9 @@ export default function BlogsPage({ initialBlogs = [] }: { initialBlogs?: Blog[]
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Per-character fly-in for the headline (same effect as the contact hero).
-  useEffect(() => {
-    if (!headlineRef.current) return
-    const lines = headlineRef.current.querySelectorAll<HTMLSpanElement>(".blog-line")
-    lines.forEach((line, li) => {
-      const text = (line.getAttribute("data-text") ?? "").trim()
-      line.textContent = ""
-      let idx = 0
-      for (const ch of text) {
-        if (ch === " ") {
-          const sp = document.createElement("span")
-          sp.className = "sp"
-          line.appendChild(sp)
-          continue
-        }
-        const s = document.createElement("span")
-        s.className = "ch"
-        s.textContent = ch
-        s.style.setProperty("--d", `${li * 120 + idx * 35}ms`)
-        line.appendChild(s)
-        idx++
-      }
-    })
-  }, [])
-
-  // Client-side search + sort. The featured card only makes sense for the
-  // default view (newest first, no search) — otherwise everything is a row.
+  // Client-side search + sort. The first result always keeps the featured-card
+  // layout so filtering/sorting never reshuffles the page design — only the
+  // "Featured" tag is reserved for the default view (newest first, no search).
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     const list = q
@@ -96,9 +72,9 @@ export default function BlogsPage({ initialBlogs = [] }: { initialBlogs?: Blog[]
     return list
   }, [blogs, query, sort])
 
-  const showFeatured = !query.trim() && sort === "new" && filtered.length > 0
-  const featured = showFeatured ? filtered[0] : null
-  const rest = showFeatured ? filtered.slice(1) : filtered
+  const isDefaultView = !query.trim() && sort === "new"
+  const featured = filtered.length > 0 ? filtered[0] : null
+  const rest = filtered.slice(1)
 
   return (
     <div style={{ backgroundColor: "var(--bg)", minHeight: "100vh" }}>
@@ -376,8 +352,6 @@ export default function BlogsPage({ initialBlogs = [] }: { initialBlogs?: Blog[]
             — pokyh.studio / Blog —
           </div>
           <h1
-            ref={headlineRef}
-            suppressHydrationWarning
             style={{
               fontFamily: "var(--font-inter), sans-serif",
               fontWeight: 500,
@@ -389,8 +363,8 @@ export default function BlogsPage({ initialBlogs = [] }: { initialBlogs?: Blog[]
               userSelect: "none",
             }}
           >
-            <span className="blog-line" data-text={t("blog_heading")} style={{ display: "block" }}>
-              {t("blog_heading")}
+            <span style={{ display: "block" }}>
+              <CharFlyIn text={t("blog_heading")} />
             </span>
           </h1>
           <p style={{
@@ -408,12 +382,15 @@ export default function BlogsPage({ initialBlogs = [] }: { initialBlogs?: Blog[]
           </p>
         </div>
 
+        {/* Centered via left/right + justify-content — the chIn animation owns
+            the transform property, so translateX(-50%) would get overridden. */}
         <div aria-hidden="true" style={{
           position: "absolute",
-          left: "50%",
+          left: 0,
+          right: 0,
           bottom: "clamp(40px, 9vh, 90px)",
-          transform: "translateX(-50%)",
           display: "flex",
+          justifyContent: "center",
           alignItems: "center",
           gap: 13,
           fontFamily: "var(--font-inter), sans-serif",
@@ -509,12 +486,12 @@ export default function BlogsPage({ initialBlogs = [] }: { initialBlogs?: Blog[]
             </div>
           ) : (
             <>
-              {featured && <FeaturedCard blog={featured} lang={langLc} />}
+              {featured && <FeaturedCard blog={featured} lang={langLc} showLabel={isDefaultView} />}
 
               {rest.length > 0 && (
                 <div style={{ marginTop: featured ? "clamp(2.5rem,5vh,4rem)" : 0 }}>
                   {rest.map((blog, i) => (
-                    <BlogRow key={blog.id} blog={blog} index={i + (featured ? 2 : 1)} lang={langLc} />
+                    <BlogRow key={blog.id} blog={blog} index={i + 2} lang={langLc} />
                   ))}
                   <div style={{ borderTop: "1px solid #2a2a2a" }} />
                 </div>
@@ -557,17 +534,21 @@ function Thumb({ blog, className }: { blog: Blog; className: string }) {
 
 /* ── Featured (newest) post ───────────────────────────────────────── */
 
-function FeaturedCard({ blog, lang }: { blog: Blog; lang: string }) {
+function FeaturedCard({ blog, lang, showLabel = true }: { blog: Blog; lang: string; showLabel?: boolean }) {
   const t = useT()
   return (
     <article data-reveal>
       <a className={`bfeat${blog.image_url ? "" : " bfeat--noimg"}`} href={`/${lang}/blog/${blog.slug}`}>
         <div style={{ minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: "1.5rem" }}>
-            <span style={{ fontFamily: "var(--font-dm-mono), monospace", fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: "#593DF8" }}>
-              {t("blog_featured")}
-            </span>
-            <span style={{ display: "inline-block", flexShrink: 0, width: 24, height: 1, background: "#3a3a3a" }} />
+            {showLabel && (
+              <>
+                <span style={{ fontFamily: "var(--font-dm-mono), monospace", fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: "#593DF8" }}>
+                  {t("blog_featured")}
+                </span>
+                <span style={{ display: "inline-block", flexShrink: 0, width: 24, height: 1, background: "#3a3a3a" }} />
+              </>
+            )}
             <span style={{ fontFamily: "var(--font-dm-mono), monospace", fontSize: 11, letterSpacing: "0.08em", color: "#555" }}>
               {formatDate(blog.published_at, lang)}
             </span>
