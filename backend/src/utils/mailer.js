@@ -84,7 +84,18 @@ const MUTED  = '#8a8a94';
 const LINE   = '#ececf1';
 const BG     = '#f4f4f7';
 
-function shell({ preheader = '', body, footerNote }) {
+function shell({ preheader = '', body, footerNote, hideHeader = false, hideFooter = false }) {
+  const header = hideHeader ? '' : `
+        <tr><td style="padding:30px 40px 24px;border:0;background:${BG};">
+          <div style="font-size:16px;font-weight:700;letter-spacing:-0.01em;color:${INK};">pokyh<span style="color:${ACCENT};">.</span>studio</div>
+        </td></tr>`;
+  const footer = hideFooter ? '' : `
+        <tr><td style="padding:24px 40px 30px;border:0;background:${BG};">
+          <div style="font-size:12px;line-height:1.6;color:${MUTED};">
+            ${footerNote || `Diese E-Mail wurde automatisch von pokyh.studio gesendet.`}
+          </div>
+          <div style="font-size:11px;color:${MUTED};margin-top:6px;">pokyh.studio · ${esc(MAIL_DOMAIN)}</div>
+        </td></tr>`;
   return `<!doctype html>
 <html lang="de" style="height:100%;">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -92,19 +103,10 @@ function shell({ preheader = '', body, footerNote }) {
   <span style="display:none!important;opacity:0;color:transparent;height:0;width:0;overflow:hidden;">${esc(preheader)}</span>
   <table role="presentation" width="100%" height="100%" cellpadding="0" cellspacing="0" style="width:100%;height:100%;min-height:100%;background:#ffffff;border:0;border-collapse:collapse;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
     <tr><td valign="top" style="padding:0;border:0;">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;border:0;border-collapse:collapse;">
-        <tr><td style="padding:30px 40px 24px;border:0;background:${BG};">
-          <div style="font-size:16px;font-weight:700;letter-spacing:-0.01em;color:${INK};">pokyh<span style="color:${ACCENT};">.</span>studio</div>
-        </td></tr>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;border:0;border-collapse:collapse;">${header}
         <tr><td style="padding:40px;border:0;">
           ${body}
-        </td></tr>
-        <tr><td style="padding:24px 40px 30px;border:0;background:${BG};">
-          <div style="font-size:12px;line-height:1.6;color:${MUTED};">
-            ${footerNote || `Diese E-Mail wurde automatisch von pokyh.studio gesendet.`}
-          </div>
-          <div style="font-size:11px;color:${MUTED};margin-top:6px;">pokyh.studio · ${esc(MAIL_DOMAIN)}</div>
-        </td></tr>
+        </td></tr>${footer}
       </table>
     </td></tr>
   </table>
@@ -133,15 +135,18 @@ function inquiryNotificationEmail(inquiry) {
   const body = `
     ${label('Neue Anfrage')}
     <h1 style="margin:0 0 4px;font-size:22px;font-weight:700;letter-spacing:-0.02em;color:${INK};">${esc(inquiry.name)}</h1>
-    <a href="mailto:${esc(inquiry.email)}" style="font-size:14px;color:${ACCENT};text-decoration:none;">${esc(inquiry.email)}</a>
+    <div style="font-size:14px;color:${ACCENT};">${esc(inquiry.email)}</div>
     <div style="height:1px;background:${LINE};margin:24px 0;"></div>
     ${rows.join('')}
-    <a href="mailto:${esc(inquiry.email)}" style="display:inline-block;background:${ACCENT};color:#fff;font-size:14px;font-weight:600;text-decoration:none;padding:12px 24px;border-radius:10px;margin-top:4px;">Antworten</a>
   `;
+  // No header/footer and no reply button: this mail is forwarded to the studio
+  // inbox and answered with a normal reply — anything extra would get quoted
+  // back to the customer. Keep it clean.
   return shell({
     preheader: `Neue Anfrage von ${inquiry.name}`,
     body,
-    footerNote: 'Du bekommst diese E-Mail, weil eine neue Kontaktanfrage über pokyh.studio eingegangen ist.',
+    hideHeader: true,
+    hideFooter: true,
   });
 }
 
@@ -185,8 +190,13 @@ function inquirySubject(inquiry) {
 // does NOT re-ingest it as a new inquiry (it's already saved in the DB).
 async function sendInquiryNotification(inquiry) {
   return sendMail({
-    from: MAIL_FROM,
-    fromName: inquiry.name || MAIL_FROM_NAME,
+    // Sender shows the customer's name + email so you see at a glance who wrote.
+    // The technical From address must stay on the verified domain (you can't send
+    // *as* the customer — that's spoofing and gets blocked/spam-filed), so the
+    // real reply target is set via Reply-To: hitting "Antworten" goes to the
+    // customer directly. From is contact@ (not noreply) for a clean look.
+    from: MAIL_INBOX,
+    fromName: inquiry.email ? `${inquiry.name} (${inquiry.email})` : (inquiry.name || MAIL_FROM_NAME),
     to: MAIL_INBOX,
     replyTo: inquiry.email,
     subject: inquirySubject(inquiry),
