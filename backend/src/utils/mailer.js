@@ -8,6 +8,10 @@ const MAIL_DOMAIN    = process.env.MAIL_DOMAIN    || 'pokyh.studio';
 const MAIL_FROM      = process.env.MAIL_FROM      || `noreply@${MAIL_DOMAIN}`;
 const MAIL_FROM_NAME = process.env.MAIL_FROM_NAME || 'Pokyh Studio';
 const MAIL_ADMIN     = process.env.MAIL_ADMIN     || `hello@${MAIL_DOMAIN}`;
+// Studio inbox address that goes through Cloudflare Email Routing → forwarded to
+// Gmail. Form inquiries are delivered here as a normal, replyable email (same
+// inbox flow as someone writing directly to contact@).
+const MAIL_INBOX     = process.env.MAIL_INBOX     || `contact@${MAIL_DOMAIN}`;
 const SMTP_HOST      = process.env.SMTP_HOST       || 'smtp.resend.com';
 const SMTP_PORT      = parseInt(process.env.SMTP_PORT || '587', 10);
 
@@ -33,7 +37,7 @@ function getTransporter() {
 }
 
 // ── Low-level send ─────────────────────────────────────────────────────────────
-async function sendMail({ from, fromName, to, subject, html, text, replyTo }) {
+async function sendMail({ from, fromName, to, subject, html, text, replyTo, headers }) {
   const transporter = getTransporter();
   if (!transporter) {
     logger.warn('Mail skipped — RESEND_API_KEY not configured', { to, subject });
@@ -48,6 +52,7 @@ async function sendMail({ from, fromName, to, subject, html, text, replyTo }) {
     html,
     text: text || htmlToText(html),
     ...(replyTo ? { replyTo } : {}),
+    ...(headers ? { headers } : {}),
   });
   logger.info('Mail sent', { to, subject, messageId: info.messageId });
   return { messageId: info.messageId };
@@ -164,15 +169,29 @@ function inquiryConfirmationEmail(inquiry) {
   });
 }
 
+// Build a readable subject line ("Thema") from the inquiry.
+function inquirySubject(inquiry) {
+  const topic = (inquiry.services || []).join(', ').trim();
+  return topic
+    ? `Anfrage: ${topic} — ${inquiry.name}`
+    : `Anfrage von ${inquiry.name}`;
+}
+
 // ── High-level helpers used by the controller ────────────────────────────────
+// Form inquiry → arrives as a normal email at the studio inbox (contact@), so it
+// looks and behaves exactly like a direct mail: it has a subject, shows the
+// customer's name as sender, and replying goes straight to the customer
+// (Reply-To). Marked auto-generated so the Email Worker forwards it to Gmail but
+// does NOT re-ingest it as a new inquiry (it's already saved in the DB).
 async function sendInquiryNotification(inquiry) {
   return sendMail({
     from: MAIL_FROM,
-    fromName: MAIL_FROM_NAME,
-    to: MAIL_ADMIN,
+    fromName: inquiry.name || MAIL_FROM_NAME,
+    to: MAIL_INBOX,
     replyTo: inquiry.email,
-    subject: `Neue Anfrage · ${inquiry.name}`,
+    subject: inquirySubject(inquiry),
     html: inquiryNotificationEmail(inquiry),
+    headers: { 'Auto-Submitted': 'auto-generated' },
   });
 }
 

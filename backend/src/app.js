@@ -258,6 +258,7 @@ async function initDatabase() {
   await ensureColumn('inquiries', 'createdAt', DataTypes.DATE);
   await ensureColumn('inquiries', 'updatedAt', DataTypes.DATE);
   await ensureColumn('inquiries', 'deadline', DataTypes.DATEONLY);
+  await ensureColumn('inquiries', 'source', DataTypes.STRING(10), 'form');
   await ensureColumn('projects', 'sort_order', DataTypes.INTEGER, 0);
   await ensureColumn('projects', 'image_url', DataTypes.STRING(500));
   await ensureColumn('projects', 'image_alt', DataTypes.STRING(255));

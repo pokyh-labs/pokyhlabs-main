@@ -1,0 +1,22 @@
+name = "pokyh-email-worker"
+main = "src/index.js"
+compatibility_date = "2024-09-01"
+
+# ── Non-sensitive operational config ─────────────────────────────────────────
+[vars]
+# Send at most one confirmation per sender within this many minutes (short
+# per-sender rate limit). The inquiry itself is still recorded every time.
+CONFIRM_TTL_MINUTES = "10"
+
+# ── KV namespace for confirmation dedup ──────────────────────────────────────
+# Create it once with:  wrangler kv namespace create AUTOREPLY_KV
+# then paste the returned id below.
+[[kv_namespaces]]
+binding = "AUTOREPLY_KV"
+id      = "REPLACE_WITH_KV_NAMESPACE_ID"
+
+# ── Addresses / secrets live OUTSIDE this file ────────────────────────────────
+# Local dev  : .dev.vars            (KEY=value, like .env — gitignored)
+# Production : wrangler secret put  (FORWARD_TO, BACKEND_INBOUND_URL,
+#                                    INBOUND_EMAIL_SECRET)
+# See README.md -> "Setup".

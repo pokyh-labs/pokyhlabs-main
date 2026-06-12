@@ -120,6 +120,9 @@ export default function ContactPage() {
   const headlineRef = useRef<HTMLHeadingElement>(null)
   const formRef = useRef<HTMLDivElement>(null)
   const stepIndicatorRef = useRef<HTMLDivElement>(null)
+  // Honeypot — a hidden field real users never see. Bots auto-fill it, which
+  // lets us drop the submission (also re-checked server-side).
+  const botFieldRef = useRef<HTMLInputElement>(null)
 
   const [step, setStep] = useState<Step>(1)
   const [services, setServices] = useState<string[]>([])
@@ -249,6 +252,10 @@ export default function ContactPage() {
     if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.email = t("contact_err_email")
     if (Object.keys(e).length) { setErrors(e); return }
 
+    // Honeypot tripped → bot. Show the success screen so it learns nothing, but
+    // never hit the API.
+    if (botFieldRef.current?.value) { setStep(5); requestAnimationFrame(scrollToForm); return }
+
     const finalServices = services.includes("website") && include3d
       ? [...services, "threejs"]
       : services
@@ -289,6 +296,7 @@ export default function ContactPage() {
           deadline: deadline || null,
           name: name.trim(),
           email: email.trim().toLowerCase(),
+          company_website: botFieldRef.current?.value || "",
         }),
       })
       if (!res.ok) {
@@ -404,6 +412,18 @@ export default function ContactPage() {
         }}
       >
         <div style={{ maxWidth: 720, margin: "0 auto", position: "relative", zIndex: 2 }}>
+
+          {/* Honeypot — off-screen, not focusable, hidden from screen readers.
+              Real users never fill it; bots do, and get silently dropped. */}
+          <input
+            ref={botFieldRef}
+            type="text"
+            name="company_website"
+            tabIndex={-1}
+            autoComplete="off"
+            aria-hidden="true"
+            style={{ position: "absolute", left: "-9999px", top: 0, width: 1, height: 1, opacity: 0, pointerEvents: "none" }}
+          />
 
           {/* Step indicator */}
           {step < 5 && (

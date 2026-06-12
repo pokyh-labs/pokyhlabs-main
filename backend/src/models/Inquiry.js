@@ -16,6 +16,9 @@ module.exports = (sequelize) => {
       validate: { isIn: [['new', 'in_progress', 'developing', 'waiting', 'done', 'archived', 'read']] },
     },
     deadline: { type: DataTypes.DATEONLY, allowNull: true },
+    // Where the inquiry came from: 'form' (website contact form) or 'email'
+    // (direct mail to contact@, ingested via the Cloudflare Email Worker).
+    source: { type: DataTypes.STRING(10), allowNull: false, defaultValue: 'form' },
   }, {
     tableName: 'inquiries',
     indexes: [

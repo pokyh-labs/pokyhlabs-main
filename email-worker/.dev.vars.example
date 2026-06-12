@@ -1,0 +1,15 @@
+# Cloudflare Worker env — copy to ".dev.vars" and fill in real values.
+# ".dev.vars" is gitignored and used by `wrangler dev` (local).
+# For the DEPLOYED worker, set the same keys as secrets:
+#   wrangler secret put FORWARD_TO
+#   wrangler secret put BACKEND_INBOUND_URL
+#   wrangler secret put INBOUND_EMAIL_SECRET
+
+# Studio inbox — MUST be a verified destination address in Cloudflare Email Routing.
+FORWARD_TO=you@example.com
+
+# Backend endpoint that turns the email into an inquiry (same flow as the form).
+BACKEND_INBOUND_URL=https://pokyh.studio/api/inquiries/inbound
+
+# Shared secret — MUST match INBOUND_EMAIL_SECRET in the backend .env.
+INBOUND_EMAIL_SECRET=CHANGE_ME_RANDOM_SECRET

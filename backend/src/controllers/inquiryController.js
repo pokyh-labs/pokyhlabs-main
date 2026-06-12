@@ -16,7 +16,14 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 async function createInquiry(req, res) {
-  const { services, description, company, name, email, deadline } = req.body;
+  const { services, description, company, name, email, deadline, company_website } = req.body;
+
+  // Honeypot: real users never fill this hidden field. If it's set, a bot did —
+  // pretend success (201) so the bot learns nothing, but drop the submission.
+  if (company_website) {
+    logger.warn('Honeypot tripped on contact form', { ip: req.ip });
+    return res.status(201).json({ message: 'Inquiry received.' });
+  }
 
   if (!Array.isArray(services) || services.length === 0) {
     return res.status(400).json({ error: 'At least one service is required.' });
@@ -61,6 +68,48 @@ async function createInquiry(req, res) {
   res.status(201).json({ id: inquiry.id, message: 'Inquiry received.' });
 }
 
+// Inbound email → inquiry. Called by the Cloudflare Email Worker when someone
+// writes directly to contact@. Goes through the SAME pipeline as the form: it
+// lands in the DB / admin dashboard and the sender gets the same confirmation.
+// The raw email is forwarded to the studio inbox by the Worker itself, so we do
+// not send a separate admin notification here (it would just duplicate it).
+async function createInboundInquiry(req, res) {
+  const { from, name, subject, text, confirm } = req.body;
+
+  const email = (from || '').trim().toLowerCase();
+  if (!email || !EMAIL_RE.test(email)) {
+    return res.status(400).json({ error: 'Valid sender email is required.' });
+  }
+
+  const displayName = (name && name.trim()) || email.split('@')[0];
+  const parts = [];
+  if (subject && subject.trim()) parts.push(`Betreff: ${subject.trim()}`);
+  if (text && text.trim()) parts.push(text.trim());
+  const description = parts.join('\n\n') || null;
+
+  const inquiry = await Inquiry.create({
+    services: '[]',
+    description,
+    company: null,
+    name: displayName,
+    email,
+    deadline: null,
+    status: 'new',
+    source: 'email',
+  });
+
+  // Same confirmation the form sends — fire-and-forget. The Worker decides via
+  // `confirm:false` when a sender already got one recently (dedup), so we never
+  // spam someone who emails several times in a row.
+  if (confirm !== false) {
+    const payload = { ...inquiry.get({ plain: true }), services: [] };
+    mailer.sendInquiryConfirmation(payload).catch(err =>
+      logger.error('Inbound confirmation failed', { message: err.message }));
+  }
+
+  res.status(201).json({ id: inquiry.id, message: 'Inbound inquiry received.' });
+}
+
 function safeParseServices(value) {
   try { return JSON.parse(value); } catch { return []; }
 }
@@ -75,6 +124,7 @@ function serializeInquiry(r) {
     email: r.email,
     status: r.status,
     deadline: r.deadline,
+    source: r.source || 'form',
     createdAt: r.createdAt,
   };
 }
@@ -125,4 +175,4 @@ async function deleteInquiry(req, res) {
   res.json({ message: 'Deleted.' });
 }
 
-module.exports = { createInquiry, getInquiries, updateInquiryStatus, deleteInquiry };
+module.exports = { createInquiry, createInboundInquiry, getInquiries, updateInquiryStatus, deleteInquiry };

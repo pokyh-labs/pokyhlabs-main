@@ -1,0 +1,17 @@
+{
+  "name": "pokyh-email-worker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Cloudflare Email Worker for pokyh.studio — forwards direct mail to the studio inbox and ingests it into the backend (same flow as the contact form).",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail"
+  },
+  "dependencies": {
+    "postal-mime": "^2.3.2"
+  },
+  "devDependencies": {
+    "wrangler": "^3.80.0"
+  }
+}

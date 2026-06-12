@@ -60,6 +60,10 @@ const authRateLimiter = createLimiter({
 // Moderate for general API
 const apiRateLimiter = createLimiter({ windowMs: 15 * 60 * 1000, max: 100 });
 
+// Strict anti-spam limit for the public contact form — at most 5 submissions
+// per 10 minutes per IP. Logged-in users and loopback are exempt (see skip()).
+const inquiryRateLimiter = createLimiter({ windowMs: 10 * 60 * 1000, max: 5 });
+
 // Strict for admin API
 const adminRateLimiter = createLimiter({ windowMs: 15 * 60 * 1000, max: 60 });
 
@@ -70,6 +74,7 @@ module.exports = {
   globalRateLimiter,
   authRateLimiter,
   apiRateLimiter,
+  inquiryRateLimiter,
   adminRateLimiter,
   uploadRateLimiter,
 };
