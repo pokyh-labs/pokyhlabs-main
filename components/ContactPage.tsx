@@ -84,18 +84,6 @@ const HOSTING_STACKS = [
 export default function ContactPage() {
   const t = useT()
 
-  const ALL_SERVICES: ServiceCard[] = ALL_SERVICES_BASE.map(svc => ({
-    ...svc,
-    label: t(svc.id === "website" ? "contact_svc_website_label" : svc.id === "app" ? "contact_svc_app_label" : svc.id === "software-automation" ? "contact_svc_software_label" : "contact_svc_hosting_label"),
-    description: t(svc.id === "website" ? "contact_svc_website_desc" : svc.id === "app" ? "contact_svc_app_desc" : svc.id === "software-automation" ? "contact_svc_software_desc" : "contact_svc_hosting_desc"),
-  }))
-
-  const APP_PLATFORMS = [
-    { id: "both",    label: t("contact_platform_both") },
-    { id: "ios",     label: t("contact_platform_ios") },
-    { id: "android", label: t("contact_platform_android") },
-  ]
-
   const STEPS: VisualStep[] = [
     { n: 1, label: t("contact_step_services") },
     { n: 2, label: t("contact_step_project") },
@@ -319,8 +307,15 @@ export default function ContactPage() {
   return (
     <div style={{ backgroundColor: "var(--bg)", minHeight: "100vh" }}>
       <style>{`
-        .svc-btn { transition: border-color 0.18s, background 0.18s, transform 0.18s; cursor:pointer; text-align:left; }
-        .svc-btn:hover { transform: translateY(-2px); }
+        .svc-row { cursor: pointer; transition: background 0.25s ease; -webkit-tap-highlight-color: transparent; }
+        .svc-row:hover { background: rgba(255,255,255,0.035); }
+        .svc-row:focus-visible { outline: 2px solid rgba(89,61,248,0.55); outline-offset: -2px; }
+        .svc-config { padding: 0 1.3rem 1.3rem calc(1.3rem + 88px); }
+        @media (max-width: 640px) {
+          .svc-config { padding-left: 1.3rem; }
+          .svc-idx { display: none; }
+        }
+        @media (hover: none), (pointer: coarse) { .svc-kbd-hint { display: none !important; } }
         .c-input { transition: border-color 0.18s; }
         .c-input:focus { outline: none; }
         .c-btn { transition: transform 0.18s, opacity 0.18s; }
@@ -449,7 +444,7 @@ export default function ContactPage() {
                         flex: 1,
                         height: 3,
                         borderRadius: 999,
-                        background: done ? "rgba(255,255,255,0.65)" : active ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.08)",
+                        background: done ? "rgba(139,117,250,0.9)" : active ? "rgba(139,117,250,0.45)" : "rgba(255,255,255,0.08)",
                         transition: "background 0.35s ease",
                       }}
                     />
@@ -524,6 +519,10 @@ export default function ContactPage() {
 }
 
 /* ── Step 1: Services ─────────────────────────────────────────────── */
+const INK = "#593df8"
+const INK_SOFT = "#a78bfa"
+const INK_FAINT = "#c4b5fd"
+
 function StepServices({ services, include3d, onToggle, onToggle3d, hostingCategory, onSelectCategory, hostingStack, onToggleStack, appPlatform, onPlatformChange, showAdvancedStack, onToggleAdvancedStack, discountPercent, error, errorHostingCategory, onNext }: {
   services: string[]; include3d: boolean
   onToggle: (id: string) => void; onToggle3d: () => void
@@ -536,7 +535,7 @@ function StepServices({ services, include3d, onToggle, onToggle3d, hostingCatego
 }) {
   const t = useT()
 
-  const ALL_SERVICES: ServiceCard[] = ALL_SERVICES_BASE.map(svc => ({
+  const SERVICES: ServiceCard[] = ALL_SERVICES_BASE.map(svc => ({
     ...svc,
     label: t(svc.id === "website" ? "contact_svc_website_label" : svc.id === "app" ? "contact_svc_app_label" : svc.id === "software-automation" ? "contact_svc_software_label" : "contact_svc_hosting_label"),
     description: t(svc.id === "website" ? "contact_svc_website_desc" : svc.id === "app" ? "contact_svc_app_desc" : svc.id === "software-automation" ? "contact_svc_software_desc" : "contact_svc_hosting_desc"),
@@ -557,6 +556,7 @@ function StepServices({ services, include3d, onToggle, onToggle3d, hostingCatego
   ]
 
   const containerRef     = useRef<HTMLDivElement>(null)
+  const listRef          = useRef<HTMLDivElement>(null)
   const threeDRowRef     = useRef<HTMLDivElement>(null)
   const appRowRef        = useRef<HTMLDivElement>(null)
   const hostingRowRef    = useRef<HTMLDivElement>(null)
@@ -566,7 +566,6 @@ function StepServices({ services, include3d, onToggle, onToggle3d, hostingCatego
   const websiteSelected = services.includes("website")
   const hostingSelected = services.includes("hosting")
   const appSelected     = services.includes("app")
-  const hasAnyService   = services.length > 0
   const showDiscount    = discountPercent > 0
 
   const prevWebsite  = useRef(websiteSelected)
@@ -579,8 +578,9 @@ function StepServices({ services, include3d, onToggle, onToggle3d, hostingCatego
     const ctx = gsap.context(() => {
       gsap.set("[data-a='heading']",       { autoAlpha: 0, y: 24 })
       gsap.set("[data-a='section-label']", { autoAlpha: 0, y: 14 })
-      gsap.set("[data-a='card']",          { autoAlpha: 0, y: 50, scale: 0.92, rotateX: -30, filter: "blur(12px)" })
-      gsap.set("[data-a='nav']",           { autoAlpha: 0, y: 18, filter: "blur(8px)" })
+      gsap.set("[data-a='list']",          { autoAlpha: 0, y: 26 })
+      gsap.set("[data-a='row']",           { autoAlpha: 0, x: -22 })
+      gsap.set("[data-a='nav']",           { autoAlpha: 0, y: 18 })
 
       // Always start expandable rows hidden so they animate in cleanly (including on Back navigation)
       gsap.set(threeDRowRef.current,     { autoAlpha: 0, height: 0, overflow: "hidden" })
@@ -592,8 +592,9 @@ function StepServices({ services, include3d, onToggle, onToggle3d, hostingCatego
       const tl = gsap.timeline({ paused: true, defaults: { ease: "power3.out" } })
       tl.to("[data-a='heading']",       { autoAlpha: 1, y: 0, duration: 0.5 })
         .to("[data-a='section-label']", { autoAlpha: 1, y: 0, duration: 0.4 }, "-=0.25")
-        .to("[data-a='card']",          { autoAlpha: 1, y: 0, scale: 1, rotateX: 0, filter: "blur(0px)", duration: 0.8, stagger: 0.08, ease: "expo.out" }, "-=0.25")
-        .to("[data-a='nav']",           { autoAlpha: 1, y: 0, filter: "blur(0px)", duration: 0.45 }, "-=0.4")
+        .to("[data-a='list']",          { autoAlpha: 1, y: 0, duration: 0.55 }, "-=0.2")
+        .to("[data-a='row']",           { autoAlpha: 1, x: 0, duration: 0.55, stagger: 0.07, ease: "expo.out" }, "-=0.35")
+        .to("[data-a='nav']",           { autoAlpha: 1, y: 0, duration: 0.45 }, "-=0.3")
         .call(() => {
           // Staggered expand for any rows already selected (e.g. pressing Back from a later step)
           let d = 0
@@ -696,19 +697,43 @@ function StepServices({ services, include3d, onToggle, onToggle3d, hostingCatego
     if (showDiscount) {
       const icon = el.querySelector<HTMLElement>("[data-discount='icon']")
       const text = el.querySelectorAll<HTMLElement>("[data-discount='text']")
-      gsap.set(icon, { autoAlpha: 0, scale: 0.4, rotate: -40, filter: "blur(8px)" })
+      if (icon) gsap.set(icon, { autoAlpha: 0, scale: 0.4, rotate: -40, filter: "blur(8px)" })
       gsap.set(text, { autoAlpha: 0, x: -14, filter: "blur(6px)" })
       gsap.fromTo(el, { height: 0, autoAlpha: 0, scale: 0.96 }, {
         height: "auto", autoAlpha: 1, scale: 1, duration: 0.5, ease: "back.out(1.6)",
         clearProps: "height,overflow,scale",
         onComplete: () => {
           const tl = gsap.timeline()
-          tl.to(icon, { autoAlpha: 1, scale: 1, rotate: 0, filter: "blur(0px)", duration: 0.6, ease: "back.out(2)" })
-            .to(text, { autoAlpha: 1, x: 0, filter: "blur(0px)", duration: 0.45, stagger: 0.08, ease: "power3.out" }, "-=0.4")
+          if (icon) tl.to(icon, { autoAlpha: 1, scale: 1, rotate: 0, filter: "blur(0px)", duration: 0.6, ease: "back.out(2)" })
+          tl.to(text, { autoAlpha: 1, x: 0, filter: "blur(0px)", duration: 0.45, stagger: 0.08, ease: "power3.out" }, icon ? "-=0.4" : 0)
         },
       })
     } else collapse(el, 0.25)
   }, [showDiscount])
+
+  // QOL: keys 1–4 toggle services, Enter continues (only while nothing else is focused)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey || e.repeat) return
+      const el = e.target as HTMLElement | null
+      const tag = el?.tagName
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return
+      const n = Number(e.key)
+      if (n >= 1 && n <= ALL_SERVICES_BASE.length) {
+        onToggle(ALL_SERVICES_BASE[n - 1].id)
+        return
+      }
+      if (e.key === "Enter" && (!el || el === document.body)) onNext()
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [onToggle, onNext])
+
+  // QOL: shake the list when validation fails
+  useEffect(() => {
+    if (!error || !listRef.current) return
+    gsap.fromTo(listRef.current, { x: 0 }, { x: -8, duration: 0.06, repeat: 5, yoyo: true, ease: "power1.inOut", clearProps: "x" })
+  }, [error])
 
   const discountLabel =
     discountPercent === 15 ? t("contact_discount_15_label") :
@@ -731,321 +756,325 @@ function StepServices({ services, include3d, onToggle, onToggle3d, hostingCatego
     marginBottom: "0.75rem",
   }
 
+  const kbdStyle: React.CSSProperties = {
+    fontFamily: "var(--font-dm-mono)",
+    fontSize: 9,
+    color: "rgba(255,255,255,0.45)",
+    background: "rgba(255,255,255,0.05)",
+    border: "1px solid rgba(255,255,255,0.12)",
+    borderRadius: 4,
+    padding: "1px 5px",
+    lineHeight: 1.4,
+  }
+
+  const pillStyle = (active: boolean, hasError = false): React.CSSProperties => ({
+    background: active ? "rgba(89,61,248,0.16)" : "rgba(255,255,255,0.03)",
+    border: `1px solid ${active ? "rgba(89,61,248,0.5)" : hasError ? "rgba(255,80,80,0.4)" : "rgba(255,255,255,0.08)"}`,
+    borderRadius: 999,
+    padding: "7px 16px",
+    color: active ? INK_FAINT : "rgba(255,255,255,0.45)",
+    fontFamily: "var(--font-inter)",
+    fontSize: "0.82rem",
+    fontWeight: active ? 600 : 400,
+    letterSpacing: "-0.01em",
+    display: "flex",
+    alignItems: "center",
+    gap: 7,
+  })
+
   return (
     <div ref={containerRef}>
       <div data-a="heading">
         <StepHeading label="01" title={t("contact_step1_title")} sub={t("contact_step1_sub")} />
       </div>
 
-      <p data-a="section-label" style={{
-        fontFamily: "var(--font-dm-mono)",
-        fontSize: 10,
-        letterSpacing: "0.22em",
-        textTransform: "uppercase",
-        color: "rgba(255,255,255,0.35)",
-        marginBottom: "0.85rem",
-      }}>
-        {t("contact_choose_services")}
-      </p>
+      <div data-a="section-label" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.85rem", gap: 12 }}>
+        <p style={{
+          fontFamily: "var(--font-dm-mono)",
+          fontSize: 10,
+          letterSpacing: "0.22em",
+          textTransform: "uppercase",
+          color: "rgba(255,255,255,0.35)",
+        }}>
+          {t("contact_choose_services")}
+        </p>
+        <span className="svc-kbd-hint" style={{ display: "flex", alignItems: "center", gap: 5, fontFamily: "var(--font-dm-mono)", fontSize: 9, letterSpacing: "0.14em", textTransform: "uppercase", color: "rgba(255,255,255,0.25)", whiteSpace: "nowrap" }}>
+          <kbd style={kbdStyle}>1</kbd>
+          <span>–</span>
+          <kbd style={kbdStyle}>4</kbd>
+          <span style={{ marginLeft: 3 }}>{t("contact_kbd_hint")}</span>
+        </span>
+      </div>
 
-      {/* Unified 3-card service grid */}
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
-        gap: 12,
-        marginBottom: "1.25rem",
-        perspective: 1200,
-      }}>
-        {ALL_SERVICES.map(svc => {
+      {/* Service rows — editorial list with inline configuration per row */}
+      <div
+        data-a="list"
+        ref={listRef}
+        role="group"
+        aria-label={t("contact_choose_services")}
+        style={{
+          border: `1px solid ${error ? "rgba(255,80,80,0.35)" : "rgba(255,255,255,0.09)"}`,
+          borderRadius: 18,
+          background: "rgba(255,255,255,0.02)",
+          overflow: "hidden",
+          marginBottom: "1.25rem",
+          transition: "border-color 0.3s ease",
+        }}
+      >
+        {SERVICES.map((svc, i) => {
           const active = services.includes(svc.id)
           return (
-            <button
+            <div
               key={svc.id}
-              data-a="card"
-              onClick={() => onToggle(svc.id)}
-              className="svc-btn"
+              data-a="row"
               style={{
-                background: active ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.025)",
-                border: `1px solid ${active ? "rgba(255,255,255,0.24)" : "rgba(255,255,255,0.08)"}`,
-                borderRadius: 16,
-                padding: "1.3rem 1.3rem 1.2rem",
-                color: "#fff",
                 position: "relative",
-                minHeight: 158,
-                display: "flex",
-                flexDirection: "column",
+                borderTop: i > 0 ? "1px solid rgba(255,255,255,0.07)" : "none",
+                background: active ? "rgba(89,61,248,0.055)" : "transparent",
+                transition: "background 0.3s ease",
               }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "0.95rem" }}>
-                <div style={{ color: active ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.32)", transition: "color 0.18s" }}>
+              <button
+                role="checkbox"
+                aria-checked={active}
+                onClick={() => onToggle(svc.id)}
+                className="svc-row"
+                style={{
+                  width: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 14,
+                  padding: "1.15rem 1.3rem",
+                  background: "transparent",
+                  border: "none",
+                  color: "#fff",
+                  textAlign: "left",
+                }}
+              >
+                <span className="svc-idx" style={{ fontFamily: "var(--font-dm-mono)", fontSize: 10, letterSpacing: "0.12em", color: active ? INK_SOFT : "rgba(255,255,255,0.28)", width: 20, flexShrink: 0, transition: "color 0.25s ease" }}>
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <span style={{
+                  width: 40, height: 40, borderRadius: 11,
+                  border: `1px solid ${active ? "rgba(89,61,248,0.45)" : "rgba(255,255,255,0.09)"}`,
+                  background: active ? "rgba(89,61,248,0.14)" : "rgba(255,255,255,0.03)",
+                  display: "grid", placeItems: "center", flexShrink: 0,
+                  color: active ? INK_FAINT : "rgba(255,255,255,0.4)",
+                  transition: "color 0.25s ease, border-color 0.25s ease, background 0.25s ease",
+                }}>
                   {svc.icon}
-                </div>
-                {active ? (
-                  <div style={{ width: 18, height: 18, borderRadius: "50%", background: "rgba(255,255,255,0.88)", display: "grid", placeItems: "center", flexShrink: 0 }}>
-                    <svg viewBox="0 0 12 12" fill="none" style={{ width: 8, height: 8 }}>
-                      <polyline points="2,6 5,9 10,3" stroke="#1a1a1a" strokeWidth={2} strokeLinecap="round" />
-                    </svg>
-                  </div>
-                ) : svc.chip ? (
+                </span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: "block", fontFamily: "var(--font-inter)", fontSize: "0.95rem", fontWeight: 600, letterSpacing: "-0.015em", color: active ? "#fff" : "rgba(255,255,255,0.72)", transition: "color 0.25s ease" }}>
+                    {svc.label}
+                  </span>
+                  <span style={{ display: "block", fontFamily: "var(--font-inter)", fontSize: "0.78rem", lineHeight: 1.45, color: active ? "rgba(255,255,255,0.48)" : "rgba(255,255,255,0.3)", marginTop: 3, transition: "color 0.25s ease" }}>
+                    {svc.description}
+                  </span>
+                </span>
+                {svc.chip && (
                   <span style={{
                     fontFamily: "var(--font-dm-mono)",
                     fontSize: 9,
                     letterSpacing: "0.14em",
                     textTransform: "uppercase",
-                    color: "rgba(255,255,255,0.4)",
-                    background: "rgba(255,255,255,0.04)",
-                    border: "1px solid rgba(255,255,255,0.08)",
+                    color: active ? INK_FAINT : "rgba(255,255,255,0.38)",
+                    background: active ? "rgba(89,61,248,0.12)" : "rgba(255,255,255,0.04)",
+                    border: `1px solid ${active ? "rgba(89,61,248,0.35)" : "rgba(255,255,255,0.08)"}`,
                     borderRadius: 999,
                     padding: "3px 9px",
                     lineHeight: 1.1,
+                    flexShrink: 0,
+                    transition: "color 0.25s ease, border-color 0.25s ease, background 0.25s ease",
                   }}>
                     {svc.chip}
                   </span>
-                ) : null}
-              </div>
-              <div style={{
-                fontFamily: "var(--font-inter)",
-                fontSize: "0.95rem",
-                fontWeight: 600,
-                letterSpacing: "-0.015em",
-                color: active ? "#fff" : "rgba(255,255,255,0.68)",
-                marginBottom: "0.3rem",
-                transition: "color 0.18s",
-              }}>
-                {svc.label}
-              </div>
-              <div style={{
-                fontFamily: "var(--font-inter)",
-                fontSize: "0.78rem",
-                lineHeight: 1.5,
-                color: active ? "rgba(255,255,255,0.5)" : "rgba(255,255,255,0.3)",
-                transition: "color 0.18s",
-              }}>
-                {svc.description}
-              </div>
-            </button>
-          )
-        })}
-      </div>
-
-      {/* Unified configuration panel — CSS-transitioned border/bg, GSAP-animated rows inside */}
-      <div style={{
-        borderRadius: 16,
-        border: `1px solid ${hasAnyService ? "rgba(255,255,255,0.08)" : "transparent"}`,
-        background: hasAnyService ? "rgba(255,255,255,0.025)" : "transparent",
-        marginBottom: hasAnyService ? "1.25rem" : 0,
-        overflow: "hidden",
-        transition: "border-color 0.35s ease, background-color 0.35s ease, margin-bottom 0.35s ease",
-      }}>
-        {/* Website — 3D add-on */}
-        <div ref={threeDRowRef} style={{ overflow: "hidden" }}>
-          <div style={{ padding: "1rem 1.3rem" }}>
-            <p style={rowLabelStyle}>{t("contact_svc_website_label")}</p>
-            <button
-              onClick={onToggle3d}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                background: "transparent",
-                border: "none",
-                cursor: "pointer",
-                padding: 0,
-                color: "#fff",
-                textAlign: "left",
-              }}
-            >
-              <div style={{
-                width: 20, height: 20, borderRadius: 6,
-                border: `1.5px solid ${include3d ? "rgba(89,61,248,0.7)" : "rgba(255,255,255,0.24)"}`,
-                background: include3d ? "rgba(89,61,248,0.25)" : "transparent",
-                display: "grid", placeItems: "center", flexShrink: 0, transition: "all 0.18s",
-              }}>
-                {include3d && (
-                  <svg viewBox="0 0 12 12" fill="none" style={{ width: 8, height: 8 }}>
-                    <polyline points="2,6 5,9 10,3" stroke="#a78bfa" strokeWidth={2} strokeLinecap="round" />
-                  </svg>
                 )}
-              </div>
-              <div>
-                <div style={{
-                  fontFamily: "var(--font-inter)",
-                  fontSize: "0.9rem",
-                  fontWeight: 500,
-                  letterSpacing: "-0.01em",
-                  color: include3d ? "#c4b5fd" : "rgba(255,255,255,0.82)",
-                  transition: "color 0.18s",
+                <span aria-hidden="true" style={{
+                  width: 22, height: 22, borderRadius: "50%",
+                  border: `1.5px solid ${active ? INK : "rgba(255,255,255,0.16)"}`,
+                  background: active ? INK : "transparent",
+                  display: "grid", placeItems: "center", flexShrink: 0,
+                  transition: "background 0.22s ease, border-color 0.22s ease",
                 }}>
-                  {t("contact_3d_label")}
-                </div>
-                <div style={{
-                  fontFamily: "var(--font-inter)",
-                  fontSize: "0.75rem",
-                  color: "rgba(255,255,255,0.32)",
-                  marginTop: 2,
-                }}>
-                  {t("contact_3d_desc")}
-                </div>
-              </div>
-            </button>
-          </div>
-        </div>
+                  <svg viewBox="0 0 12 12" fill="none" style={{ width: 9, height: 9, opacity: active ? 1 : 0, transform: active ? "scale(1)" : "scale(0.4)", transition: "opacity 0.16s ease, transform 0.26s cubic-bezier(0.34,1.56,0.64,1)" }}>
+                    <polyline points="2,6 5,9 10,3" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </span>
+              </button>
 
-        {/* Mobile App — platform */}
-        <div ref={appRowRef} style={{ overflow: "hidden" }}>
-          <div style={{ padding: "1rem 1.3rem" }}>
-            <p style={rowLabelStyle}>{t("contact_app_platform_q")}</p>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {APP_PLATFORMS.map(p => {
-                const active = appPlatform === p.id
-                return (
-                  <button
-                    key={p.id}
-                    onClick={() => onPlatformChange(p.id as "ios" | "android" | "both")}
-                    className="platform-pill"
-                    style={{
-                      background: active ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.03)",
-                      border: `1px solid ${active ? "rgba(255,255,255,0.30)" : "rgba(255,255,255,0.08)"}`,
-                      borderRadius: 999,
-                      padding: "7px 18px",
-                      color: active ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.45)",
-                      fontFamily: "var(--font-inter)",
-                      fontSize: "0.82rem",
-                      fontWeight: active ? 600 : 400,
-                      letterSpacing: "-0.01em",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 7,
-                    }}
-                  >
-                    {active && (
-                      <svg viewBox="0 0 12 12" fill="none" style={{ width: 8, height: 8, flexShrink: 0 }}>
-                        <polyline points="2,6 5,9 10,3" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" />
-                      </svg>
-                    )}
-                    {p.label}
-                  </button>
-                )
-              })}
-            </div>
-            <p style={{ fontFamily: "var(--font-inter)", fontSize: "0.74rem", color: "rgba(255,255,255,0.3)", marginTop: "0.65rem" }}>
-              {t("contact_platform_both_hint")}
-            </p>
-          </div>
-        </div>
-
-        {/* Hosting — project type */}
-        <div ref={hostingRowRef} style={{ overflow: "hidden" }}>
-          <div style={{ padding: "1rem 1.3rem" }}>
-            <p style={rowLabelStyle}>{t("contact_hosting_q")}</p>
-            <p style={{ fontFamily: "var(--font-inter)", fontSize: "0.78rem", color: "rgba(255,255,255,0.32)", lineHeight: 1.5, marginBottom: "0.8rem" }}>
-              {t("contact_hosting_pick")}
-            </p>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              {HOSTING_CATEGORIES.map(cat => {
-                const active = hostingCategory === cat.id
-                return (
-                  <button
-                    key={cat.id}
-                    data-pill="true"
-                    onClick={() => onSelectCategory(active ? "" : cat.id)}
-                    className="platform-pill"
-                    style={{
-                      background: active ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.03)",
-                      border: `1px solid ${active ? "rgba(255,255,255,0.30)" : errorHostingCategory ? "rgba(255,80,80,0.4)" : "rgba(255,255,255,0.08)"}`,
-                      borderRadius: 999,
-                      padding: "7px 18px",
-                      color: active ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.42)",
-                      fontFamily: "var(--font-inter)",
-                      fontSize: "0.82rem",
-                      fontWeight: active ? 600 : 400,
-                      letterSpacing: "-0.01em",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 7,
-                    }}
-                  >
-                    {active && (
-                      <svg viewBox="0 0 12 12" fill="none" style={{ width: 8, height: 8, flexShrink: 0 }}>
-                        <polyline points="2,6 5,9 10,3" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" />
-                      </svg>
-                    )}
-                    {cat.label}
-                  </button>
-                )
-              })}
-            </div>
-
-            {errorHostingCategory && <ErrorMsg msg={errorHostingCategory} style={{ marginTop: "0.7rem" }} />}
-
-            <button
-              onClick={onToggleAdvancedStack}
-              className="hosting-expand-btn"
-              style={{
-                background: "transparent",
-                border: "none",
-                padding: 0,
-                marginTop: "0.95rem",
-                color: "rgba(255,255,255,0.4)",
-                fontFamily: "var(--font-dm-mono)",
-                fontSize: 9,
-                letterSpacing: "0.18em",
-                textTransform: "uppercase",
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-              }}
-            >
-              {showAdvancedStack ? t("contact_hide_tech") : t("contact_show_tech")}
-              <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={1.6} style={{ width: 9, height: 9, transform: showAdvancedStack ? "rotate(180deg)" : "none", transition: "transform 0.25s" }}>
-                <polyline points="2,4 6,8 10,4" strokeLinecap="round" />
-              </svg>
-            </button>
-
-            <div ref={advancedStackRef} style={{ overflow: "hidden" }}>
-              <div style={{ paddingTop: "0.85rem", display: "flex", flexWrap: "wrap", gap: 8 }}>
-                {HOSTING_STACKS.map(stack => {
-                  const active = hostingStack.includes(stack.id)
-                  return (
+              {/* Website — 3D add-on */}
+              {svc.id === "website" && (
+                <div ref={threeDRowRef} style={{ overflow: "hidden" }}>
+                  <div className="svc-config">
                     <button
-                      key={stack.id}
-                      data-pill="true"
-                      onClick={() => onToggleStack(stack.id)}
-                      className="platform-pill"
+                      onClick={onToggle3d}
+                      style={{ display: "flex", alignItems: "center", gap: 12, background: "transparent", border: "none", cursor: "pointer", padding: 0, color: "#fff", textAlign: "left" }}
+                    >
+                      <span style={{
+                        width: 20, height: 20, borderRadius: 6,
+                        border: `1.5px solid ${include3d ? "rgba(89,61,248,0.7)" : "rgba(255,255,255,0.24)"}`,
+                        background: include3d ? "rgba(89,61,248,0.25)" : "transparent",
+                        display: "grid", placeItems: "center", flexShrink: 0, transition: "all 0.18s",
+                      }}>
+                        {include3d && (
+                          <svg viewBox="0 0 12 12" fill="none" style={{ width: 8, height: 8 }}>
+                            <polyline points="2,6 5,9 10,3" stroke={INK_SOFT} strokeWidth={2} strokeLinecap="round" />
+                          </svg>
+                        )}
+                      </span>
+                      <span>
+                        <span style={{ display: "block", fontFamily: "var(--font-inter)", fontSize: "0.9rem", fontWeight: 500, letterSpacing: "-0.01em", color: include3d ? INK_FAINT : "rgba(255,255,255,0.82)", transition: "color 0.18s" }}>
+                          {t("contact_3d_label")}
+                        </span>
+                        <span style={{ display: "block", fontFamily: "var(--font-inter)", fontSize: "0.75rem", color: "rgba(255,255,255,0.32)", marginTop: 2 }}>
+                          {t("contact_3d_desc")}
+                        </span>
+                      </span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Mobile App — platform */}
+              {svc.id === "app" && (
+                <div ref={appRowRef} style={{ overflow: "hidden" }}>
+                  <div className="svc-config">
+                    <p style={rowLabelStyle}>{t("contact_app_platform_q")}</p>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      {APP_PLATFORMS.map(p => {
+                        const pActive = appPlatform === p.id
+                        return (
+                          <button
+                            key={p.id}
+                            onClick={() => onPlatformChange(p.id as "ios" | "android" | "both")}
+                            className="platform-pill"
+                            style={pillStyle(pActive)}
+                          >
+                            {pActive && (
+                              <svg viewBox="0 0 12 12" fill="none" style={{ width: 8, height: 8, flexShrink: 0 }}>
+                                <polyline points="2,6 5,9 10,3" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" />
+                              </svg>
+                            )}
+                            {p.label}
+                          </button>
+                        )
+                      })}
+                    </div>
+                    <p style={{ fontFamily: "var(--font-inter)", fontSize: "0.74rem", color: "rgba(255,255,255,0.3)", marginTop: "0.65rem" }}>
+                      {t("contact_platform_both_hint")}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Hosting — project type + optional tech stack */}
+              {svc.id === "hosting" && (
+                <div ref={hostingRowRef} style={{ overflow: "hidden" }}>
+                  <div className="svc-config">
+                    <p style={rowLabelStyle}>{t("contact_hosting_q")}</p>
+                    <p style={{ fontFamily: "var(--font-inter)", fontSize: "0.78rem", color: "rgba(255,255,255,0.32)", lineHeight: 1.5, marginBottom: "0.8rem" }}>
+                      {t("contact_hosting_pick")}
+                    </p>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                      {HOSTING_CATEGORIES.map(cat => {
+                        const cActive = hostingCategory === cat.id
+                        return (
+                          <button
+                            key={cat.id}
+                            data-pill="true"
+                            onClick={() => onSelectCategory(cActive ? "" : cat.id)}
+                            className="platform-pill"
+                            style={pillStyle(cActive, Boolean(errorHostingCategory))}
+                          >
+                            {cActive && (
+                              <svg viewBox="0 0 12 12" fill="none" style={{ width: 8, height: 8, flexShrink: 0 }}>
+                                <polyline points="2,6 5,9 10,3" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" />
+                              </svg>
+                            )}
+                            {cat.label}
+                          </button>
+                        )
+                      })}
+                    </div>
+
+                    {errorHostingCategory && <ErrorMsg msg={errorHostingCategory} style={{ marginTop: "0.7rem" }} />}
+
+                    <button
+                      onClick={onToggleAdvancedStack}
+                      className="hosting-expand-btn"
                       style={{
-                        background: active ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.03)",
-                        border: `1px solid ${active ? "rgba(255,255,255,0.30)" : "rgba(255,255,255,0.08)"}`,
-                        borderRadius: 999,
-                        padding: "6px 14px",
-                        color: active ? "rgba(255,255,255,0.88)" : "rgba(255,255,255,0.38)",
-                        fontFamily: "var(--font-inter)",
-                        fontSize: "0.78rem",
-                        fontWeight: active ? 500 : 400,
-                        letterSpacing: "-0.01em",
+                        background: "transparent",
+                        border: "none",
+                        padding: 0,
+                        marginTop: "0.95rem",
+                        color: "rgba(255,255,255,0.4)",
+                        fontFamily: "var(--font-dm-mono)",
+                        fontSize: 9,
+                        letterSpacing: "0.18em",
+                        textTransform: "uppercase",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
                       }}
                     >
-                      {stack.label}
+                      {showAdvancedStack ? t("contact_hide_tech") : t("contact_show_tech")}
+                      <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={1.6} style={{ width: 9, height: 9, transform: showAdvancedStack ? "rotate(180deg)" : "none", transition: "transform 0.25s" }}>
+                        <polyline points="2,4 6,8 10,4" strokeLinecap="round" />
+                      </svg>
                     </button>
-                  )
-                })}
-              </div>
+
+                    <div ref={advancedStackRef} style={{ overflow: "hidden" }}>
+                      <div style={{ paddingTop: "0.85rem", display: "flex", flexWrap: "wrap", gap: 8 }}>
+                        {HOSTING_STACKS.map(stack => {
+                          const sActive = hostingStack.includes(stack.id)
+                          return (
+                            <button
+                              key={stack.id}
+                              data-pill="true"
+                              onClick={() => onToggleStack(stack.id)}
+                              className="platform-pill"
+                              style={{ ...pillStyle(sActive), padding: "6px 14px", fontSize: "0.78rem", fontWeight: sActive ? 500 : 400 }}
+                            >
+                              {stack.label}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
-        </div>
+          )
+        })}
       </div>
 
       {/* Discount banner */}
       <div ref={discountRef} style={{ overflow: "hidden", height: 0 }}>
         <div style={{
-          background: "rgba(89,61,248,0.07)",
-          border: "1px solid rgba(89,61,248,0.22)",
-          borderRadius: 12,
-          padding: "0.95rem 1.15rem",
+          background: "rgba(89,61,248,0.08)",
+          border: "1px solid rgba(89,61,248,0.26)",
+          borderRadius: 14,
+          padding: "1rem 1.2rem",
           marginBottom: "1.5rem",
           display: "flex",
           alignItems: "center",
           gap: 14,
         }}>
+          <div data-discount="icon" style={{
+            width: 40, height: 40, borderRadius: 11, flexShrink: 0,
+            background: "rgba(89,61,248,0.18)",
+            border: "1px solid rgba(89,61,248,0.3)",
+            display: "grid", placeItems: "center",
+            color: INK_FAINT,
+            fontFamily: "var(--font-dm-mono)",
+            fontSize: 11,
+            letterSpacing: "0.02em",
+            willChange: "transform, filter, opacity",
+          }}>
+            −{discountPercent}%
+          </div>
           <div>
             <p data-discount="text" style={{ fontFamily: "var(--font-inter)", fontSize: "0.92rem", fontWeight: 600, color: "rgba(167,139,250,0.95)", letterSpacing: "-0.01em", willChange: "transform, filter, opacity" }}>
               {discountLabel}
@@ -1058,7 +1087,13 @@ function StepServices({ services, include3d, onToggle, onToggle3d, hostingCatego
       </div>
 
       {error && <ErrorMsg msg={error} style={{ marginBottom: "1.5rem" }} />}
-      <div data-a="nav"><NavRow onNext={onNext} nextLabel={t("contact_continue")} /></div>
+      <div data-a="nav">
+        <NavRow
+          onNext={onNext}
+          nextLabel={t("contact_continue")}
+          meta={services.length > 0 ? t("contact_selected_count").replace("{count}", String(services.length)) : undefined}
+        />
+      </div>
     </div>
   )
 }
@@ -1631,8 +1666,8 @@ function ErrorMsg({ msg, style: s }: { msg: string; style?: React.CSSProperties 
   )
 }
 
-function NavRow({ onBack, onNext, nextLabel, isFinal, disabled }: {
-  onBack?: () => void; onNext: () => void; nextLabel: string; isFinal?: boolean; disabled?: boolean
+function NavRow({ onBack, onNext, nextLabel, isFinal, disabled, meta }: {
+  onBack?: () => void; onNext: () => void; nextLabel: string; isFinal?: boolean; disabled?: boolean; meta?: string
 }) {
   const btnRef   = useRef<HTMLButtonElement>(null)
   const labelRef = useRef<HTMLSpanElement>(null)
@@ -1687,6 +1722,12 @@ function NavRow({ onBack, onNext, nextLabel, isFinal, disabled }: {
           ← Back
         </button>
       ) : <div />}
+      <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
+      {meta && (
+        <span style={{ fontFamily: "var(--font-dm-mono)", fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "rgba(167,139,250,0.8)" }}>
+          {meta}
+        </span>
+      )}
       <button
         ref={btnRef}
         onClick={onNext}
@@ -1710,6 +1751,7 @@ function NavRow({ onBack, onNext, nextLabel, isFinal, disabled }: {
       >
         <span ref={labelRef} style={{ display: "inline-block", willChange: "transform" }}>{nextLabel}</span>
       </button>
+      </div>
     </div>
   )
 }

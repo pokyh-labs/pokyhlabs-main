@@ -104,7 +104,13 @@ function loadImage(url: string): Promise<HTMLImageElement | null> {
   return new Promise((resolve) => {
     const img = new Image()
     img.crossOrigin = "anonymous"
-    img.onload = () => resolve(img)
+    // decode() moves the (potentially large) image decode off the main thread —
+    // otherwise the first drawImage() decodes synchronously and janks.
+    img.onload = () => {
+      const done = () => resolve(img)
+      if (typeof img.decode === "function") img.decode().then(done, done)
+      else done()
+    }
     img.onerror = () => resolve(null)
     img.src = url
   })
@@ -118,7 +124,15 @@ function makeTex(canvas: HTMLCanvasElement): THREE.CanvasTexture {
   return tex
 }
 
-function drawPaperBg(ctx: CanvasRenderingContext2D, w: number, h: number, spineOnRight: boolean) {
+// The noise layers are rendered once into a cached canvas and stamped onto
+// every page — re-running thousands of fillRects per page texture blocked the
+// main thread long enough to stutter the hero animation while the book builds.
+let paperNoiseCache: HTMLCanvasElement | null = null
+function getPaperNoise(w: number, h: number): HTMLCanvasElement {
+  if (paperNoiseCache && paperNoiseCache.width === w && paperNoiseCache.height === h) return paperNoiseCache
+  const c = document.createElement("canvas")
+  c.width = w; c.height = h
+  const ctx = c.getContext("2d")!
   ctx.fillStyle = "#f7f1e3"
   ctx.fillRect(0, 0, w, h)
   ctx.globalAlpha = 0.05
@@ -128,6 +142,12 @@ function drawPaperBg(ctx: CanvasRenderingContext2D, w: number, h: number, spineO
     ctx.fillRect(Math.random() * w, Math.random() * h, sz, sz)
   }
   ctx.globalAlpha = 1
+  paperNoiseCache = c
+  return c
+}
+
+function drawPaperBg(ctx: CanvasRenderingContext2D, w: number, h: number, spineOnRight: boolean) {
+  ctx.drawImage(getPaperNoise(w, h), 0, 0)
   const spineX = spineOnRight ? w : 0
   const grad = ctx.createLinearGradient(spineX, 0, spineOnRight ? w - 140 : 140, 0)
   grad.addColorStop(0, "rgba(60,40,15,0.20)")
@@ -136,7 +156,12 @@ function drawPaperBg(ctx: CanvasRenderingContext2D, w: number, h: number, spineO
   ctx.fillRect(0, 0, w, h)
 }
 
-function drawLinen(ctx: CanvasRenderingContext2D, w: number, h: number) {
+let linenCache: HTMLCanvasElement | null = null
+function getLinen(w: number, h: number): HTMLCanvasElement {
+  if (linenCache && linenCache.width === w && linenCache.height === h) return linenCache
+  const c = document.createElement("canvas")
+  c.width = w; c.height = h
+  const ctx = c.getContext("2d")!
   ctx.fillStyle = "#1a1714"
   ctx.fillRect(0, 0, w, h)
   ctx.globalAlpha = 0.04
@@ -148,6 +173,12 @@ function drawLinen(ctx: CanvasRenderingContext2D, w: number, h: number) {
     ctx.fillRect(Math.random() * w, Math.random() * h, 1.5, 1.5)
   }
   ctx.globalAlpha = 1
+  linenCache = c
+  return c
+}
+
+function drawLinen(ctx: CanvasRenderingContext2D, w: number, h: number) {
+  ctx.drawImage(getLinen(w, h), 0, 0)
 }
 
 function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
@@ -483,6 +514,9 @@ export async function createBookScene({
   // leaf k:   front=text_(k-1),  back=image_k          (1 <= k <= N-1)
   // leaf N:   front=text_(N-1),  back=back-cover
   // When N === 0 we only have one leaf with cover+back-cover.
+  // Painting all page textures in one go blocks the main thread and stutters
+  // the hero entrance animation — yield a frame between leaves instead.
+  const nextFrame = () => new Promise<void>((r) => requestAnimationFrame(() => r()))
   const leafSpecs: LeafSpec[] = []
   if (N === 0) {
     leafSpecs.push({
@@ -502,6 +536,7 @@ export async function createBookScene({
         ? makeBackCover(logo)
         : makeImagePage(projects[backMeta.projectIdx], backMeta.projectIdx, N, projectImages[backMeta.projectIdx] ?? null)
       leafSpecs.push({ frontTex, backTex, frontMeta, backMeta })
+      await nextFrame()
     }
   }
 
@@ -591,7 +626,9 @@ export async function createBookScene({
   const key = new THREE.DirectionalLight(0xffffff, 2.0)
   key.position.set(2, 5, 2)
   key.castShadow = true
-  key.shadow.mapSize.set(2048, 2048)
+  // 1024 is visually indistinguishable here (soft shadow + radius blur) and
+  // roughly quarters the shadow pass cost — helps the first frames not to jank.
+  key.shadow.mapSize.set(1024, 1024)
   key.shadow.camera.left = -3; key.shadow.camera.right = 3
   key.shadow.camera.top = 3; key.shadow.camera.bottom = -3
   key.shadow.camera.near = 0.1; key.shadow.camera.far = 12
@@ -831,7 +868,8 @@ export async function createBookScene({
   // the camera up far enough to keep the whole spread visible without cropping.
   // On wide desktop screens we pull the camera back slightly (1.3×) so the book
   // doesn't overwhelm the viewport — mobile keeps the closer view.
-  const DESKTOP_SCALE = 1.7   // extra pull-back on wide screens (>= 900 px)
+  const DESKTOP_SCALE = 1.7    // extra pull-back on wide screens (>= 900 px)
+  const DESKTOP_XL_SCALE = 2.0 // even further back on very large screens so the book doesn't overwhelm
   let camDist = 1
   function resize() {
     const w = canvas.clientWidth || canvas.parentElement?.clientWidth || window.innerWidth
@@ -843,7 +881,7 @@ export async function createBookScene({
     const a = w / h
     const base = Math.max(1, refAspect / Math.max(a, 0.4))
     // On wide screens the book was doubled from original; pull back to ~1.3× instead.
-    camDist = w >= 900 ? base * DESKTOP_SCALE : base
+    camDist = w >= 1600 ? base * DESKTOP_XL_SCALE : w >= 900 ? base * DESKTOP_SCALE : base
   }
   const ro = new ResizeObserver(resize)
   ro.observe(canvas)
@@ -886,7 +924,10 @@ export async function createBookScene({
     // from a reclined pose, turns toward the camera and dollies in, so it reads
     // as a solid object moving through 3D space (not a PNG being slid). Reverses
     // automatically on scroll-up because `e` is scroll-driven.
-    tiltGroup.position.y = THREE.MathUtils.lerp(-3.4, 0, e)
+    // The start offset scales with camDist: on portrait/narrow viewports the
+    // camera sits far back, so a fixed -3.4 would leave the book peeking into
+    // view at the bottom of the hero before any scroll.
+    tiltGroup.position.y = THREE.MathUtils.lerp(-3.4 * Math.max(1, camDist), 0, e)
     const s = THREE.MathUtils.lerp(0.78, 1, e)
     tiltGroup.scale.setScalar(s)
     tiltGroup.rotation.x = THREE.MathUtils.lerp(-Math.PI / 3, TILT_REST_X, e)
@@ -916,7 +957,20 @@ export async function createBookScene({
     renderer.render(scene, camera)
     rafId = requestAnimationFrame(tick)
   }
-  tick()
+  // Warm up the GPU before the first real render: upload the page textures one
+  // per frame (otherwise they'd all upload inside the first render call — each
+  // is a 1024×1366 canvas) and compile the shaders async where supported.
+  for (const spec of leafSpecs) {
+    renderer.initTexture(spec.frontTex)
+    renderer.initTexture(spec.backTex)
+    await nextFrame()
+  }
+  try {
+    const r = renderer as THREE.WebGLRenderer & { compileAsync?: (s: THREE.Scene, c: THREE.Camera) => Promise<unknown> }
+    if (typeof r.compileAsync === "function") await r.compileAsync(scene, camera)
+    else renderer.compile(scene, camera)
+  } catch {}
+  rafId = requestAnimationFrame(tick)
   publishPageChange()
 
   return {
