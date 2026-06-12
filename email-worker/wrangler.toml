@@ -13,7 +13,7 @@ CONFIRM_TTL_MINUTES = "10"
 # then paste the returned id below.
 [[kv_namespaces]]
 binding = "AUTOREPLY_KV"
-id      = "REPLACE_WITH_KV_NAMESPACE_ID"
+id      = "30fe061808974ae19aeb417f2106c8d2"
 
 # ── Addresses / secrets live OUTSIDE this file ────────────────────────────────
 # Local dev  : .dev.vars            (KEY=value, like .env — gitignored)
