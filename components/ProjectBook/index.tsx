@@ -59,7 +59,6 @@ export default function ProjectBook({
   const phaseRef = useRef<"hero" | "book" | "exit">("hero")
   const zoomRef = useRef(false)
   const snappingRef = useRef(false)
-  const lastSettledRef = useRef(0)
 
   const [pageInfo, setPageInfo] = useState<PageInfo>({
     page: 0,
@@ -200,7 +199,9 @@ export default function ProjectBook({
     return () => { st.kill() }
   }, [ready, maxPage, eEnd, pEnd])
 
-  // ── Keyboard / horizontal paging + snap that catches at the covers ──
+  // ── Keyboard / horizontal paging ────────────────────────────────
+  // (No auto-snap: the page never scrolls on its own — scrolling stays exactly
+  // where the user leaves it. Arrow keys and horizontal swipes still flip pages.)
   useEffect(() => {
     if (!ready) return
     const section = sectionRef.current
@@ -216,8 +217,6 @@ export default function ProjectBook({
     const yForProgress = (p: number, m: { absTop: number; L: number }) => m.absTop + p * m.L
     const pageProgress = (k: number) => eEnd + (k / maxPage) * (pEnd - eEnd)
 
-    lastSettledRef.current = progressForY(window.scrollY, metrics())
-
     const animateTo = (yPx: number) => {
       snappingRef.current = true
       const done = () => { snappingRef.current = false }
@@ -232,9 +231,7 @@ export default function ProjectBook({
       const p = progressForY(window.scrollY, m)
       const cur = Math.round(((p - eEnd) / (pEnd - eEnd)) * maxPage)
       const next = Math.min(maxPage, Math.max(0, cur + dir))
-      const tp = pageProgress(next)
-      lastSettledRef.current = tp
-      animateTo(yForProgress(tp, m))
+      animateTo(yForProgress(pageProgress(next), m))
     }
 
     const onKey = (e: KeyboardEvent) => {
@@ -267,44 +264,11 @@ export default function ProjectBook({
       }
     }
 
-    // After scrolling settles: keep free movement *inside* the book, but snap
-    // the entrance/exit, and — crucially — catch a fast flick at the cover
-    // (going up) or back cover (going down) so it can't fly to the hero/footer
-    // in one motion. Leaving the book then takes a second deliberate scroll.
-    let settleTimer: ReturnType<typeof setTimeout> | null = null
-    const settle = () => {
-      if (snappingRef.current || zoomRef.current) return
-      const m = metrics()
-      const y = window.scrollY
-      const p = progressForY(y, m)
-      const eps = 1e-3
-      if (p > eEnd + eps && p < pEnd - eps) { lastSettledRef.current = p; return } // free in book
-      const wasInBook = lastSettledRef.current > eEnd + eps && lastSettledRef.current < pEnd - eps
-      let target: number
-      if (p <= eEnd + eps) {
-        target = wasInBook ? eEnd : p < eEnd * 0.5 ? 0 : eEnd
-      } else {
-        if (y >= m.absTop + m.L - 1 && !wasInBook) { lastSettledRef.current = 1; return } // free footer
-        target = wasInBook ? pEnd : p > (pEnd + 1) * 0.5 ? 1 : pEnd
-      }
-      if (Math.abs(target - p) < 1.5e-3) { lastSettledRef.current = target; return }
-      lastSettledRef.current = target
-      animateTo(yForProgress(target, m))
-    }
-    const onScroll = () => {
-      if (snappingRef.current || zoomRef.current) return
-      if (settleTimer) clearTimeout(settleTimer)
-      settleTimer = setTimeout(settle, 110)
-    }
-
     window.addEventListener("keydown", onKey)
     window.addEventListener("wheel", onWheel, { passive: false })
-    lenis.on("scroll", onScroll)
     return () => {
       window.removeEventListener("keydown", onKey)
       window.removeEventListener("wheel", onWheel)
-      lenis.off("scroll", onScroll)
-      if (settleTimer) clearTimeout(settleTimer)
     }
   }, [ready, maxPage, eEnd, pEnd])
 

@@ -92,14 +92,11 @@ export default function BlogsPage({ initialBlogs = [] }: { initialBlogs?: Blog[]
           border-radius: 18px;
           padding: clamp(1.5rem, 3.5vw, 3rem);
           background: rgba(255,255,255,0.018);
-          transition: border-color 0.3s ease, background 0.3s ease, transform 0.3s cubic-bezier(.2,.8,.2,1);
+          transition: border-color 0.3s ease;
           -webkit-tap-highlight-color: transparent;
         }
-        .bfeat:hover {
-          border-color: rgba(139,117,250,0.35);
-          background: rgba(255,255,255,0.03);
-          transform: translateY(-2px);
-        }
+        .bfeat:hover { border-color: rgba(139,117,250,0.45); }
+        .bfeat--noimg { grid-template-columns: minmax(0, 1fr); }
         .bfeat__media {
           position: relative;
           border-radius: 12px;
@@ -112,9 +109,7 @@ export default function BlogsPage({ initialBlogs = [] }: { initialBlogs?: Blog[]
           display: block;
           width: 100%; height: 100%;
           object-fit: cover;
-          transition: transform 0.7s cubic-bezier(.2,.8,.2,1);
         }
-        .bfeat:hover .bfeat__media img { transform: scale(1.04); }
         .bfeat__readlink {
           display: inline-flex;
           align-items: center;
@@ -131,8 +126,9 @@ export default function BlogsPage({ initialBlogs = [] }: { initialBlogs?: Blog[]
 
         /* ── List rows ── */
         .brow {
+          position: relative;
           display: grid;
-          grid-template-columns: 56px 132px minmax(0, 1fr) 52px;
+          grid-template-columns: 56px minmax(0, 1fr) 52px;
           gap: clamp(1.25rem, 2.5vw, 2.25rem);
           align-items: center;
           padding: 2.1rem 1.4rem;
@@ -142,21 +138,34 @@ export default function BlogsPage({ initialBlogs = [] }: { initialBlogs?: Blog[]
           transition: background 0.25s ease;
           -webkit-tap-highlight-color: transparent;
         }
-        .brow:hover { background: rgba(255,255,255,0.035); }
+        .brow:hover { background: rgba(255,255,255,0.035); z-index: 5; }
+        /* Floating image preview — pops out of the row on hover (desktop only). */
         .brow__thumb {
-          border-radius: 10px;
-          overflow: hidden;
+          position: absolute;
+          right: clamp(110px, 14vw, 220px);
+          top: 50%;
+          width: clamp(190px, 17vw, 250px);
           aspect-ratio: 4 / 3;
+          border-radius: 12px;
+          overflow: hidden;
           border: 1px solid #2a2a2a;
           background: #202020;
+          box-shadow: 0 24px 50px -20px rgba(0,0,0,0.65);
+          opacity: 0;
+          transform: translateY(-50%) rotate(-5deg) scale(0.82);
+          transition: opacity 0.3s ease, transform 0.5s cubic-bezier(.2,.8,.2,1);
+          pointer-events: none;
+          z-index: 2;
+        }
+        .brow:hover .brow__thumb {
+          opacity: 1;
+          transform: translateY(-50%) rotate(-2deg) scale(1);
         }
         .brow__thumb img {
           display: block;
           width: 100%; height: 100%;
           object-fit: cover;
-          transition: transform 0.6s cubic-bezier(.2,.8,.2,1);
         }
-        .brow:hover .brow__thumb img { transform: scale(1.06); }
         .brow__circle {
           width: 52px; height: 52px;
           border-radius: 50%;
@@ -174,32 +183,40 @@ export default function BlogsPage({ initialBlogs = [] }: { initialBlogs?: Blog[]
         .brow__title { transition: color 0.25s ease; }
         .brow:hover .brow__title { color: #c4b5fd; }
 
-        .bplaceholder {
-          width: 100%; height: 100%;
-          display: grid;
-          place-items: center;
-          background:
-            radial-gradient(120% 120% at 20% 0%, rgba(89,61,248,0.22), rgba(89,61,248,0.02) 60%),
-            #1f1e24;
-        }
-        .bplaceholder span {
-          font-family: var(--font-dm-mono), monospace;
-          font-size: 10px;
-          letter-spacing: 0.3em;
-          text-transform: uppercase;
-          color: rgba(196,181,253,0.5);
+        /* Touch devices have no hover — show the image inline instead. */
+        @media (hover: none), (pointer: coarse) {
+          .brow { grid-template-columns: 56px 132px minmax(0, 1fr) 52px; }
+          .brow--noimg { grid-template-columns: 56px minmax(0, 1fr) 52px; }
+          .brow__thumb {
+            position: static;
+            width: 100%;
+            opacity: 1;
+            transform: none;
+            box-shadow: none;
+            border-radius: 10px;
+          }
         }
 
         /* ── Responsive ── */
         @media (max-width: 860px) {
           .bfeat { grid-template-columns: 1fr; gap: 1.5rem; }
           .bfeat__media { order: -1; aspect-ratio: 16 / 9; }
-          .brow { grid-template-columns: 96px minmax(0, 1fr) 44px; padding: 1.7rem 1rem; margin: 0 -1rem; }
+          .brow, .brow--noimg { grid-template-columns: 96px minmax(0, 1fr) 44px; padding: 1.7rem 1rem; margin: 0 -1rem; }
+          .brow--noimg { grid-template-columns: minmax(0, 1fr) 44px; }
           .brow__idx { display: none; }
           .brow__circle { width: 44px; height: 44px; }
+          .brow__thumb {
+            position: static;
+            width: 100%;
+            opacity: 1;
+            transform: none;
+            box-shadow: none;
+            border-radius: 10px;
+          }
         }
         @media (max-width: 520px) {
           .brow { grid-template-columns: 84px minmax(0, 1fr); }
+          .brow--noimg { grid-template-columns: minmax(0, 1fr); }
           .brow__circle { display: none; }
           .brow__excerpt { display: none; }
         }
@@ -341,14 +358,11 @@ function MetaPills({ blog }: { blog: Blog }) {
 }
 
 function Thumb({ blog, className }: { blog: Blog; className: string }) {
+  if (!blog.image_url) return null
   return (
-    <div className={className} aria-hidden={!blog.image_url}>
-      {blog.image_url ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={blog.image_url} alt={blog.image_alt ?? blog.title} loading="lazy" decoding="async" />
-      ) : (
-        <div className="bplaceholder"><span>pokyh.studio</span></div>
-      )}
+    <div className={className}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={blog.image_url} alt={blog.image_alt ?? blog.title} loading="lazy" decoding="async" />
     </div>
   )
 }
@@ -359,7 +373,7 @@ function FeaturedCard({ blog, lang }: { blog: Blog; lang: string }) {
   const t = useT()
   return (
     <article data-reveal>
-      <a className="bfeat" href={`/${lang}/blog/${blog.slug}`}>
+      <a className={`bfeat${blog.image_url ? "" : " bfeat--noimg"}`} href={`/${lang}/blog/${blog.slug}`}>
         <div style={{ minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: "1.5rem" }}>
             <span style={{ fontFamily: "var(--font-dm-mono), monospace", fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: "#593DF8" }}>
@@ -423,7 +437,7 @@ function BlogRow({ blog, index, lang }: { blog: Blog; index: number; lang: strin
   const t = useT()
   return (
     <article data-reveal style={{ borderTop: "1px solid #2a2a2a" }}>
-      <a className="brow" href={`/${lang}/blog/${blog.slug}`}>
+      <a className={`brow${blog.image_url ? "" : " brow--noimg"}`} href={`/${lang}/blog/${blog.slug}`}>
         <span className="brow__idx" style={{ fontFamily: "var(--font-dm-mono), monospace", fontSize: 12, color: "#593DF8", letterSpacing: "0.15em" }}>
           {String(index).padStart(2, "0")}
         </span>

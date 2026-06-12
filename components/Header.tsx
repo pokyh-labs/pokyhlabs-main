@@ -801,10 +801,10 @@ function LanguageButton({
             left: "50%",
             minWidth: 220,
             padding: 8,
-            background: "#fcfaf6",
-            border: "1px solid rgba(12,12,12,0.08)",
+            background: "#0c0c0c",
+            border: "1px solid rgba(255,255,255,0.1)",
             borderRadius: 18,
-            color: "#0c0c0c",
+            color: "#fff",
             fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
             fontSize: 16,
             fontWeight: 500,
@@ -831,8 +831,8 @@ function LanguageButton({
                   gap: 12,
                   padding: "12px 16px",
                   borderRadius: 10,
-                  background: active ? "rgba(12,12,12,0.08)" : "transparent",
-                  color: "#0c0c0c",
+                  background: active ? "rgba(255,255,255,0.12)" : "transparent",
+                  color: "#fff",
                   border: "none",
                   cursor: "pointer",
                   fontFamily: "inherit",
@@ -844,11 +844,11 @@ function LanguageButton({
                 onMouseEnter={(e) => {
                   if (!active)
                     (e.currentTarget as HTMLElement).style.background =
-                      "rgba(12,12,12,0.05)";
+                      "rgba(255,255,255,0.07)";
                 }}
                 onMouseLeave={(e) => {
                   (e.currentTarget as HTMLElement).style.background = active
-                    ? "rgba(12,12,12,0.08)"
+                    ? "rgba(255,255,255,0.12)"
                     : "transparent";
                 }}
               >
